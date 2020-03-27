@@ -101,15 +101,17 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\..\DXUT\Core;..\..\DXUT\Optional;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;DXUT.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>
       </OptimizeReferences>
       <EnableCOMDATFolding>
       </EnableCOMDATFolding>
+      <AdditionalLibraryDirectories>..\..\DXUT\Core\Bin\Desktop_2019_Win10\x64\Debug;..\..\DXUT\Optional\Bin\Desktop_2019_Win10\x64\Debug;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -145,6 +147,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\MiniEngineMath\Frustum.cpp" />
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="imgui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
@@ -168,6 +172,17 @@
     <ClCompile Include="Win32FrameWork.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\MiniEngineMath\BoundingPlane.h" />
+    <ClInclude Include="..\MiniEngineMath\BoundingSphere.h" />
+    <ClInclude Include="..\MiniEngineMath\Common.h" />
+    <ClInclude Include="..\MiniEngineMath\Frustum.h" />
+    <ClInclude Include="..\MiniEngineMath\Matrix3.h" />
+    <ClInclude Include="..\MiniEngineMath\Matrix4.h" />
+    <ClInclude Include="..\MiniEngineMath\Quaternion.h" />
+    <ClInclude Include="..\MiniEngineMath\Scalar.h" />
+    <ClInclude Include="..\MiniEngineMath\Transform.h" />
+    <ClInclude Include="..\MiniEngineMath\Vector.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DXSampleHelper.h" />
     <ClInclude Include="imconfig.h">
@@ -196,6 +211,7 @@
     </ClInclude>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TiledRendering.h" />
+    <ClInclude Include="VectorMath.h" />
     <ClInclude Include="Win32Application.h" />
     <ClInclude Include="Win32FrameWork.h" />
   </ItemGroup>
@@ -203,6 +219,17 @@
     <FxCompile Include="shaders.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\DXUT\Core\DXUT_2019_Win10.vcxproj">
+      <Project>{85344b7f-5aa0-4e12-a065-d1333d11f6ca}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\DXUT\Optional\DXUTOpt_2019_Win10.vcxproj">
+      <Project>{61b333c2-c4f7-4cc1-a9bf-83f6d95588eb}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\MiniEngineMath\Functions.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

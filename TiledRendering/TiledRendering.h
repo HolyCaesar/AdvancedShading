@@ -1,5 +1,9 @@
 #pragma once
 
+#include "DXUT.h"
+#include "DXUTmisc.h"
+#include "DXUTCamera.h"
+#include "DXUTSettingsDlg.h"
 #include "Win32FrameWork.h"
 
 #include "imgui.h"
@@ -12,7 +16,6 @@
 #include <dxgidebug.h>
 #pragma comment(lib, "dxguid.lib")
 #endif
-
 
 
 using namespace DirectX;

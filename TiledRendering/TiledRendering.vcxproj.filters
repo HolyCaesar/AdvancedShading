@@ -22,6 +22,9 @@
     <Filter Include="GUI">
       <UniqueIdentifier>{b30b780a-3b41-46ac-9c4c-d2f0c68323ef}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MiniEngineMath">
+      <UniqueIdentifier>{c898ba78-9cc6-4181-8325-f70357a4c89e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -56,6 +59,12 @@
     </ClCompile>
     <ClCompile Include="imgui_draw.cpp">
       <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MiniEngineMath\Frustum.cpp">
+      <Filter>MiniEngineMath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -101,10 +110,51 @@
     <ClInclude Include="imconfig.h">
       <Filter>GUI</Filter>
     </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Frustum.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Matrix3.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Matrix4.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Quaternion.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Scalar.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Transform.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Vector.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\Common.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\BoundingPlane.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MiniEngineMath\BoundingSphere.h">
+      <Filter>MiniEngineMath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\MiniEngineMath\Functions.inl">
+      <Filter>MiniEngineMath</Filter>
+    </None>
   </ItemGroup>
 </Project>
