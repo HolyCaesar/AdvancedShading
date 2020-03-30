@@ -110,6 +110,13 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
         }
         return 0;
 
+    case WM_SIZE:
+        if (pWinApp)
+        {
+            // TODO need to implement something to handle window resize
+        }
+        return 0;
+
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;

@@ -9,6 +9,13 @@
 //
 //*********************************************************
 
+cbuffer ConstBuffer : register(b0)
+{
+    matrix World;
+    matrix WorldViewProj;
+    //float4 offset;
+};
+
 struct PSInput
 {
     float4 position : SV_POSITION;
@@ -19,8 +26,15 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 {
     PSInput result;
 
-    result.position = position;
+    result.position = mul(World, position);
+    result.position = mul(WorldViewProj, result.position);
     result.color = color;
+
+    //result.position = position;
+    //result.color = color;
+
+    //result.position = position + offset;
+    //result.color = color;
 
     return result;
 }

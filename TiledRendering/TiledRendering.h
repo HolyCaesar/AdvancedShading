@@ -44,6 +44,13 @@ private:
         XMFLOAT4 color;
     };
 
+    struct CBuffer 
+    {
+        XMMATRIX worldMatrix;
+        XMMATRIX worldViewProjMatrix;
+        //XMFLOAT4 offset;
+    };
+
     // Pipeline objects.
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissorRect;
@@ -55,6 +62,7 @@ private:
     ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
     ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
     ComPtr<ID3D12PipelineState> m_pipelineState;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
     UINT m_rtvDescriptorSize;
@@ -62,12 +70,19 @@ private:
     // App resources.
     ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+    ComPtr<ID3D12Resource> m_constantBuffer;
+    CBuffer m_constantBufferData;
+    UINT8* m_pCbvDataBegin;
+
 
     // Synchronization objects.
     UINT m_frameIndex;
     HANDLE m_fenceEvent;
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue[FrameCount];
+
+    // DXUT Model-View Camera
+    CModelViewerCamera m_modelViewCamera;
 
     void LoadPipeline();
     void LoadAssets();

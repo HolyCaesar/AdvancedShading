@@ -5,14 +5,18 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 void TiledRendering::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam);
+
+    m_modelViewCamera.HandleMessages(hWnd, message, wParam, lParam);
 }
 
 TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
     Win32FrameWork(width, height, name),
     m_frameIndex(0),
+    m_pCbvDataBegin(nullptr),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
-    m_rtvDescriptorSize(0)
+    m_rtvDescriptorSize(0),
+    m_constantBufferData{}
 {
 }
 
@@ -153,23 +157,25 @@ void TiledRendering::LoadPipeline()
     // Create descriptor heaps.
     {
         // Describe and create a render target view (RTV) descriptor heap.
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-        rtvHeapDesc.NumDescriptors = FrameCount;
-        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
-
+        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+        desc.NumDescriptors = FrameCount;
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
 
         m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    }
 
-    {
-        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         desc.NumDescriptors = 1;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeap)) != S_OK);
+
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        desc.NumDescriptors = 1;
+        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvHeap)) != S_OK);
     }
+
 
 
     // Create frame resources.
@@ -192,14 +198,45 @@ void TiledRendering::LoadPipeline()
 // Load the sample assets.
 void TiledRendering::LoadAssets()
 {
-    // Create an empty root signature.
+    //// Create an empty root signature.
+    //{
+    //    CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+    //    rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+    //    ComPtr<ID3DBlob> signature;
+    //    ComPtr<ID3DBlob> error;
+    //    ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+    //    ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+    //}
+
+    // Create a root signature consisting of a descriptor table with a single CBV
     {
-        CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+        D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1; // Use highest version
+        if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+            featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+
+        CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+        CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+
+        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+        rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+        // Allow input layout and deny unecessary access to certain pipeline stages
+        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
 
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
-        ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+        ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
         ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
     }
 
@@ -287,6 +324,28 @@ void TiledRendering::LoadAssets()
         m_vertexBufferView.SizeInBytes = vertexBufferSize;
     }
 
+    // Create the constant buffer
+    {
+        ThrowIfFailed(m_device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_constantBuffer)));
+
+        // Describe and create a constant buffer view.
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+        cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
+        cbvDesc.SizeInBytes = (sizeof(CBuffer) + 255) & ~255;    // CB size is required to be 256-byte aligned.
+        m_device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+
+        CD3DX12_RANGE readRange(0, 0);
+        ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
+        memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+    }
+
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
         ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
@@ -299,11 +358,18 @@ void TiledRendering::LoadAssets()
             ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
         }
 
-        // Wait for the command list to execute; we are reusing the same command 
-        // list in our main loop but for now, we just want to wait for setup to 
-        // complete before continuing.
-        //WaitForPreviousFrame();
         WaitForGpu();
+
+        // Setup the camera's view parameters
+        static const XMVECTORF32 s_Eye = { 0.0f, 0.0f, -6.0f, 0.f };
+        static const XMVECTORF32 s_At = { 0.0f, 0.0f, 0.0f, 0.f };
+        m_modelViewCamera.SetViewParams(s_Eye, s_At);
+        // Setup the camera's projection parameters
+        float fAspectRatio = m_width / (float)m_height;
+        m_modelViewCamera.SetProjParams(XM_PI / 4, fAspectRatio, 0.01f, 1000.0f);
+        m_modelViewCamera.SetWindow(m_width, m_height);
+        m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
+
 
         LoadImGUI();
     }
@@ -334,6 +400,22 @@ void TiledRendering::LoadImGUI()
 // Update frame-based values.
 void TiledRendering::OnUpdate()
 {
+    m_modelViewCamera.FrameMove(ImGui::GetIO().DeltaTime);
+
+    XMMATRIX world = XMMatrixIdentity(), view = m_modelViewCamera.GetViewMatrix(), proj = m_modelViewCamera.GetProjMatrix();
+    m_constantBufferData.worldMatrix = world;
+    m_constantBufferData.worldViewProjMatrix = XMMatrixTranspose(world * view * proj);
+    memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+    //const float translationSpeed = 0.005f;
+    //const float offsetBounds = 1.25f;
+
+    //m_constantBufferData.offset.x += translationSpeed;
+    //if (m_constantBufferData.offset.x > offsetBounds)
+    //{
+    //    m_constantBufferData.offset.x = -offsetBounds;
+    //}
+    //memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 }
 
 // Render the scene.
@@ -382,8 +464,15 @@ void TiledRendering::PopulateCommandList()
     // re-recording.
     ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
 
+
     // Set necessary state.
     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+    ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
+    m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+    m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
+
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
@@ -400,11 +489,10 @@ void TiledRendering::PopulateCommandList()
     m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
     m_commandList->DrawInstanced(3, 1, 0, 0);
 
-    m_commandList->SetDescriptorHeaps(1, m_srvHeap.GetAddressOf());
+    //m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     ImGui::Render();
+    m_commandList->SetDescriptorHeaps(1, m_srvHeap.GetAddressOf());
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
-
-
 
 
     // Indicate that the back buffer will now be used to present.
