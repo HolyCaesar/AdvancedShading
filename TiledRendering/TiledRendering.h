@@ -10,6 +10,8 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
+#include "Camera.h"
+
 #define DX12_ENABLE_DEBUG_LAYER
 
 #ifdef DX12_ENABLE_DEBUG_LAYER
@@ -83,6 +85,7 @@ private:
 
     // DXUT Model-View Camera
     CModelViewerCamera m_modelViewCamera;
+    IMath::Camera m_perspectiveCamera;
 
     void LoadPipeline();
     void LoadAssets();

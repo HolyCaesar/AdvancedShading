@@ -35,32 +35,38 @@ CameraController::CameraController(Camera& camera, Vector3 worldUp) : m_TargetCa
 	m_LastAscent = 0.0f;
 }
 
-void CameraController::KeyEvent(char key)
+void CameraController::KeyEvent(char key, bool isPressed)
 {
 	switch (key)
 	{
 	case 'W':
 	{
+		isKeyPressed['W'] = isPressed ? true : false;
 		break;
 	}
 	case 'S':
 	{
+		isKeyPressed['S'] = isPressed ? true : false;
 		break;
 	}
 	case 'A':
 	{
+		isKeyPressed['A'] = isPressed ? true : false;
 		break;
 	}
 	case 'D':
 	{
+		isKeyPressed['D'] = isPressed ? true : false;
 		break;
 	}
 	case 'Q':
 	{
+		isKeyPressed['Q'] = isPressed ? true : false;
 		break;
 	}
 	case 'E':
 	{
+		isKeyPressed['E'] = isPressed ? true : false;
 		break;
 	}
 	default:

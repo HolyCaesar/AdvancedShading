@@ -35,7 +35,7 @@ namespace ICore
 
 		// TODO: I will implement a UserInput to handle different types of input
 		// For this demo, keyboard and mouse event is enough
-		void KeyEvent(char key);
+		void KeyEvent(char key, bool isPressed);
 
 	private:
 		std::unordered_map<char, bool> isKeyPressed;
