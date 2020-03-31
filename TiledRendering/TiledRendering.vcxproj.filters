@@ -66,6 +66,9 @@
     <ClCompile Include="..\MiniEngineMath\Frustum.cpp">
       <Filter>MiniEngineMath</Filter>
     </ClCompile>
+    <ClCompile Include="CameraController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -145,6 +148,9 @@
     </ClInclude>
     <ClInclude Include="..\MiniEngineMath\BoundingSphere.h">
       <Filter>MiniEngineMath</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraController.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

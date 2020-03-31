@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClCompile Include="..\MiniEngineMath\Frustum.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="imgui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
@@ -183,6 +184,7 @@
     <ClInclude Include="..\MiniEngineMath\Transform.h" />
     <ClInclude Include="..\MiniEngineMath\Vector.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CameraController.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DXSampleHelper.h" />
     <ClInclude Include="imconfig.h">

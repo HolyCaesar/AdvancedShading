@@ -82,4 +82,45 @@ namespace IMath
 		float m_FarClip;
 		bool m_ReverseZ;    // Invert near and far clip distances so that z = 0 is the far plane
 	};
+
+	inline void BaseCamera::SetEyeAtUp(Vector3 eye, Vector3 at, Vector3 up)
+	{
+		SetLookDirection(at - eye, up);
+		SetPosition(eye);
+	}
+
+	inline void BaseCamera::SetPosition(Vector3 worldPos)
+	{
+		m_CameraToWorld.SetTranslation(worldPos);
+	}
+
+	inline void BaseCamera::SetTransform(const AffineTransform& xform)
+	{
+		// By using these functions, we rederive an orthogonal transform.
+		SetLookDirection(-xform.GetZ(), xform.GetY());
+		SetPosition(xform.GetTranslation());
+	}
+
+	inline void BaseCamera::SetRotation(Quaternion basisRotation)
+	{
+		m_CameraToWorld.SetRotation(Normalize(basisRotation));
+		m_Basis = Matrix3(m_CameraToWorld.GetRotation());
+	}
+
+	inline Camera::Camera() : m_ReverseZ(true)
+	{
+		SetPerspectiveMatrix(XM_PIDIV4, 9.0f / 16.0f, 1.0f, 1000.0f);
+	}
+
+	inline void Camera::SetPerspectiveMatrix(float verticalFovRadians, float aspectHeightOverWidth, float nearZClip, float farZClip)
+	{
+		m_VerticalFOV = verticalFovRadians;
+		m_AspectRatio = aspectHeightOverWidth;
+		m_NearClip = nearZClip;
+		m_FarClip = farZClip;
+
+		UpdateProjMatrix();
+
+		m_PreviousViewProjMatrix = m_ViewProjMatrix;
+	}
 }
