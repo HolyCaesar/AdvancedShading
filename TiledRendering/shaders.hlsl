@@ -8,6 +8,8 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
+Texture2D g_texture : register(t0);
+SamplerState g_sampler : register(s0);
 
 cbuffer ConstBuffer : register(b0)
 {
@@ -20,15 +22,17 @@ struct PSInput
 {
     float4 position : SV_POSITION;
     float4 color : COLOR;
+    float2 tex :TEXTURE0;
 };
 
-PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
+PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 tex : TEXCOORD)
 {
     PSInput result;
 
     result.position = mul(World, position);
     result.position = mul(WorldViewProj, result.position);
     result.color = color;
+    result.tex = tex;
 
     //result.position = position;
     //result.color = color;
@@ -41,5 +45,6 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    return input.color;
+    //return input.color;
+    return g_texture.Sample(g_sampler, input.tex);
 }
