@@ -340,8 +340,6 @@ void TiledRendering::LoadAssets()
 			IID_PPV_ARGS(&vertexUploadHeap)));
 
 
-
-
 		D3D12_SUBRESOURCE_DATA vertexData = {};
 		vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
 		vertexData.RowPitch = 3 * sizeof(triangleVertices) / sizeof(triangleVertices[0]);
@@ -349,7 +347,6 @@ void TiledRendering::LoadAssets()
 
 		UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
 
 
 		//const UINT vertexBufferSize = sizeof(triangleVertices);

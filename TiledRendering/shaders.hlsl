@@ -34,12 +34,6 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 tex : TE
     result.color = color;
     result.tex = tex;
 
-    //result.position = position;
-    //result.color = color;
-
-    //result.position = position + offset;
-    //result.color = color;
-
     return result;
 }
 
