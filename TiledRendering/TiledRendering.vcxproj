@@ -151,6 +151,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
+    <ClCompile Include="GraphicsCore.cpp" />
     <ClCompile Include="imgui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
@@ -170,6 +171,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TiledRendering.cpp" />
+    <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Win32Application.cpp" />
     <ClCompile Include="Win32FrameWork.cpp" />
   </ItemGroup>
@@ -189,6 +191,7 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DXSampleHelper.h" />
+    <ClInclude Include="GraphicsCore.h" />
     <ClInclude Include="imconfig.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
@@ -215,6 +218,7 @@
     </ClInclude>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TiledRendering.h" />
+    <ClInclude Include="Utility.h" />
     <ClInclude Include="VectorMath.h" />
     <ClInclude Include="Win32Application.h" />
     <ClInclude Include="Win32FrameWork.h" />

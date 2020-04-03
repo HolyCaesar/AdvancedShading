@@ -4,10 +4,8 @@
 #include <vector>
 #include <queue>
 #include <string>
-#include "stdafx.h"
 
 using namespace Microsoft::WRL;
-
 // This is an unbounded resource descriptor allocator.  It is intended to provide space for CPU-visible resource descriptors
 // as resources are created.  For those that need to be made shader-visible, they will need to be copied to a UserDescriptorHeap
 // or a DynamicDescriptorHeap.
@@ -60,7 +58,7 @@ public:
 		return ret;
 	}
 
-	DescriptorHandle operator+= (int offsetScaledByDescriptorSize)
+	void operator+= (int offsetScaledByDescriptorSize)
 	{
 		if (m_CpuHandle.ptr != D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
 			m_CpuHandle.ptr += offsetScaledByDescriptorSize;

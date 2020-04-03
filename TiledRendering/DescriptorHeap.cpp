@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "Utility.h"
+#include "GraphicsCore.h"
 #include "DescriptorHeap.h"
 
 std::mutex DescriptorAllocator::sm_AllocationMutex;
-std::vector<ComPtr<ID3D12DescriptorHeap>> sm_DescriptorHeapPool;
+std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> DescriptorAllocator::sm_DescriptorHeapPool;
+
 
 void DescriptorAllocator::DestroyAll(void)
 {
@@ -20,8 +22,8 @@ ID3D12DescriptorHeap* DescriptorAllocator::RequestNewHeap(D3D12_DESCRIPTOR_HEAP_
 	Desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	Desc.NodeMask = 1;
 
-	ComPtr<ID3D12DescriptorHeap> pHeap;
-	ASSERT_SUCCEEDED(Graphics::g_Device->CreateDescriptorHeap(&Desc, MY_IID_PPV_ARGS(&pHeap)));
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> pHeap;
+	ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pHeap)));
 	sm_DescriptorHeapPool.emplace_back(pHeap);
 	return pHeap.Get();
 }
@@ -35,7 +37,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DescriptorAllocator::Allocate(uint32_t Count)
 		m_RemainingFreeHandles = sm_NumDescriptorsPerHeap;
 
 		if (m_DescriptorSize == 0)
-			m_DescriptorSize == Graphics::g_Device->GetDescriptorHandleIncrementSize(m_Type);
+			m_DescriptorSize == IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(m_Type);
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE ret = m_CurrentHandle;
@@ -47,16 +49,16 @@ D3D12_CPU_DESCRIPTOR_HANDLE DescriptorAllocator::Allocate(uint32_t Count)
 
 void ShaderVisibleDescriptorHeap::Create(const std::wstring& DebugHeapName)
 {
-	ASSERT_SUCCEEDED(Graphics::g_Device->CreateDescriptorHeap(&m_HeapDesc, MY_IID_PPV_ARGS(mHeap.ReleaseAndGetAddressOf())));
+	ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&m_HeapDesc, IID_PPV_ARGS(m_Heap.ReleaseAndGetAddressOf())));
 #ifdef RELEASE
 	(void)DebugHeapName;
 #else
 	m_Heap->SetName(DebugHeapName.c_str());
 #endif
 
-	m_DescriptorSize = Graphics::g_Device->GetDescriptorHandleIncrementSize(m_HeapDesc.Type);
+	m_DescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(m_HeapDesc.Type);
 	m_NumFreeDescriptors = m_HeapDesc.NumDescriptors;
-	m_FirstHandle = DescriptorHandle(m_Heap->GetCPUDescriptorHandleForHeapStart(), m_Heap->GetGPUDescriptorHandleForHeapStart);
+	m_FirstHandle = DescriptorHandle(m_Heap->GetCPUDescriptorHandleForHeapStart(), m_Heap->GetGPUDescriptorHandleForHeapStart());
 	m_NextFreeHandle = m_FirstHandle;
 }
 

@@ -31,12 +31,16 @@ namespace IGraphics
 		// Time elapsed between two frames
 		float GetFrameTime(void);
 
-		ComPtr<ID3D12Device> m_pD3D12Device;
+		ComPtr<ID3D12Device> g_pD3D12Device;
 		//CommandListManager m_CommandManager;
 
 	private:
 		static GraphicsCore* m_gcInstance;
 		static std::mutex m_mutex;
+
+		float s_FrameTime = 0.0f;
+		uint64_t s_FrameIndex = 0;
+		int64_t s_FrameStartTick = 0;
 
 	private:
 		GraphicsCore() = default;
@@ -45,6 +49,7 @@ namespace IGraphics
 		GraphicsCore& operator=(const GraphicsCore&) = delete;
 	};
 
-	extern GraphicsCore* g_GraphicsCor;
+
+	extern GraphicsCore* g_GraphicsCore;
 }
 

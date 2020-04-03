@@ -28,16 +28,12 @@ using namespace IMath;
 //#endif
 //}
 
-namespace
-{
-	float s_FrameTime = 0.0f;
-	uint64_t s_FrameIndex = 0;
-	int64_t s_FrameStartTick = 0;
-}
-
 namespace IGraphics
 {
-	GraphicsCore* g_GraphicsCor = GraphicsCore::GetInstance();
+	std::mutex GraphicsCore::m_mutex;
+	GraphicsCore* GraphicsCore::m_gcInstance;
+
+	GraphicsCore* g_GraphicsCore = GraphicsCore::GetInstance();
 
 	void GraphicsCore::Initialize(void)
 	{
@@ -84,10 +80,10 @@ namespace IGraphics
 			}
 
 			if (MaxSize > 0)
-				m_pD3D12Device = pDevice.Detach();
+				g_pD3D12Device = pDevice.Detach();
 		}
 
-		if (m_pD3D12Device == nullptr)
+		if (g_pD3D12Device == nullptr)
 		{
 			Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
 			ComPtr<IDXGIAdapter> warpAdapter;
@@ -98,7 +94,7 @@ namespace IGraphics
 				D3D_FEATURE_LEVEL_11_0,
 				IID_PPV_ARGS(&pDevice)
 			));
-			m_pD3D12Device = pDevice.Detach();
+			g_pD3D12Device = pDevice.Detach();
 		}
 	}
 
@@ -114,14 +110,14 @@ namespace IGraphics
 	{
 #if defined(_DEBUG)
 		ID3D12DebugDevice* debugInterface;
-		if (SUCCEEDED(m_pD3D12Device->QueryInterface(&debugInterface)))
+		if (SUCCEEDED(g_pD3D12Device->QueryInterface(&debugInterface)))
 		{
 			debugInterface->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
 			debugInterface->Release();
 		}
 #endif
 
-		SAFE_RELEASE(m_pD3D12Device);
+		SAFE_RELEASE(g_pD3D12Device);
 	}
 
 	void GraphicsCore::Present(void)
@@ -132,5 +128,15 @@ namespace IGraphics
 	void GraphicsCore::Resize(uint32_t width, uint32_t height)
 	{
 		// TODO
+	}
+
+	uint64_t GraphicsCore::GetFrameCount(void)
+	{
+		return s_FrameIndex;
+	}
+
+	float GraphicsCore::GetFrameTime(void)
+	{
+		return s_FrameTime;
 	}
 }

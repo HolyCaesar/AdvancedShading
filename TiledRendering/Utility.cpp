@@ -11,15 +11,16 @@
 // Author:  James Stanard 
 //
 
-#include "pch.h"
+#include "stdafx.h"
 #include "Utility.h"
+#include "VectorMath.h"
 #include <string>
 
 // A faster version of memcopy that uses SSE instructions.  TODO:  Write an ARM variant if necessary.
 void SIMDMemCopy( void* __restrict _Dest, const void* __restrict _Source, size_t NumQuadwords )
 {
-    ASSERT(Math::IsAligned(_Dest, 16));
-    ASSERT(Math::IsAligned(_Source, 16));
+    ASSERT(IMath::IsAligned(_Dest, 16));
+    ASSERT(IMath::IsAligned(_Source, 16));
 
     __m128i* __restrict Dest = (__m128i* __restrict)_Dest;
     const __m128i* __restrict Source = (const __m128i* __restrict)_Source;
@@ -97,7 +98,7 @@ void SIMDMemCopy( void* __restrict _Dest, const void* __restrict _Source, size_t
 
 void SIMDMemFill( void* __restrict _Dest, __m128 FillVector, size_t NumQuadwords )
 {
-    ASSERT(Math::IsAligned(_Dest, 16));
+    ASSERT(IMath::IsAligned(_Dest, 16));
 
     register const __m128i Source = _mm_castps_si128(FillVector);
     __m128i* __restrict Dest = (__m128i* __restrict)_Dest;
