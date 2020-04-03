@@ -80,79 +80,82 @@ void TiledRendering::LoadPipeline()
 {
 	UINT dxgiFactoryFlags = 0;
 
-#if defined(_DEBUG)
-	// Enable the debug layer (requires the Graphics Tools "optional feature").
-	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
-	{
-		ComPtr<ID3D12Debug> debugController;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-		{
-			debugController->EnableDebugLayer();
+	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
+	IGraphics::g_GraphicsCore->Initialize();
 
-			// Enable additional debug layers.
-			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-		}
-	}
-#endif
-
-	ComPtr<IDXGIFactory4> factory;
-	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
-
-	if (m_useWarpDevice)
-	{
-		ComPtr<IDXGIAdapter> warpAdapter;
-		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-
-		ThrowIfFailed(D3D12CreateDevice(
-			warpAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&m_device)
-		));
-	}
-	else
-	{
-		ComPtr<IDXGIAdapter1> hardwareAdapter;
-		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
-
-		ThrowIfFailed(D3D12CreateDevice(
-			hardwareAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&m_device)
-		));
-	}
-
-	// Describe and create the command queue.
-	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-	ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
-
-	// Describe and create the swap chain.
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.BufferCount = FrameCount;
-	swapChainDesc.Width = m_width;
-	swapChainDesc.Height = m_height;
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.SampleDesc.Count = 1;
-
-	ComPtr<IDXGISwapChain1> swapChain;
-	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-		Win32Application::GetHwnd(),
-		&swapChainDesc,
-		nullptr,
-		nullptr,
-		&swapChain
-	));
-
-	// This sample does not support fullscreen transitions.
-	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
-
-	ThrowIfFailed(swapChain.As(&m_swapChain));
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+//#if defined(_DEBUG)
+//	// Enable the debug layer (requires the Graphics Tools "optional feature").
+//	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
+//	{
+//		ComPtr<ID3D12Debug> debugController;
+//		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+//		{
+//			debugController->EnableDebugLayer();
+//
+//			// Enable additional debug layers.
+//			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+//		}
+//	}
+//#endif
+//
+//	ComPtr<IDXGIFactory4> factory;
+//	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+//
+//	if (m_useWarpDevice)
+//	{
+//		ComPtr<IDXGIAdapter> warpAdapter;
+//		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+//
+//		ThrowIfFailed(D3D12CreateDevice(
+//			warpAdapter.Get(),
+//			D3D_FEATURE_LEVEL_11_0,
+//			IID_PPV_ARGS(&m_device)
+//		));
+//	}
+//	else
+//	{
+//		ComPtr<IDXGIAdapter1> hardwareAdapter;
+//		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+//
+//		ThrowIfFailed(D3D12CreateDevice(
+//			hardwareAdapter.Get(),
+//			D3D_FEATURE_LEVEL_11_0,
+//			IID_PPV_ARGS(&m_device)
+//		));
+//	}
+//	
+//	// Describe and create the command queue.
+//	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+//	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+//	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+//
+//	ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+//
+//	// Describe and create the swap chain.
+//	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+//	swapChainDesc.BufferCount = FrameCount;
+//	swapChainDesc.Width = m_width;
+//	swapChainDesc.Height = m_height;
+//	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+//	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+//	swapChainDesc.SampleDesc.Count = 1;
+//
+//	ComPtr<IDXGISwapChain1> swapChain;
+//	ThrowIfFailed(factory->CreateSwapChainForHwnd(
+//		m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+//		Win32Application::GetHwnd(),
+//		&swapChainDesc,
+//		nullptr,
+//		nullptr,
+//		&swapChain
+//	));
+//
+//	// This sample does not support fullscreen transitions.
+//	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+//
+//	ThrowIfFailed(swapChain.As(&m_swapChain));
+	m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
 
 	// Create descriptor heaps.
 	{
@@ -161,24 +164,25 @@ void TiledRendering::LoadPipeline()
 		desc.NumDescriptors = FrameCount;
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
+		//ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
 
-		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = 1;
-		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeap)) != S_OK);
+		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		desc.NumDescriptors = 1;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeapTex2D)) != S_OK);
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeap)) != S_OK);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		desc.NumDescriptors = 1;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvHeap)) != S_OK);
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeapTex2D)) != S_OK);
+
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		desc.NumDescriptors = 1;
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvHeap)) != S_OK);
 	}
 
 
@@ -190,11 +194,11 @@ void TiledRendering::LoadPipeline()
 		// Create a RTV for each frame.
 		for (UINT n = 0; n < FrameCount; n++)
 		{
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+			IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 			rtvHandle.Offset(1, m_rtvDescriptorSize);
 
-			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
+			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
 		}
 	}
 
@@ -219,7 +223,7 @@ void TiledRendering::LoadAssets()
 		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1; // Use highest version
-		if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+		if (FAILED(IGraphics::g_GraphicsCore->g_pD3D12Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
@@ -260,7 +264,7 @@ void TiledRendering::LoadAssets()
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -301,11 +305,11 @@ void TiledRendering::LoadAssets()
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
-		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 
 	// Create the command list.
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
 	// Create the vertex buffer.
 	ComPtr<ID3D12Resource> vertexUploadHeap;
@@ -321,7 +325,7 @@ void TiledRendering::LoadAssets()
 
 		const UINT vertexBufferSize = sizeof(triangleVertices);
 
-		ThrowIfFailed(m_device->CreateCommittedResource(
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
@@ -331,7 +335,7 @@ void TiledRendering::LoadAssets()
 
 		const UINT64 vertexUploadBufferSize = GetRequiredIntermediateSize(m_vertexBuffer.Get(), 0, 1);
 
-		ThrowIfFailed(m_device->CreateCommittedResource(
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(vertexUploadBufferSize),
@@ -393,7 +397,7 @@ void TiledRendering::LoadAssets()
 		textureDesc.SampleDesc.Quality = 0;
 		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-		ThrowIfFailed(m_device->CreateCommittedResource(
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&textureDesc,
@@ -404,7 +408,7 @@ void TiledRendering::LoadAssets()
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
 
 		// Create the GPU upload buffer.
-		ThrowIfFailed(m_device->CreateCommittedResource(
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
@@ -430,17 +434,17 @@ void TiledRendering::LoadAssets()
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
-		m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeapTex2D->GetCPUDescriptorHandleForHeapStart());
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeapTex2D->GetCPUDescriptorHandleForHeapStart());
 	}
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Create the constant buffer
 	{
-		ThrowIfFailed(m_device->CreateCommittedResource(
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
@@ -452,7 +456,7 @@ void TiledRendering::LoadAssets()
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 		cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = (sizeof(CBuffer) + 255) & ~255;    // CB size is required to be 256-byte aligned.
-		m_device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
 
 		CD3DX12_RANGE readRange(0, 0);
 		ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
@@ -462,7 +466,7 @@ void TiledRendering::LoadAssets()
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
-		ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		++m_fenceValue[m_frameIndex];
 
 		// Create an event handle to use for frame synchronization.
@@ -540,7 +544,7 @@ void TiledRendering::LoadImGUI()
 
 	// Setup Platform/Renderer bindings
 	ImGui_ImplWin32_Init(Win32Application::GetHwnd());
-	ImGui_ImplDX12_Init(m_device.Get(), FrameCount,
+	ImGui_ImplDX12_Init(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), FrameCount,
 		DXGI_FORMAT_R8G8B8A8_UNORM, m_srvHeap.Get(),
 		m_srvHeap->GetCPUDescriptorHandleForHeapStart(),
 		m_srvHeap->GetGPUDescriptorHandleForHeapStart());
@@ -578,10 +582,10 @@ void TiledRendering::OnRender()
 
 	// Execute the command list.
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(1, 0));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->Present(1, 0));
 
 	//WaitForPreviousFrame();
 	MoveToNextFrame();
@@ -594,12 +598,14 @@ void TiledRendering::OnDestroy()
 	//WaitForPreviousFrame();
 	WaitForGpu();
 
+
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
 
 	CloseHandle(m_fenceEvent);
+	IGraphics::g_GraphicsCore->Shutdown();
 }
 
 void TiledRendering::PopulateCommandList()
@@ -679,7 +685,7 @@ void TiledRendering::PopulateCommandList()
 void TiledRendering::WaitForGpu()
 {
 	// Schedule a Signal command in the queue
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValue[m_frameIndex]));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandQueue->Signal(m_fence.Get(), m_fenceValue[m_frameIndex]));
 
 	// Wait Until the fence has been processed
 	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
@@ -694,10 +700,10 @@ void TiledRendering::MoveToNextFrame()
 {
 	// Schedule a Singal command in the queue.
 	const UINT64 currentFenceValue = m_fenceValue[m_frameIndex];
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandQueue->Signal(m_fence.Get(), currentFenceValue));
 
 	// Update the frame index;
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
 
 	// If the next frame is not ready to be rendered yet, wait until it is ready.
 	if (m_fence->GetCompletedValue() < m_fenceValue[m_frameIndex])

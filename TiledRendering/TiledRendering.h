@@ -10,6 +10,7 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
+#include "GraphicsCore.h"
 #include "Camera.h"
 
 #define DX12_ENABLE_DEBUG_LAYER
@@ -38,7 +39,7 @@ public:
     void ShowImGUI();
 
 private:
-    static const UINT FrameCount = 2;
+    static const UINT FrameCount = 3;
 
     static const UINT TextureWidth = 256;
     static const UINT TextureHeight = 256;
@@ -61,11 +62,11 @@ private:
     // Pipeline objects.
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissorRect;
-    ComPtr<IDXGISwapChain3> m_swapChain;
-    ComPtr<ID3D12Device> m_device;
+    //ComPtr<IDXGISwapChain3> m_swapChain;
+    //ComPtr<ID3D12Device> m_device;
     ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
     ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
-    ComPtr<ID3D12CommandQueue> m_commandQueue;
+    //ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
     ComPtr<ID3D12DescriptorHeap> m_srvHeap;
@@ -106,4 +107,3 @@ private:
     void MoveToNextFrame();
 
 };
-

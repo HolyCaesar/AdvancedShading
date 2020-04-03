@@ -13,7 +13,7 @@ namespace IGraphics
 			if (m_gcInstance == nullptr)
 			{
 				std::lock_guard<std::mutex> lock(m_mutex);
-				if(m_gcInstance) m_gcInstance = new GraphicsCore();
+				if(!m_gcInstance) m_gcInstance = new GraphicsCore();
 			}
 			return m_gcInstance;
 		}
@@ -32,15 +32,19 @@ namespace IGraphics
 		float GetFrameTime(void);
 
 		ComPtr<ID3D12Device> g_pD3D12Device;
-		//CommandListManager m_CommandManager;
+		ComPtr<IDXGISwapChain3> g_pSwapChain;
+		ComPtr<ID3D12CommandQueue> g_commandQueue;
+		HWND g_hwnd;
 
-	private:
-		static GraphicsCore* m_gcInstance;
-		static std::mutex m_mutex;
+		//CommandListManager m_CommandManager;
 
 		float s_FrameTime = 0.0f;
 		uint64_t s_FrameIndex = 0;
 		int64_t s_FrameStartTick = 0;
+
+	private:
+		static GraphicsCore* m_gcInstance;
+		static std::mutex m_mutex;
 
 	private:
 		GraphicsCore() = default;

@@ -54,6 +54,9 @@ namespace IGraphics
 		}
 #endif
 
+		/*
+		* D3D12 Device Creation
+		*/
 		ComPtr<IDXGIFactory4> factory;
 		ASSERT_SUCCEEDED(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
@@ -96,6 +99,45 @@ namespace IGraphics
 			));
 			g_pD3D12Device = pDevice.Detach();
 		}
+
+
+		/*
+		* Describe and create the command queue.
+		*/
+		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+		ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&g_commandQueue)));
+
+		/*
+		* D3D12 SwapChain Creation
+		*/
+		// Describe and create the swap chain.
+		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
+		swapChainDesc.Width = m_DisplayWidth;
+		swapChainDesc.Height = m_DisplayHeight;
+		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.SampleDesc.Count = 1;
+
+		ComPtr<IDXGISwapChain1> swapChain;
+		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
+			g_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+			g_hwnd,
+			&swapChainDesc,
+			nullptr,
+			nullptr,
+			&swapChain
+		));
+
+		// This sample does not support fullscreen transitions.
+		ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
+
+		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
+		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
 	}
 
 	void GraphicsCore::Terminate(void)
@@ -116,8 +158,8 @@ namespace IGraphics
 			debugInterface->Release();
 		}
 #endif
-
 		SAFE_RELEASE(g_pD3D12Device);
+		if (m_gcInstance) delete m_gcInstance;
 	}
 
 	void GraphicsCore::Present(void)
