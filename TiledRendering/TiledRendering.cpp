@@ -322,7 +322,6 @@ void TiledRendering::LoadAssets()
 			{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, {0.0f, 1.0f } }
 		};
 
-
 		const UINT vertexBufferSize = sizeof(triangleVertices);
 
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(

@@ -101,7 +101,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\DXUT\Core;..\..\DXUT\Optional;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\DXUT\Core;..\..\DXUT\Optional;..\Core;..\Model</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\MiniEngineMath\Frustum.cpp" />
+    <ClCompile Include="..\Model\Model.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
@@ -186,6 +187,8 @@
     <ClInclude Include="..\MiniEngineMath\Scalar.h" />
     <ClInclude Include="..\MiniEngineMath\Transform.h" />
     <ClInclude Include="..\MiniEngineMath\Vector.h" />
+    <ClInclude Include="..\Model\Model.h" />
+    <ClInclude Include="..\Model\OBJ_Loader.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraController.h" />
     <ClInclude Include="d3dx12.h" />
