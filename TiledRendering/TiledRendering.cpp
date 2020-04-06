@@ -83,78 +83,78 @@ void TiledRendering::LoadPipeline()
 	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
 	IGraphics::g_GraphicsCore->Initialize();
 
-//#if defined(_DEBUG)
-//	// Enable the debug layer (requires the Graphics Tools "optional feature").
-//	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
-//	{
-//		ComPtr<ID3D12Debug> debugController;
-//		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-//		{
-//			debugController->EnableDebugLayer();
-//
-//			// Enable additional debug layers.
-//			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-//		}
-//	}
-//#endif
-//
-//	ComPtr<IDXGIFactory4> factory;
-//	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
-//
-//	if (m_useWarpDevice)
-//	{
-//		ComPtr<IDXGIAdapter> warpAdapter;
-//		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-//
-//		ThrowIfFailed(D3D12CreateDevice(
-//			warpAdapter.Get(),
-//			D3D_FEATURE_LEVEL_11_0,
-//			IID_PPV_ARGS(&m_device)
-//		));
-//	}
-//	else
-//	{
-//		ComPtr<IDXGIAdapter1> hardwareAdapter;
-//		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
-//
-//		ThrowIfFailed(D3D12CreateDevice(
-//			hardwareAdapter.Get(),
-//			D3D_FEATURE_LEVEL_11_0,
-//			IID_PPV_ARGS(&m_device)
-//		));
-//	}
-//	
-//	// Describe and create the command queue.
-//	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-//	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-//	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-//
-//	ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
-//
-//	// Describe and create the swap chain.
-//	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-//	swapChainDesc.BufferCount = FrameCount;
-//	swapChainDesc.Width = m_width;
-//	swapChainDesc.Height = m_height;
-//	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-//	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-//	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-//	swapChainDesc.SampleDesc.Count = 1;
-//
-//	ComPtr<IDXGISwapChain1> swapChain;
-//	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-//		m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-//		Win32Application::GetHwnd(),
-//		&swapChainDesc,
-//		nullptr,
-//		nullptr,
-//		&swapChain
-//	));
-//
-//	// This sample does not support fullscreen transitions.
-//	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
-//
-//	ThrowIfFailed(swapChain.As(&m_swapChain));
+	//#if defined(_DEBUG)
+	//	// Enable the debug layer (requires the Graphics Tools "optional feature").
+	//	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
+	//	{
+	//		ComPtr<ID3D12Debug> debugController;
+	//		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+	//		{
+	//			debugController->EnableDebugLayer();
+	//
+	//			// Enable additional debug layers.
+	//			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+	//		}
+	//	}
+	//#endif
+	//
+	//	ComPtr<IDXGIFactory4> factory;
+	//	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+	//
+	//	if (m_useWarpDevice)
+	//	{
+	//		ComPtr<IDXGIAdapter> warpAdapter;
+	//		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+	//
+	//		ThrowIfFailed(D3D12CreateDevice(
+	//			warpAdapter.Get(),
+	//			D3D_FEATURE_LEVEL_11_0,
+	//			IID_PPV_ARGS(&m_device)
+	//		));
+	//	}
+	//	else
+	//	{
+	//		ComPtr<IDXGIAdapter1> hardwareAdapter;
+	//		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+	//
+	//		ThrowIfFailed(D3D12CreateDevice(
+	//			hardwareAdapter.Get(),
+	//			D3D_FEATURE_LEVEL_11_0,
+	//			IID_PPV_ARGS(&m_device)
+	//		));
+	//	}
+	//	
+	//	// Describe and create the command queue.
+	//	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+	//	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	//	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	//
+	//	ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+	//
+	//	// Describe and create the swap chain.
+	//	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+	//	swapChainDesc.BufferCount = FrameCount;
+	//	swapChainDesc.Width = m_width;
+	//	swapChainDesc.Height = m_height;
+	//	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	//	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	//	swapChainDesc.SampleDesc.Count = 1;
+	//
+	//	ComPtr<IDXGISwapChain1> swapChain;
+	//	ThrowIfFailed(factory->CreateSwapChainForHwnd(
+	//		m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+	//		Win32Application::GetHwnd(),
+	//		&swapChainDesc,
+	//		nullptr,
+	//		nullptr,
+	//		&swapChain
+	//	));
+	//
+	//	// This sample does not support fullscreen transitions.
+	//	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+	//
+	//	ThrowIfFailed(swapChain.As(&m_swapChain));
 	m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
 
 	// Create descriptor heaps.
@@ -285,8 +285,11 @@ void TiledRendering::LoadAssets()
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
+			//{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			//{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
@@ -313,16 +316,12 @@ void TiledRendering::LoadAssets()
 
 	// Create the vertex buffer.
 	ComPtr<ID3D12Resource> vertexUploadHeap;
+	ComPtr<ID3D12Resource> indexUploadHeap;
+	m_pModel = make_shared<Model>();
 	{
-		// Define the geometry for a triangle.
-		Vertex triangleVertices[] =
-		{
-			{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.5f, 0.0f } },
-			{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-			{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, {0.0f, 1.0f } }
-		};
+		m_pModel->Load("bunny.obj");
 
-		const UINT vertexBufferSize = sizeof(triangleVertices);
+		const UINT vertexBufferSize = m_pModel->m_Header.vertexDataByteSize;
 
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -344,38 +343,163 @@ void TiledRendering::LoadAssets()
 
 
 		D3D12_SUBRESOURCE_DATA vertexData = {};
-		vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
-		vertexData.RowPitch = 3 * sizeof(triangleVertices) / sizeof(triangleVertices[0]);
+		//vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
+		//vertexData.RowPitch = 3 * sizeof(triangleVertices) / sizeof(triangleVertices[0]);
+		//vertexData.SlicePitch = vertexData.RowPitch;
+		vertexData.pData = reinterpret_cast<BYTE*>(m_pModel->m_vecVertexData.data());
+		vertexData.RowPitch = vertexBufferSize;
 		vertexData.SlicePitch = vertexData.RowPitch;
 
 		UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
-
-		//const UINT vertexBufferSize = sizeof(triangleVertices);
-		//// Note: using upload heaps to transfer static data like vert buffers is not 
-		//// recommended. Every time the GPU needs it, the upload heap will be marshalled 
-		//// over. Please read up on Default Heap usage. An upload heap is used here for 
-		//// code simplicity and because there are very few verts to actually transfer.
-		//ThrowIfFailed(m_device->CreateCommittedResource(
-		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		//	D3D12_HEAP_FLAG_NONE,
-		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-		//	D3D12_RESOURCE_STATE_GENERIC_READ,
-		//	nullptr,
-		//	IID_PPV_ARGS(&m_vertexBuffer)));
-
-		//// Copy the triangle data to the vertex buffer.
-		//UINT8* pVertexDataBegin;
-		//CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-		//ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-		//memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
-		//m_vertexBuffer->Unmap(0, nullptr);
-
 		// Initialize the vertex buffer view.
 		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
+
+		// Upload index buffer data.
+		const UINT indexBufferSize = m_pModel->m_Header.indexDataByteSize;
+
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&m_indexBuffer)));
+
+		const UINT64 indexUploadBufferSize = GetRequiredIntermediateSize(m_indexBuffer.Get(), 0, 1);
+
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(indexUploadBufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&indexUploadHeap)));
+
+
+		D3D12_SUBRESOURCE_DATA indexData = {};
+		indexData.pData = reinterpret_cast<BYTE*>(m_pModel->m_vecIndexData.data());
+		indexData.RowPitch = indexBufferSize;
+		indexData.SlicePitch = indexData.RowPitch;
+
+		UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), indexUploadHeap.Get(), 0, 0, 1, &indexData);
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		// Create index buffer view.
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		m_indexBufferView.SizeInBytes = indexBufferSize;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		//Vertex triangleVertices[] =
+		//{
+		//	{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 0
+		//	{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 1
+		//	{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 2
+		//	{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 3
+		//	{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }, // 4
+		//	{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }, // 5
+		//	{ XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }, // 6
+		//	{ XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }  // 7
+		//};
+
+
+
+		//WORD g_Indicies[36] =
+		//{
+		//	0, 1, 2, 0, 2, 3,
+		//	4, 6, 5, 4, 7, 6,
+		//	4, 5, 1, 4, 1, 0,
+		//	3, 2, 6, 3, 6, 7,
+		//	1, 5, 6, 1, 6, 2,
+		//	4, 0, 3, 4, 3, 7
+		//};
+
+		//const UINT vertexBufferSize = sizeof(triangleVertices);
+
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+		//	D3D12_RESOURCE_STATE_COPY_DEST,
+		//	nullptr,
+		//	IID_PPV_ARGS(&m_vertexBuffer)));
+
+		//const UINT64 vertexUploadBufferSize = GetRequiredIntermediateSize(m_vertexBuffer.Get(), 0, 1);
+
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexUploadBufferSize),
+		//	D3D12_RESOURCE_STATE_GENERIC_READ,
+		//	nullptr,
+		//	IID_PPV_ARGS(&vertexUploadHeap)));
+
+
+		//D3D12_SUBRESOURCE_DATA vertexData = {};
+		//vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
+		//vertexData.RowPitch = sizeof(triangleVertices);
+		//vertexData.SlicePitch = vertexData.RowPitch;
+
+		//UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
+		//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		//// Initialize the vertex buffer view.
+		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+		//m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+		//m_vertexBufferView.SizeInBytes = vertexBufferSize;
+
+
+
+		//// Upload index buffer data.
+		//const UINT indexBufferSize = sizeof(g_Indicies);
+
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
+		//	D3D12_RESOURCE_STATE_COPY_DEST,
+		//	nullptr,
+		//	IID_PPV_ARGS(&m_indexBuffer)));
+
+		//const UINT64 indexUploadBufferSize = GetRequiredIntermediateSize(m_indexBuffer.Get(), 0, 1);
+
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Buffer(indexUploadBufferSize),
+		//	D3D12_RESOURCE_STATE_GENERIC_READ,
+		//	nullptr,
+		//	IID_PPV_ARGS(&indexUploadHeap)));
+
+
+		//D3D12_SUBRESOURCE_DATA indexData = {};
+		//indexData.pData = reinterpret_cast<BYTE*>(g_Indicies);
+		//indexData.RowPitch = sizeof(g_Indicies);
+		//indexData.SlicePitch = indexData.RowPitch;
+
+		//UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), indexUploadHeap.Get(), 0, 0, 1, &indexData);
+		//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		//// Create index buffer view.
+		//m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		//m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		//m_indexBufferView.SizeInBytes = sizeof(g_Indicies);
 	}
 
 	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
@@ -483,7 +607,7 @@ void TiledRendering::LoadAssets()
 		m_modelViewCamera.SetViewParams(s_Eye, s_At);
 		// Setup the camera's projection parameters
 		float fAspectRatio = m_width / (float)m_height;
-		m_modelViewCamera.SetProjParams(XM_PI / 4, fAspectRatio, 0.01f, 1000.0f);
+		m_modelViewCamera.SetProjParams(XM_PI / 4, fAspectRatio, 0.01f, 10000.0f);
 		m_modelViewCamera.SetWindow(m_width, m_height);
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
 
@@ -555,9 +679,14 @@ void TiledRendering::OnUpdate()
 {
 	m_modelViewCamera.FrameMove(ImGui::GetIO().DeltaTime);
 
-	XMMATRIX world = XMMatrixIdentity(), view = m_modelViewCamera.GetViewMatrix(), proj = m_modelViewCamera.GetProjMatrix();
+	static XMMATRIX rotMat = XMMatrixRotationY(0.001f);
+	static XMMATRIX world = XMMatrixIdentity();
+
+	world = rotMat * world;
+	//XMMATRIX world = XMMatrixIdentity(), view = m_modelViewCamera.GetViewMatrix(), proj = m_modelViewCamera.GetProjMatrix();
+	XMMATRIX view = m_modelViewCamera.GetViewMatrix(), proj = m_modelViewCamera.GetProjMatrix();
 	m_constantBufferData.worldMatrix = world;
-	m_constantBufferData.worldViewProjMatrix = XMMatrixTranspose(world * view * proj);
+	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
 	memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 
 	//const float translationSpeed = 0.005f;
@@ -603,6 +732,9 @@ void TiledRendering::OnDestroy()
 	ImGui::DestroyContext();
 
 
+	m_pModel.reset();
+
+
 	CloseHandle(m_fenceEvent);
 	IGraphics::g_GraphicsCore->Shutdown();
 }
@@ -631,13 +763,13 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
 	m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeapTex2D->GetGPUDescriptorHandleForHeapStart());
 
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
 	// Indicate that the back buffer will be used as a render target.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+	m_commandList->RSSetViewports(1, &m_viewport);
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 	// Record commands.
@@ -645,9 +777,14 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	m_commandList->DrawInstanced(3, 1, 0, 0);
+	m_commandList->IASetIndexBuffer(&m_indexBufferView);
 
-	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	//m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
+	//m_commandList->DrawIndexedInstanced(m_pModel->m_vecIndexData.size(), 1, 0, 0, 0);
+	//m_commandList->DrawInstanced(36, 1, 0, 0);
+	m_commandList->DrawInstanced(m_pModel->m_vecVertexData.size(), 1, 0, 0);
+
 	ImGui::Render();
 	m_commandList->SetDescriptorHeaps(1, m_srvHeap.GetAddressOf());
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());

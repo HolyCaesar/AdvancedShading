@@ -12,6 +12,7 @@
 
 #include "GraphicsCore.h"
 #include "Camera.h"
+#include "Model.h"
 
 #define DX12_ENABLE_DEBUG_LAYER
 
@@ -48,7 +49,7 @@ private:
     struct Vertex
     {
         XMFLOAT3 position;
-        XMFLOAT4 color;
+        XMFLOAT3 color;
         XMFLOAT2 uv;
     };
 
@@ -79,6 +80,8 @@ private:
     // App resources.
     ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+    ComPtr<ID3D12Resource> m_indexBuffer;
+    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
     ComPtr<ID3D12Resource> m_texture;
 
     ComPtr<ID3D12Resource> m_constantBuffer;
@@ -95,6 +98,9 @@ private:
     // DXUT Model-View Camera
     CModelViewerCamera m_modelViewCamera;
     IMath::Camera m_perspectiveCamera;
+
+    // Model
+    shared_ptr<Model> m_pModel;
 
     void LoadPipeline();
     void LoadAssets();

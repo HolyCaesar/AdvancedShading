@@ -18,20 +18,27 @@ cbuffer ConstBuffer : register(b0)
     //float4 offset;
 };
 
+//struct PSInput
+//{
+//    float4 position : SV_POSITION;
+//    float4 color : COLOR;
+//    float2 tex :TEXTURE0;
+//};
+
 struct PSInput
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
+    float3 normal : NORMAL;
     float2 tex :TEXTURE0;
 };
 
-PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 tex : TEXCOORD)
+PSInput VSMain(float3 position : POSITION, float3 normal : NORMAL, float2 tex : TEXCOORD)
 {
     PSInput result;
 
-    result.position = mul(World, position);
+    result.position = mul(World, float4(position, 1.0f));
     result.position = mul(WorldViewProj, result.position);
-    result.color = color;
+    result.normal = normal;
     result.tex = tex;
 
     return result;
@@ -40,5 +47,6 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 tex : TE
 float4 PSMain(PSInput input) : SV_TARGET
 {
     //return input.color;
-    return g_texture.Sample(g_sampler, input.tex);
+    //return g_texture.Sample(g_sampler, input.tex);
+    return float4(1.0f, 1.0f, 0.0f, 1.0f);
 }
