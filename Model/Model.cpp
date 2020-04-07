@@ -119,7 +119,6 @@ bool Model::LoadObjModel(const string model_file_path)
 		meshInfo.boundingBox.minPt = Scalar((numeric_limits<float>::max)());
 		meshInfo.boundingBox.maxPt = Scalar((numeric_limits<float>::min)());
 
-		int vCnt(0), iCnt(0);
 		// Load Vertex
 		for (auto vex : curMesh.Vertices)
 		{
@@ -134,7 +133,6 @@ bool Model::LoadObjModel(const string model_file_path)
 			AABBMax.x = max(AABBMax.x, bv.position.x);
 			AABBMax.y = max(AABBMax.y, bv.position.y);
 			AABBMax.z = max(AABBMax.z, bv.position.z);
-			++vCnt;
 		}
 
 		float cX = (AABBMax.x + AABBMin.x) / 2.0f;
@@ -156,7 +154,6 @@ bool Model::LoadObjModel(const string model_file_path)
 			indices.push_back(curMesh.Indices[i]);
 			indices.push_back(curMesh.Indices[i + 1]);
 			indices.push_back(curMesh.Indices[i + 2]);
-			++iCnt;
 		}
 
 		meshInfo.boundingBox.minPt.SetX(AABBMin.x);
@@ -167,10 +164,10 @@ bool Model::LoadObjModel(const string model_file_path)
 		meshInfo.boundingBox.maxPt.SetZ(AABBMax.z);
 		
 		// meshInfo.materialIndex = ??;
-		meshInfo.vertexDataByteOffset = sizeof(Vertex) * vCnt;
-		meshInfo.vertexCount = vCnt;
-		meshInfo.indexDataByteOffset = sizeof(uint32_t) * iCnt;
-		meshInfo.indexCount = iCnt;
+		meshInfo.vertexDataByteOffset = sizeof(Vertex) * vertices.size();
+		meshInfo.vertexCount = vertices.size();
+		meshInfo.indexDataByteOffset = sizeof(uint32_t) * indices.size();
+		meshInfo.indexCount = indices.size();
 		meshInfo.vertexStride = sizeof(Vertex);
 
 		m_vMeshes.push_back(meshInfo);

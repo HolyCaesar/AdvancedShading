@@ -207,17 +207,6 @@ void TiledRendering::LoadPipeline()
 // Load the sample assets.
 void TiledRendering::LoadAssets()
 {
-	//// Create an empty root signature.
-	//{
-	//    CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	//    rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	//    ComPtr<ID3DBlob> signature;
-	//    ComPtr<ID3DBlob> error;
-	//    ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-	//    ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
-	//}
-
 	// Create a root signature consisting of a descriptor table with a single CBV
 	{
 		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -279,8 +268,33 @@ void TiledRendering::LoadAssets()
 		UINT compileFlags = 0;
 #endif
 
+#if defined(_DEBUG)
+		ComPtr<ID3DBlob> errorMessages;
+		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorMessages);
+		if (FAILED(hr) && errorMessages)
+		{
+			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 150; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+		}
+		errorMessages.Reset();
+		errorMessages = nullptr;
+
+		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &errorMessages);
+		if (FAILED(hr) && errorMessages)
+		{
+			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 150; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+		}
+#else
 		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
 		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+#endif
 
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -386,7 +400,7 @@ void TiledRendering::LoadAssets()
 		indexData.SlicePitch = indexData.RowPitch;
 
 		UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), indexUploadHeap.Get(), 0, 0, 1, &indexData);
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER));
 
 		// Create index buffer view.
 		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
@@ -611,7 +625,6 @@ void TiledRendering::LoadAssets()
 		m_modelViewCamera.SetWindow(m_width, m_height);
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
 
-
 		LoadImGUI();
 	}
 }
@@ -671,7 +684,6 @@ void TiledRendering::LoadImGUI()
 		DXGI_FORMAT_R8G8B8A8_UNORM, m_srvHeap.Get(),
 		m_srvHeap->GetCPUDescriptorHandleForHeapStart(),
 		m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-
 }
 
 // Update frame-based values.
@@ -688,16 +700,6 @@ void TiledRendering::OnUpdate()
 	m_constantBufferData.worldMatrix = world;
 	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
 	memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
-
-	//const float translationSpeed = 0.005f;
-	//const float offsetBounds = 1.25f;
-
-	//m_constantBufferData.offset.x += translationSpeed;
-	//if (m_constantBufferData.offset.x > offsetBounds)
-	//{
-	//    m_constantBufferData.offset.x = -offsetBounds;
-	//}
-	//memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 }
 
 // Render the scene.
@@ -781,8 +783,6 @@ void TiledRendering::PopulateCommandList()
 
 
 	//m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
-	//m_commandList->DrawIndexedInstanced(m_pModel->m_vecIndexData.size(), 1, 0, 0, 0);
-	//m_commandList->DrawInstanced(36, 1, 0, 0);
 	m_commandList->DrawInstanced(m_pModel->m_vecVertexData.size(), 1, 0, 0);
 
 	ImGui::Render();
