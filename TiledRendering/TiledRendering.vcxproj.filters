@@ -182,6 +182,9 @@
     <ClInclude Include="..\Model\OBJ_Loader.h">
       <Filter>Model</Filter>
     </ClInclude>
+    <ClInclude Include="GpuResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders.hlsl">

@@ -98,14 +98,14 @@ public:
 
 protected:
 	bool LoadObjModel(const std::string filename);
-	bool SaveObjModel(const std::string filename) const {}
+	//bool SaveObjModel(const std::string filename) const {}
 
 	void ComputeMeshBoundingBox(unsigned int meshIndex, BoundingBox& bbox) const;
 	void ComputeGlobalBoundingBox(BoundingBox& bbox) const;
 	void ComputeAllBoundingBoxes();
 
-	void ReleaseTextures() {}
-	void LoadTextures() {}
+	void ReleaseTextures() { /*TODO*/ }
+	void LoadTextures() { /*TODO*/ }
 	vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRVs;
 };
 

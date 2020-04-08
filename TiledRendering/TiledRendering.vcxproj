@@ -194,6 +194,7 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DXSampleHelper.h" />
+    <ClInclude Include="GpuResource.h" />
     <ClInclude Include="GraphicsCore.h" />
     <ClInclude Include="imconfig.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
