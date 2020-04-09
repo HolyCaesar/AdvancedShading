@@ -87,6 +87,9 @@
     <ClCompile Include="GpuResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GpuBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -186,6 +189,9 @@
       <Filter>Model</Filter>
     </ClInclude>
     <ClInclude Include="GpuResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GpuBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
