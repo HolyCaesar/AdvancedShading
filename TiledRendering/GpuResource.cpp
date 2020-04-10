@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utility.h"
 #include "GraphicsCore.h"
 #include "GpuResource.h"
 #include <fstream>
@@ -389,6 +388,88 @@ void PixelBuffer::ExportToFile(const std::wstring& FilePath)
 /*
 * Color Buffer
 */
+void ColorBuffer::CreateDerivedViews(ID3D12Device* pD3D12Device, DXGI_FORMAT Format, uint32_t ArraySize, uint32_t NumMips)
+{
+    ASSERT(ArraySize == 1 || NumMips == 1, "We don't support auto-mips on texture arrays");
+    
+    m_NumMipMaps = NumMips - 1;
+
+    D3D12_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+    D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+    D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+
+    RTVDesc.Format = Format;
+    UAVDesc.Format = GetUAVFormat(Format);
+    SRVDesc.Format = Format;
+    SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+    if (ArraySize > 1)
+    {
+        RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+        RTVDesc.Texture2DArray.MipSlice = 0;
+        RTVDesc.Texture2DArray.FirstArraySlice = 0;
+        RTVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
+
+        UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        UAVDesc.Texture2DArray.MipSlice = 0;
+        UAVDesc.Texture2DArray.FirstArraySlice = 0;
+        UAVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
+
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+        SRVDesc.Texture2DArray.MipLevels = NumMips;
+        SRVDesc.Texture2DArray.MostDetailedMip = 0;
+        SRVDesc.Texture2DArray.FirstArraySlice = 0;
+        SRVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
+    }
+    else if (m_FragmentCount > 1)
+    {
+        RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+    }
+    else
+    {
+        RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        RTVDesc.Texture2D.MipSlice = 0;
+
+        UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+        UAVDesc.Texture2D.MipSlice = 0;
+
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        SRVDesc.Texture2D.MipLevels = NumMips;
+        SRVDesc.Texture2D.MostDetailedMip = 0;
+    }
+
+    if (m_SRVHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+    {
+        // TODO need to implement allocateDescriptor in graphics core.
+        //m_RTVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        //m_SRVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    }
+
+    ID3D12Resource* Resource = m_pResource.Get();
+    
+    // Create the render target view
+    IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(Resource, &RTVDesc, m_RTVHandle);
+    // Create the shader resource view
+    IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(Resource, &SRVDesc, m_SRVHandle);
+
+    if (m_FragmentCount > 1)
+        return;
+
+    // Create the UAVs for each mip level (RWTexture2D)
+    for (uint32_t i = 0; i < NumMips; ++i)
+    {
+        // TODO need to implement allocateDescriptor in graphics core
+        //if (m_UAVHandle[i].ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+        //    m_UAVHandle[i] = IGraphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+        IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(Resource, nullptr, &UAVDesc, m_UAVHandle[i]);
+
+        UAVDesc.Texture2D.MipSlice++;
+    }
+}
+
+
 void ColorBuffer::CreateFromSwapChain(const std::wstring& Name, ID3D12Resource* BaseResource)
 {
     AssociateWithResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, BaseResource, D3D12_RESOURCE_STATE_PRESENT);
