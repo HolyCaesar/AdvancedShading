@@ -32,9 +32,29 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 	);
 
 	m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
+
+
 	if (initialData)
 	{
-		// TODO need to implement uploaded heap
+		ComPtr<ID3D12Resource> uploadHeap;
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_pResource.Get(), 0, 1);
+
+		// Create the GPU upload buffer.
+		ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&uploadHeap)));
+
+		D3D12_SUBRESOURCE_DATA rawData = {};
+		rawData.pData = reinterpret_cast<const BYTE*>(initialData);
+		rawData.RowPitch = m_BufferSize;
+		rawData.SlicePitch = rawData.RowPitch;
+
+		UpdateSubresources(IGraphics::g_GraphicsCore->g_commandList.Get(), m_pResource.Get(), uploadHeap.Get(), 0, 0, 1, &rawData);
+		IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER));
 	}
 }
 

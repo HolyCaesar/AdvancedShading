@@ -34,6 +34,7 @@ namespace IGraphics
 		ComPtr<ID3D12Device> g_pD3D12Device;
 		ComPtr<IDXGISwapChain3> g_pSwapChain;
 		ComPtr<ID3D12CommandQueue> g_commandQueue;
+		ComPtr<ID3D12GraphicsCommandList> g_commandList;
 		HWND g_hwnd;
 
 		//CommandListManager m_CommandManager;
