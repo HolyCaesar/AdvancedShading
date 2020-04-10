@@ -97,3 +97,8 @@ protected:
     DXGI_FORMAT m_Format;
     uint32_t m_BankRotation;
 };
+
+class ColorBuffer : public PixelBuffer
+{
+
+};
