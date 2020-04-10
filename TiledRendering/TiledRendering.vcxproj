@@ -151,6 +151,7 @@
     <ClCompile Include="..\Model\Model.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraController.cpp" />
+    <ClCompile Include="Color.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="GpuBuffer.cpp" />
     <ClCompile Include="GpuResource.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="..\Model\OBJ_Loader.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraController.h" />
+    <ClInclude Include="Color.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DXSampleHelper.h" />

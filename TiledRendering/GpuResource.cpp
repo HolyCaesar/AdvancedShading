@@ -384,3 +384,62 @@ void PixelBuffer::ExportToFile(const std::wstring& FilePath)
     //// No values were written to the buffer, so use a null range when unmapping.
     //TempBuffer.Unmap();
 }
+
+
+/*
+* Color Buffer
+*/
+void ColorBuffer::CreateFromSwapChain(const std::wstring& Name, ID3D12Resource* BaseResource)
+{
+    AssociateWithResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, BaseResource, D3D12_RESOURCE_STATE_PRESENT);
+
+    //m_UAVHandle[0] = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    //Graphics::g_Device->CreateUnorderedAccessView(m_pResource.Get(), nullptr, nullptr, m_UAVHandle[0]);
+
+    // TODO implement allocateDescriptor later
+    //m_RTVHandle = IGraphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(m_pResource.Get(), nullptr, m_RTVHandle);
+}
+
+void ColorBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t NumMips,
+    DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMem)
+{
+    NumMips = (NumMips == 0 ? ComputeNumMips(Width, Height) : NumMips);
+    D3D12_RESOURCE_FLAGS Flags = CombineResourceFlags();
+    D3D12_RESOURCE_DESC ResourceDesc = Tex2DDescription(Width, Height, 1, NumMips, Format, Flags);
+
+    ResourceDesc.SampleDesc.Count = m_FragmentCount;
+    ResourceDesc.SampleDesc.Quality = 0;
+
+    D3D12_CLEAR_VALUE ClearValue = {};
+    ClearValue.Format = Format;
+    ClearValue.Color[0] = m_ClearColor.R();
+    ClearValue.Color[1] = m_ClearColor.G();
+    ClearValue.Color[2] = m_ClearColor.B();
+    ClearValue.Color[3] = m_ClearColor.A();
+
+    CreateTextureResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, ResourceDesc, ClearValue, VidMem);
+    CreateDerivedViews(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Format, 1, NumMips);
+}
+
+void ColorBuffer::CreateArray(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t ArrayCount,
+    DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMem)
+{
+    D3D12_RESOURCE_FLAGS Flags = CombineResourceFlags();
+    D3D12_RESOURCE_DESC ResourceDesc = Tex2DDescription(Width, Height, ArrayCount, 1, Format, Flags);
+
+    D3D12_CLEAR_VALUE ClearValue = {};
+    ClearValue.Format = Format;
+    ClearValue.Color[0] = m_ClearColor.R();
+    ClearValue.Color[1] = m_ClearColor.G();
+    ClearValue.Color[2] = m_ClearColor.B();
+    ClearValue.Color[3] = m_ClearColor.A();
+
+    CreateTextureResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, ResourceDesc, ClearValue, VidMem);
+    CreateDerivedViews(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Format, ArrayCount, 1);
+}
+
+//void ColorBuffer::GenerateMipMaps()
+//{
+//    // TODO
+//}

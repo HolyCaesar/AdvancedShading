@@ -14,6 +14,7 @@
 #pragma once
 
 #include <DirectXMath.h>
+#define INLINE __forceinline
 
 using namespace DirectX;
 

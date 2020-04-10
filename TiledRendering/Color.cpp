@@ -11,7 +11,8 @@
 // Author:  James Stanard 
 //
 
-#include "pch.h"
+#include "stdafx.h"
+#include "VectorMath.h"
 #include "Color.h"
 
 using DirectX::XMVECTORU32;
@@ -24,9 +25,9 @@ uint32_t Color::R11G11B10F(bool RoundToEven) const
 
     union { float f; uint32_t u; } R, G, B;
 
-    R.f = Math::Clamp(m_value.f[0], 0.0f, kMaxVal) * kF32toF16;
-    G.f = Math::Clamp(m_value.f[1], 0.0f, kMaxVal) * kF32toF16;
-    B.f = Math::Clamp(m_value.f[2], 0.0f, kMaxVal) * kF32toF16;
+    R.f = IMath::Clamp(m_value.f[0], 0.0f, kMaxVal) * kF32toF16;
+    G.f = IMath::Clamp(m_value.f[1], 0.0f, kMaxVal) * kF32toF16;
+    B.f = IMath::Clamp(m_value.f[2], 0.0f, kMaxVal) * kF32toF16;
 
     if (RoundToEven)
     {
@@ -88,12 +89,12 @@ uint32_t Color::R9G9B9E5() const
     static const float kMinVal = float(1.f / (1 << 16));
 
     // Clamp RGB to [0, 1.FF*2^16]
-    float r = Math::Clamp(m_value.f[0], 0.0f, kMaxVal);
-    float g = Math::Clamp(m_value.f[1], 0.0f, kMaxVal);
-    float b = Math::Clamp(m_value.f[2], 0.0f, kMaxVal);
+    float r = IMath::Clamp(m_value.f[0], 0.0f, kMaxVal);
+    float g = IMath::Clamp(m_value.f[1], 0.0f, kMaxVal);
+    float b = IMath::Clamp(m_value.f[2], 0.0f, kMaxVal);
 
     // Compute the maximum channel, no less than 1.0*2^-15
-    float MaxChannel = Math::Max(Math::Max(r, g), Math::Max(b, kMinVal));
+    float MaxChannel = IMath::Max(IMath::Max(r, g), IMath::Max(b, kMinVal));
 
     // Take the exponent of the maximum channel (rounding up the 9th bit) and
     // add 15 to it.  When added to the channels, it causes the implicit '1.0'
