@@ -394,6 +394,16 @@ void TiledRendering::LoadAssets()
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
 
+
+
+
+		m_test.Create(L"TestVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
+
+
+
+
+
+
 		// Upload index buffer data.
 		const UINT indexBufferSize = m_pModel->m_Header.indexDataByteSize;
 

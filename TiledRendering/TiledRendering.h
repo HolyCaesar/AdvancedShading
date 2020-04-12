@@ -13,6 +13,7 @@
 #include "GraphicsCore.h"
 #include "Camera.h"
 #include "Model.h"
+#include "GpuBuffer.h"
 
 #define DX12_ENABLE_DEBUG_LAYER
 
@@ -104,6 +105,7 @@ private:
 
     // Model
     shared_ptr<Model> m_pModel;
+    StructuredBuffer m_test;
 
     void LoadPipeline();
     void LoadAssets();
