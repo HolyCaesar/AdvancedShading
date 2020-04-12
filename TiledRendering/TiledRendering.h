@@ -66,8 +66,8 @@ private:
     CD3DX12_RECT m_scissorRect;
     //ComPtr<IDXGISwapChain3> m_swapChain;
     //ComPtr<ID3D12Device> m_device;
-    ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-    ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
+    ComPtr<ID3D12Resource> m_renderTargets[SWAP_CHAIN_BUFFER_COUNT];
+    ComPtr<ID3D12CommandAllocator> m_commandAllocator[SWAP_CHAIN_BUFFER_COUNT];
     //ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
@@ -94,10 +94,10 @@ private:
 
 
     // Synchronization objects.
-    UINT m_frameIndex;
-    HANDLE m_fenceEvent;
-    ComPtr<ID3D12Fence> m_fence;
-    UINT64 m_fenceValue[FrameCount];
+    //UINT m_frameIndex;
+    //HANDLE m_fenceEvent;
+    //ComPtr<ID3D12Fence> m_fence;
+    //UINT64 m_fenceValue[SWAP_CHAIN_BUFFER_COUNT];
 
     // DXUT Model-View Camera
     CModelViewerCamera m_modelViewCamera;
@@ -114,7 +114,7 @@ private:
     std::vector<UINT8> GenerateTextureData(); // For test purpose
     //void WaitForPreviousFrame();
 
-    void WaitForGpu();
-    void MoveToNextFrame();
+    //void WaitForGpu();
+    //void MoveToNextFrame();
 
 };

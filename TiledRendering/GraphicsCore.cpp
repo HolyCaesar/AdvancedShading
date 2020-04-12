@@ -138,6 +138,21 @@ namespace IGraphics
 
 		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
 		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
+
+		// Create sync objects
+		{
+			ASSERT_SUCCEEDED(g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+			++m_fenceValue[s_FrameIndex];
+
+			// Create an event handle to use for frame synchronization.
+			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			if (m_fenceEvent == nullptr)
+			{
+				ASSERT_SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
+			}
+		}
+
+		//WaitForGpu();
 	}
 
 	void GraphicsCore::Terminate(void)
@@ -150,6 +165,10 @@ namespace IGraphics
 
 	void GraphicsCore::Shutdown()
 	{
+		WaitForGpu();
+
+		CloseHandle(m_fenceEvent);
+
 #if defined(_DEBUG)
 		ID3D12DebugDevice* debugInterface;
 		if (SUCCEEDED(g_pD3D12Device->QueryInterface(&debugInterface)))
@@ -181,4 +200,63 @@ namespace IGraphics
 	{
 		return s_FrameTime;
 	}
+
+
+	// Sync functions
+	void GraphicsCore::WaitForGpu()
+	{
+		// Schedule a Signal command in the queue
+		ASSERT_SUCCEEDED(g_commandQueue->Signal(m_fence.Get(), m_fenceValue[s_FrameIndex]));
+
+		// Wait Until the fence has been processed
+		ASSERT_SUCCEEDED(m_fence->SetEventOnCompletion(m_fenceValue[s_FrameIndex], m_fenceEvent));
+		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+
+		// Increment the fence value for the current frame.
+		++m_fenceValue[s_FrameIndex];
+	}
+
+	// PRepare to render the next frame.
+	void GraphicsCore::MoveToNextFrame()
+	{
+		// Schedule a Singal command in the queue.
+		const UINT64 currentFenceValue = m_fenceValue[s_FrameIndex];
+		ASSERT_SUCCEEDED(g_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+
+		// Update the frame index;
+		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
+
+		// If the next frame is not ready to be rendered yet, wait until it is ready.
+		if (m_fence->GetCompletedValue() < m_fenceValue[s_FrameIndex])
+		{
+			ASSERT_SUCCEEDED(m_fence->SetEventOnCompletion(m_fenceValue[s_FrameIndex], m_fenceEvent));
+			WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+		}
+
+		// Set the fence value for the next frame.
+		m_fenceValue[s_FrameIndex] = currentFenceValue + 1;
+	}
 }
+
+// Old Implementation
+//void TiledRendering::WaitForPreviousFrame()
+//{
+//    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
+//    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
+//    // sample illustrates how to use fences for efficient resource usage and to
+//    // maximize GPU utilization.
+//
+//    // Signal and increment the fence value.
+//    const UINT64 fence = m_fenceValue;
+//    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
+//    m_fenceValue++;
+//
+//    // Wait until the previous frame is finished.
+//    if (m_fence->GetCompletedValue() < fence)
+//    {
+//        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+//        WaitForSingleObject(m_fenceEvent, INFINITE);
+//    }
+//
+//    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+//}

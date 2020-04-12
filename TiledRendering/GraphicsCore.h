@@ -2,6 +2,8 @@
 #include <memory>
 #include "DescriptorHeap.h"
 
+#define SWAP_CHAIN_BUFFER_COUNT 3
+
 namespace IGraphics
 {
 	using namespace Microsoft::WRL;
@@ -51,6 +53,12 @@ namespace IGraphics
 			return g_DescriptorAllocator[Type].Allocate(Count);
 		}
 
+
+		void WaitForGpu();
+		void MoveToNextFrame();
+
+
+
 		float s_FrameTime = 0.0f;
 		uint64_t s_FrameIndex = 0;
 		int64_t s_FrameStartTick = 0;
@@ -58,6 +66,11 @@ namespace IGraphics
 	private:
 		static GraphicsCore* m_gcInstance;
 		static std::mutex m_mutex;
+
+		// Synchronization objects.
+		HANDLE m_fenceEvent;
+		ComPtr<ID3D12Fence> m_fence;
+		UINT64 m_fenceValue[SWAP_CHAIN_BUFFER_COUNT];
 
 	private:
 		GraphicsCore() = default;

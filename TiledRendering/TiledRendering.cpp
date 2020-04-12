@@ -11,7 +11,7 @@ void TiledRendering::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 
 TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 	Win32FrameWork(width, height, name),
-	m_frameIndex(0),
+	//m_frameIndex(0),
 	m_pCbvDataBegin(nullptr),
 	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
@@ -155,7 +155,8 @@ void TiledRendering::LoadPipeline()
 	//	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 	//
 	//	ThrowIfFailed(swapChain.As(&m_swapChain));
-	m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
+
+	//m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
 
 	// Create descriptor heaps.
 	{
@@ -347,7 +348,7 @@ void TiledRendering::LoadAssets()
 
 	// Create the command list.
 	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
 	m_commandList = IGraphics::g_GraphicsCore->g_commandList;
 
 	// Create the vertex buffer.
@@ -397,7 +398,7 @@ void TiledRendering::LoadAssets()
 
 
 
-		m_test.Create(L"TestVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
+		//m_test.Create(L"TestVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
 
 
 
@@ -662,17 +663,17 @@ void TiledRendering::LoadAssets()
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		++m_fenceValue[m_frameIndex];
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		//++m_fenceValue[m_frameIndex];
 
-		// Create an event handle to use for frame synchronization.
-		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_fenceEvent == nullptr)
-		{
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		}
+		//// Create an event handle to use for frame synchronization.
+		//m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		//if (m_fenceEvent == nullptr)
+		//{
+		//	ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+		//}
 
-		WaitForGpu();
+		IGraphics::g_GraphicsCore->WaitForGpu();
 
 		// Setup the camera's view parameters
 		static const XMVECTORF32 s_Eye = { 0.0f, 0.0f, -6.0f, 0.f };
@@ -777,7 +778,7 @@ void TiledRendering::OnRender()
 	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->Present(1, 0));
 
 	//WaitForPreviousFrame();
-	MoveToNextFrame();
+	IGraphics::g_GraphicsCore->MoveToNextFrame();
 }
 
 void TiledRendering::OnDestroy()
@@ -785,7 +786,7 @@ void TiledRendering::OnDestroy()
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
 	//WaitForPreviousFrame();
-	WaitForGpu();
+	IGraphics::g_GraphicsCore->WaitForGpu();
 
 
 	ImGui_ImplDX12_Shutdown();
@@ -795,7 +796,7 @@ void TiledRendering::OnDestroy()
 
 	m_pModel.reset();
 
-	CloseHandle(m_fenceEvent);
+	//CloseHandle(m_fenceEvent);
 	IGraphics::g_GraphicsCore->Shutdown();
 }
 
@@ -804,12 +805,12 @@ void TiledRendering::PopulateCommandList()
 	// Command list allocators can only be reset when the associated 
 	// command lists have finished execution on the GPU; apps should use 
 	// fences to determine GPU execution progress.
-	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
+	ThrowIfFailed(m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
 
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
 
 
 	// Set necessary state.
@@ -825,9 +826,9 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Indicate that the back buffer will be used as a render target.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), IGraphics::g_GraphicsCore->s_FrameIndex, m_rtvDescriptorSize);
 	auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -851,63 +852,43 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Indicate that the back buffer will now be used to present.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_commandList->Close());
 }
 
-//void TiledRendering::WaitForPreviousFrame()
+
+
+//void TiledRendering::WaitForGpu()
 //{
-//    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-//    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-//    // sample illustrates how to use fences for efficient resource usage and to
-//    // maximize GPU utilization.
+//	// Schedule a Signal command in the queue
+//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandQueue->Signal(m_fence.Get(), m_fenceValue[m_frameIndex]));
 //
-//    // Signal and increment the fence value.
-//    const UINT64 fence = m_fenceValue;
-//    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-//    m_fenceValue++;
+//	// Wait Until the fence has been processed
+//	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
+//	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 //
-//    // Wait until the previous frame is finished.
-//    if (m_fence->GetCompletedValue() < fence)
-//    {
-//        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-//        WaitForSingleObject(m_fenceEvent, INFINITE);
-//    }
-//
-//    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+//	// Increment the fence value for the current frame.
+//	++m_fenceValue[m_frameIndex];
 //}
-
-void TiledRendering::WaitForGpu()
-{
-	// Schedule a Signal command in the queue
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandQueue->Signal(m_fence.Get(), m_fenceValue[m_frameIndex]));
-
-	// Wait Until the fence has been processed
-	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
-	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-
-	// Increment the fence value for the current frame.
-	++m_fenceValue[m_frameIndex];
-}
-
-// PRepare to render the next frame.
-void TiledRendering::MoveToNextFrame()
-{
-	// Schedule a Singal command in the queue.
-	const UINT64 currentFenceValue = m_fenceValue[m_frameIndex];
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandQueue->Signal(m_fence.Get(), currentFenceValue));
-
-	// Update the frame index;
-	m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
-
-	// If the next frame is not ready to be rendered yet, wait until it is ready.
-	if (m_fence->GetCompletedValue() < m_fenceValue[m_frameIndex])
-	{
-		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
-		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-	}
-
-	// Set the fence value for the next frame.
-	m_fenceValue[m_frameIndex] = currentFenceValue + 1;
-}
+//
+//// PRepare to render the next frame.
+//void TiledRendering::MoveToNextFrame()
+//{
+//	// Schedule a Singal command in the queue.
+//	const UINT64 currentFenceValue = m_fenceValue[m_frameIndex];
+//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+//
+//	// Update the frame index;
+//	m_frameIndex = IGraphics::g_GraphicsCore->g_pSwapChain->GetCurrentBackBufferIndex();
+//
+//	// If the next frame is not ready to be rendered yet, wait until it is ready.
+//	if (m_fence->GetCompletedValue() < m_fenceValue[m_frameIndex])
+//	{
+//		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
+//		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+//	}
+//
+//	// Set the fence value for the next frame.
+//	m_fenceValue[m_frameIndex] = currentFenceValue + 1;
+//}
