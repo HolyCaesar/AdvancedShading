@@ -127,26 +127,55 @@ D3D12_RESOURCE_DESC GpuBuffer::DescribeBuffer(void)
 	return Desc;
 }
 
-//void ByteAddressBuffer::CreateDerivedViews(void)
-//{
-	//D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	//SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	//SRVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	//SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	//SRVDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
-	//SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+void ByteAddressBuffer::CreateDerivedViews(void)
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	SRVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	SRVDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
+	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 
-	//if (m_SRV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
-	//	m_SRV = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	//g_Device->CreateShaderResourceView(m_pResource.Get(), &SRVDesc, m_SRV);
+	if (m_SRV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+		m_SRV = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_pResource.Get(), &SRVDesc, m_SRV);
 
-	//D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	//UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	//UAVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	//UAVDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
-	//UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	UAVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	UAVDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
+	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-	//if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
-	//	m_UAV = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	//g_Device->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
-//}
+	if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+		m_UAV = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
+}
+
+void StructuredBuffer::CreateDerivedViews(void)
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	SRVDesc.Buffer.NumElements = m_ElementCount;
+	SRVDesc.Buffer.StructureByteStride = m_ElementSize;
+	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+	if (m_SRV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+		m_SRV = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_pResource.Get(), &SRVDesc, m_SRV);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
+	UAVDesc.Buffer.CounterOffsetInBytes = 0;
+	UAVDesc.Buffer.NumElements = m_ElementCount;
+	UAVDesc.Buffer.StructureByteStride = m_ElementSize;
+	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+	m_CounterBuffer.Create(L"StructuredBuffer::Counter", 1, 4);
+
+	if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+		m_UAV = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_pResource.Get(), m_CounterBuffer.GetResource(), &UAVDesc, m_UAV);
+}

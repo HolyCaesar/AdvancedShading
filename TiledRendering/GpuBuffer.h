@@ -76,3 +76,29 @@ inline D3D12_INDEX_BUFFER_VIEW GpuBuffer::IndexBufferView(size_t Offset, uint32_
 	IBView.SizeInBytes = Size;
 	return IBView;
 }
+
+class ByteAddressBuffer : public GpuBuffer
+{
+public:
+	virtual void CreateDerivedViews(void) override;
+};
+
+class StructuredBuffer : public GpuBuffer
+{
+public:
+	virtual void Destroy(void) override
+	{
+		m_CounterBuffer.Destroy();
+		GpuBuffer::Destroy();
+	}
+
+	virtual void CreateDerivedViews(void) override;
+
+	ByteAddressBuffer& GetCounterBuffer(void) { return m_CounterBuffer; }
+
+	//const D3D12_CPU_DESCRIPTOR_HANDLE& GetCounterSRV(CommandContext& Context);
+	//const D3D12_CPU_DESCRIPTOR_HANDLE& GetCounterUAV(CommandContext& Context);
+
+private:
+	ByteAddressBuffer m_CounterBuffer;
+};

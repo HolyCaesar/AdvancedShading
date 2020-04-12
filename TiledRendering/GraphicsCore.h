@@ -39,6 +39,18 @@ namespace IGraphics
 
 		//CommandListManager m_CommandManager;
 
+		DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
+		{
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+			D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+		};
+		D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1)
+		{
+			return g_DescriptorAllocator[Type].Allocate(Count);
+		}
+
 		float s_FrameTime = 0.0f;
 		uint64_t s_FrameIndex = 0;
 		int64_t s_FrameStartTick = 0;
