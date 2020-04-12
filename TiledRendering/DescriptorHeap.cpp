@@ -37,7 +37,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DescriptorAllocator::Allocate(uint32_t Count)
 		m_RemainingFreeHandles = sm_NumDescriptorsPerHeap;
 
 		if (m_DescriptorSize == 0)
-			m_DescriptorSize == IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(m_Type);
+			m_DescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(m_Type);
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE ret = m_CurrentHandle;

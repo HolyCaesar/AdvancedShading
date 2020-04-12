@@ -826,14 +826,14 @@ void TiledRendering::PopulateCommandList()
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0.0f, nullptr);
+	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 	m_commandList->IASetIndexBuffer(&m_indexBufferView);
 
 
 	//m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
-	m_commandList->DrawInstanced(m_pModel->m_vecVertexData.size(), 1, 0, 0);
+	m_commandList->DrawInstanced((UINT)(m_pModel->m_vecVertexData.size()), 1, 0, 0);
 
 	ImGui::Render();
 	m_commandList->SetDescriptorHeaps(1, m_srvHeap.GetAddressOf());
