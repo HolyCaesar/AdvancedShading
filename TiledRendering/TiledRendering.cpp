@@ -15,7 +15,7 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 	m_pCbvDataBegin(nullptr),
 	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
-	m_rtvDescriptorSize(0),
+	//m_rtvDescriptorSize(0),
 	m_constantBufferData{}
 {
 }
@@ -162,13 +162,13 @@ void TiledRendering::LoadPipeline()
 	{
 		// Describe and create a render target view (RTV) descriptor heap.
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.NumDescriptors = FrameCount;
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		//desc.NumDescriptors = FrameCount;
+		//desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		//desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		//ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
 
-		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		desc.NumDescriptors = 1;
@@ -194,19 +194,19 @@ void TiledRendering::LoadPipeline()
 
 
 	// Create frame resources.
-	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+	//{
+	//	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		// Create a RTV for each frame.
-		for (UINT n = 0; n < FrameCount; n++)
-		{
-			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-			IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-			rtvHandle.Offset(1, m_rtvDescriptorSize);
+	//	// Create a RTV for each frame.
+	//	for (UINT n = 0; n < FrameCount; n++)
+	//	{
+	//		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+	//		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+	//		rtvHandle.Offset(1, m_rtvDescriptorSize);
 
-			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
-		}
-	}
+	//		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
+	//	}
+	//}
 
 }
 
@@ -348,7 +348,7 @@ void TiledRendering::LoadAssets()
 
 	// Create the command list.
 	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
 	m_commandList = IGraphics::g_GraphicsCore->g_commandList;
 
 	// Create the vertex buffer.
@@ -805,12 +805,12 @@ void TiledRendering::PopulateCommandList()
 	// Command list allocators can only be reset when the associated 
 	// command lists have finished execution on the GPU; apps should use 
 	// fences to determine GPU execution progress.
-	ThrowIfFailed(m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
 
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
+	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
 
 
 	// Set necessary state.
@@ -826,9 +826,9 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Indicate that the back buffer will be used as a render target.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), IGraphics::g_GraphicsCore->s_FrameIndex, m_rtvDescriptorSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(IGraphics::g_GraphicsCore->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), IGraphics::g_GraphicsCore->s_FrameIndex, IGraphics::g_GraphicsCore->m_rtvDescriptorSize);
 	auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -852,7 +852,7 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Indicate that the back buffer will now be used to present.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_commandList->Close());
 }

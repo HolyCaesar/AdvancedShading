@@ -152,6 +152,28 @@ namespace IGraphics
 			}
 		}
 
+		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+		desc.NumDescriptors = SWAP_CHAIN_BUFFER_COUNT;
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ASSERT_SUCCEEDED(g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
+		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		// Create frame resources.
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+
+			// Create a RTV for each frame.
+			for (UINT n = 0; n < SWAP_CHAIN_BUFFER_COUNT; n++)
+			{
+				ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+				g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+				rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
+			}
+		}
+
 		//WaitForGpu();
 	}
 

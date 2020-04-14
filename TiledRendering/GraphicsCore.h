@@ -37,7 +37,12 @@ namespace IGraphics
 		ComPtr<IDXGISwapChain3> g_pSwapChain;
 		ComPtr<ID3D12CommandQueue> g_commandQueue;
 		ComPtr<ID3D12GraphicsCommandList> g_commandList;
+		ComPtr<ID3D12Resource> m_renderTargets[SWAP_CHAIN_BUFFER_COUNT];
+		ComPtr<ID3D12CommandAllocator> m_commandAllocator[SWAP_CHAIN_BUFFER_COUNT];
 		HWND g_hwnd;
+
+		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+		UINT m_rtvDescriptorSize;
 
 		//CommandListManager m_CommandManager;
 
