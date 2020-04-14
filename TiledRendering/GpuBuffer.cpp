@@ -56,6 +56,14 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 		IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
 		UpdateSubresources(IGraphics::g_GraphicsCore->g_commandList.Get(), m_pResource.Get(), uploadHeap.Get(), 0, 0, 1, &rawData);
 		IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		//ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_commandList->Close());
+		//ID3D12CommandList* ppCommandLists[] = { IGraphics::g_GraphicsCore->g_commandList.Get() };
+		//IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+		//ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_commandList->Reset(m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), nullptr));
+
+		//IGraphics::g_GraphicsCore->WaitForGpu();
 	}
 }
 
