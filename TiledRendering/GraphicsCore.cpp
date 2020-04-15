@@ -173,8 +173,6 @@ namespace IGraphics
 				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
 			}
 		}
-
-		//WaitForGpu();
 	}
 
 	void GraphicsCore::Terminate(void)
