@@ -258,48 +258,48 @@ void TiledRendering::LoadAssets()
 	m_pModel = make_shared<Model>();
 	{
 		m_pModel->Load("bunny.obj");
+		m_vertexBuffer.Create(L"TestVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
 
-		const UINT vertexBufferSize = m_pModel->m_Header.vertexDataByteSize;
+		//const UINT vertexBufferSize = m_pModel->m_Header.vertexDataByteSize;
 
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_vertexBuffer)));
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+		//	D3D12_RESOURCE_STATE_COPY_DEST,
+		//	nullptr,
+		//	IID_PPV_ARGS(&m_vertexBuffer)));
 
-		const UINT64 vertexUploadBufferSize = GetRequiredIntermediateSize(m_vertexBuffer.Get(), 0, 1);
+		//const UINT64 vertexUploadBufferSize = GetRequiredIntermediateSize(m_vertexBuffer.Get(), 0, 1);
 
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(vertexUploadBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&vertexUploadHeap)));
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexUploadBufferSize),
+		//	D3D12_RESOURCE_STATE_GENERIC_READ,
+		//	nullptr,
+		//	IID_PPV_ARGS(&vertexUploadHeap)));
 
 
-		D3D12_SUBRESOURCE_DATA vertexData = {};
-		//vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
-		//vertexData.RowPitch = 3 * sizeof(triangleVertices) / sizeof(triangleVertices[0]);
+		//D3D12_SUBRESOURCE_DATA vertexData = {};
+		////vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
+		////vertexData.RowPitch = 3 * sizeof(triangleVertices) / sizeof(triangleVertices[0]);
+		////vertexData.SlicePitch = vertexData.RowPitch;
+		//vertexData.pData = reinterpret_cast<BYTE*>(m_pModel->m_vecVertexData.data());
+		//vertexData.RowPitch = vertexBufferSize;
 		//vertexData.SlicePitch = vertexData.RowPitch;
-		vertexData.pData = reinterpret_cast<BYTE*>(m_pModel->m_vecVertexData.data());
-		vertexData.RowPitch = vertexBufferSize;
-		vertexData.SlicePitch = vertexData.RowPitch;
 
-		UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		//UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
+		//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
-		// Initialize the vertex buffer view.
-		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-		m_vertexBufferView.SizeInBytes = vertexBufferSize;
+		//// Initialize the vertex buffer view.
+		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+		//m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+		//m_vertexBufferView.SizeInBytes = vertexBufferSize;
 
 
 
 
-		m_test.Create(L"TestVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
 
 
 
@@ -741,7 +741,7 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_commandList->IASetVertexBuffers(0, 1, &m_test.VertexBufferView());
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
 	//m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 
 	m_commandList->IASetIndexBuffer(&m_indexBufferView);
