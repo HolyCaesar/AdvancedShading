@@ -340,114 +340,6 @@ void TiledRendering::LoadAssets()
 		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
 		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 		m_indexBufferView.SizeInBytes = indexBufferSize;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		//Vertex triangleVertices[] =
-		//{
-		//	{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 0
-		//	{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 1
-		//	{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 2
-		//	{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 3
-		//	{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }, // 4
-		//	{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }, // 5
-		//	{ XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }, // 6
-		//	{ XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) }  // 7
-		//};
-
-
-
-		//WORD g_Indicies[36] =
-		//{
-		//	0, 1, 2, 0, 2, 3,
-		//	4, 6, 5, 4, 7, 6,
-		//	4, 5, 1, 4, 1, 0,
-		//	3, 2, 6, 3, 6, 7,
-		//	1, 5, 6, 1, 6, 2,
-		//	4, 0, 3, 4, 3, 7
-		//};
-
-		//const UINT vertexBufferSize = sizeof(triangleVertices);
-
-		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		//	D3D12_HEAP_FLAG_NONE,
-		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-		//	D3D12_RESOURCE_STATE_COPY_DEST,
-		//	nullptr,
-		//	IID_PPV_ARGS(&m_vertexBuffer)));
-
-		//const UINT64 vertexUploadBufferSize = GetRequiredIntermediateSize(m_vertexBuffer.Get(), 0, 1);
-
-		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		//	D3D12_HEAP_FLAG_NONE,
-		//	&CD3DX12_RESOURCE_DESC::Buffer(vertexUploadBufferSize),
-		//	D3D12_RESOURCE_STATE_GENERIC_READ,
-		//	nullptr,
-		//	IID_PPV_ARGS(&vertexUploadHeap)));
-
-
-		//D3D12_SUBRESOURCE_DATA vertexData = {};
-		//vertexData.pData = reinterpret_cast<BYTE*>(triangleVertices);
-		//vertexData.RowPitch = sizeof(triangleVertices);
-		//vertexData.SlicePitch = vertexData.RowPitch;
-
-		//UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
-		//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-		//// Initialize the vertex buffer view.
-		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-		//m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-		//m_vertexBufferView.SizeInBytes = vertexBufferSize;
-
-
-
-		//// Upload index buffer data.
-		//const UINT indexBufferSize = sizeof(g_Indicies);
-
-		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		//	D3D12_HEAP_FLAG_NONE,
-		//	&CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
-		//	D3D12_RESOURCE_STATE_COPY_DEST,
-		//	nullptr,
-		//	IID_PPV_ARGS(&m_indexBuffer)));
-
-		//const UINT64 indexUploadBufferSize = GetRequiredIntermediateSize(m_indexBuffer.Get(), 0, 1);
-
-		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		//	D3D12_HEAP_FLAG_NONE,
-		//	&CD3DX12_RESOURCE_DESC::Buffer(indexUploadBufferSize),
-		//	D3D12_RESOURCE_STATE_GENERIC_READ,
-		//	nullptr,
-		//	IID_PPV_ARGS(&indexUploadHeap)));
-
-
-		//D3D12_SUBRESOURCE_DATA indexData = {};
-		//indexData.pData = reinterpret_cast<BYTE*>(g_Indicies);
-		//indexData.RowPitch = sizeof(g_Indicies);
-		//indexData.SlicePitch = indexData.RowPitch;
-
-		//UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), indexUploadHeap.Get(), 0, 0, 1, &indexData);
-		//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-		//// Create index buffer view.
-		//m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-		//m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-		//m_indexBufferView.SizeInBytes = sizeof(g_Indicies);
 	}
 
 	// Create Depth Buffer
@@ -564,16 +456,6 @@ void TiledRendering::LoadAssets()
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
-		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		//++m_fenceValue[m_frameIndex];
-
-		//// Create an event handle to use for frame synchronization.
-		//m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		//if (m_fenceEvent == nullptr)
-		//{
-		//	ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		//}
-
 		IGraphics::g_GraphicsCore->WaitForGpu();
 
 		// Setup the camera's view parameters
