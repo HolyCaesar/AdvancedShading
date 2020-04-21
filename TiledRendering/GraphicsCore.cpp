@@ -107,8 +107,11 @@ namespace IGraphics
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
 		ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&g_commandQueue)));
+
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+		ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
 
 		/*
 		* D3D12 SwapChain Creation
@@ -171,6 +174,7 @@ namespace IGraphics
 				rtvHandle.Offset(1, m_rtvDescriptorSize);
 
 				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
+				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator[n])));
 			}
 		}
 	}

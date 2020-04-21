@@ -39,10 +39,15 @@ namespace IGraphics
 		ComPtr<ID3D12GraphicsCommandList> g_commandList;
 		ComPtr<ID3D12Resource> m_renderTargets[SWAP_CHAIN_BUFFER_COUNT];
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator[SWAP_CHAIN_BUFFER_COUNT];
-		HWND g_hwnd;
 
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		UINT m_rtvDescriptorSize;
+		HWND g_hwnd;
+
+		// Compute Shader resources
+		ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
+		ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
+		ComPtr<ID3D12GraphicsCommandList> g_computeCommandList;
 
 		//CommandListManager m_CommandManager;
 
@@ -61,6 +66,7 @@ namespace IGraphics
 
 		void WaitForGpu();
 		void MoveToNextFrame();
+		UINT64 GetRenderFenceValue() { return m_fenceValue[s_FrameIndex]; }
 
 
 
