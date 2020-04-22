@@ -73,6 +73,7 @@ void TiledRendering::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
+	LoadComputeShaderResources();
 }
 
 // Load the rendering pipeline dependencies.
@@ -114,6 +115,25 @@ void TiledRendering::LoadPipeline()
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavHeap)) != S_OK);
 		m_cbvSrvUavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
+	
+	// Create compute shader resource
+	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
+
+	for(int n = 0; n < SWAP_CHAIN_BUFFER_COUNT; ++n)
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator[n])));
+
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_computeFence)));
+	m_computeFenceValue = 1;
+
+	// Create an event handle to use for frame synchronization.
+	m_computeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (m_computeFenceEvent == nullptr)
+	{
+		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 	}
 }
 
@@ -191,6 +211,7 @@ void TiledRendering::LoadAssets()
 			wstring str;
 			for (int i = 0; i < 150; i++) str += errorMsg[i];
 			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
 		}
 		errorMessages.Reset();
 		errorMessages = nullptr;
@@ -203,6 +224,7 @@ void TiledRendering::LoadAssets()
 			wstring str;
 			for (int i = 0; i < 150; i++) str += errorMsg[i];
 			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
 		}
 #else
 		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
@@ -474,18 +496,19 @@ void TiledRendering::LoadComputeShaderResources()
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
 		ComPtr<ID3DBlob> errorMessages;
-		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &computeShader, &errorMessages);
+		HRESULT hr = D3DCompileFromFile(L"csShader.hlsl", nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &computeShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
 			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
 			wstring str;
-			for (int i = 0; i < 150; i++) str += errorMsg[i];
+			for (int i = 0; i < 2000; i++) str += errorMsg[i];
 			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
 		}
 #else
 		UINT compileFlags = 0;
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"csShader.hlsl").c_str(), nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &pixelShader, nullptr));
 #endif
 
 		D3D12_COMPUTE_PIPELINE_STATE_DESC descComputePSO = {};
@@ -496,10 +519,9 @@ void TiledRendering::LoadComputeShaderResources()
 		NAME_D3D12_OBJECT(m_computePSO);
 	}
 
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_computeCommandList)));
-	m_computeCommandList = IGraphics::g_GraphicsCore->g_computeCommandList;
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.Get(), IID_PPV_ARGS(&m_computeCommandList)));
 	
-	uint32_t w(128), h(128);
+	uint32_t w(128), h(1);
 	
 	vector<XMFLOAT4> csInputArray;
 	for (int i = 0; i < w * h; ++i)
@@ -544,8 +566,11 @@ void TiledRendering::LoadComputeShaderResources()
 	computeData.RowPitch = w * sizeof(XMFLOAT4);
 	computeData.SlicePitch = computeData.RowPitch * h;
 
-	UpdateSubresources(m_computeCommandList.Get(), m_computeInput.Get(), csInputUploadHeap.Get(), 0, 0, 1, &computeData);
-	m_computeCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_computeInput.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
+
+	UpdateSubresources(m_commandList.Get(), m_computeInput.Get(), csInputUploadHeap.Get(), 0, 0, 1, &computeData);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_computeInput.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Describe and create a SRV for the texture.
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -557,7 +582,7 @@ void TiledRendering::LoadComputeShaderResources()
 	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_computeInput.Get(), &srvDesc, csSRVHandle);
 
 
-	// create fractal texture and views
+	// create compute shader UAV
 	textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, w, h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	ThrowIfFailed(
 		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
@@ -573,28 +598,54 @@ void TiledRendering::LoadComputeShaderResources()
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
-	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 	uavDesc.Buffer.FirstElement = 0;
 	uavDesc.Buffer.NumElements = w * h;
 	uavDesc.Buffer.StructureByteStride = sizeof(XMFLOAT4);
 	uavDesc.Buffer.CounterOffsetInBytes = w * h * sizeof(XMFLOAT4);
 	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
-	//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), nullptr, nullptr, csUAVHandle);
-	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), m_computeOutput.Get(), &uavDesc, csUAVHandle);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), nullptr, nullptr, csUAVHandle);
+	//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), m_computeOutput.Get(), &uavDesc, csUAVHandle);
 
 
 	ThrowIfFailed(m_computeCommandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_computeCommandList.Get() };
-	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	WaitForComputeShader();
+
+	ThrowIfFailed(m_commandList->Close());
+	ID3D12CommandList* ppCommandLists1[] = { m_commandList.Get() };
+	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists1), ppCommandLists1);
 
 	IGraphics::g_GraphicsCore->WaitForGpu();
+
+
+	//    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
+//    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
+//    // sample illustrates how to use fences for efficient resource usage and to
+//    // maximize GPU utilization.
+//
+//    // Signal and increment the fence value.
+//    const UINT64 fence = m_fenceValue;
+//    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
+//    m_fenceValue++;
+//
+//    // Wait until the previous frame is finished.
+//    if (m_fence->GetCompletedValue() < fence)
+//    {
+//        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+//        WaitForSingleObject(m_fenceEvent, INFINITE);
+//    }
+//
+//    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 void TiledRendering::PopulateComputeCommandList()
 {
-	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Reset());
-	ThrowIfFailed(m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.Get()));
+	ThrowIfFailed(m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+	ThrowIfFailed(m_computeCommandList->Reset(m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.Get()));
 
 	m_computeCommandList->SetComputeRootSignature(m_computeRootSignature.Get());
 	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
@@ -613,21 +664,17 @@ void TiledRendering::PopulateComputeCommandList()
 	// Reset the UAV counter for this frame.
 	//m_computeCommandList->CopyBufferRegion(m_processedCommandBuffers[m_frameIndex].Get(), CommandBufferCounterOffset, m_processedCommandBufferCounterReset.Get(), 0, sizeof(UINT));
 
-	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_computeOutput.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	m_computeCommandList->ResourceBarrier(1, &barrier);
+	//D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_computeOutput.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	//m_computeCommandList->ResourceBarrier(1, &barrier);
 
-	m_computeCommandList->Dispatch(128 * 128, 1, 1);
+	m_computeCommandList->Dispatch(4, 4, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
 	
 	ID3D12CommandList* tmpList = m_computeCommandList.Get();
-	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(1, &tmpList);
+	m_computeCommandQueue->ExecuteCommandLists(1, &tmpList);
 
-	IGraphics::g_GraphicsCore->m_computeCommandQueue->Signal(m_computeFence.Get(), IGraphics::g_GraphicsCore->GetRenderFenceValue());
-
-	// Execute the rendering work only when the compute work is complete.
-	IGraphics::g_GraphicsCore->g_commandQueue->Wait(m_computeFence.Get(), IGraphics::g_GraphicsCore->GetRenderFenceValue());
-
+	WaitForComputeShader();
 }
 
 std::vector<UINT8> TiledRendering::GenerateTextureData()
@@ -707,6 +754,8 @@ void TiledRendering::OnUpdate()
 void TiledRendering::OnRender()
 {
 	ShowImGUI();
+
+	PopulateComputeCommandList();
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
@@ -799,4 +848,19 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_commandList->Close());
+}
+
+void TiledRendering::WaitForComputeShader()
+{
+    // Signal and increment the fence value.
+    const UINT64 fence = m_computeFenceValue;
+    ThrowIfFailed(m_computeCommandQueue->Signal(m_computeFence.Get(), fence));
+	m_computeFenceValue++;
+
+    // Wait until the previous frame is finished.
+    if (m_computeFence->GetCompletedValue() < fence)
+    {
+        ThrowIfFailed(m_computeFence->SetEventOnCompletion(fence, m_computeFenceEvent));
+        WaitForSingleObject(m_computeFenceEvent, INFINITE);
+    }
 }

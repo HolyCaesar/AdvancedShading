@@ -205,6 +205,9 @@
     <FxCompile Include="shaders.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="csShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\MiniEngineMath\Functions.inl">

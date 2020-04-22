@@ -44,10 +44,6 @@ namespace IGraphics
 		UINT m_rtvDescriptorSize;
 		HWND g_hwnd;
 
-		// Compute Shader resources
-		ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
-		ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
-		ComPtr<ID3D12GraphicsCommandList> g_computeCommandList;
 
 		//CommandListManager m_CommandManager;
 

@@ -98,12 +98,16 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
     UINT m_cbvSrvUavDescriptorSize;
 
+    ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
+    ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
     ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
 
     ComPtr<ID3D12Resource> m_computeInput;
     ComPtr<ID3D12Resource> m_computeOutput;
 
     ComPtr<ID3D12Fence> m_computeFence;
+    uint64_t m_computeFenceValue;
+    HANDLE m_computeFenceEvent;
 
     // Indexes for the root parameter table
     enum RootParameters : uint32_t
@@ -142,4 +146,7 @@ private:
 
     void LoadComputeShaderResources();
     void PopulateComputeCommandList();
+
+
+    void WaitForComputeShader();
 };
