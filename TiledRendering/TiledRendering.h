@@ -91,7 +91,6 @@ private:
     // Model
     shared_ptr<Model> m_pModel;
 
-
     // Compute Shader
     ComPtr<ID3D12RootSignature> m_computeRootSignature;
     ComPtr<ID3D12PipelineState> m_computePSO;
@@ -102,8 +101,11 @@ private:
     ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
     ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
 
-    ComPtr<ID3D12Resource> m_computeInput;
+    ComPtr<ID3D12Resource> m_computeInputTex2D;
+    ComPtr<ID3D12Resource> m_computeInputStructureBuffer;
     ComPtr<ID3D12Resource> m_computeOutput;
+    XMFLOAT4 m_csInputStructureBuffer;
+    UINT8* m_pcsInputStructureBegin;
 
     ComPtr<ID3D12Fence> m_computeFence;
     uint64_t m_computeFenceValue;
@@ -124,7 +126,7 @@ private:
     {
         //e_cCB = 1,
         e_cUAV = 1,
-        e_cSRV = 1,
+        e_cSRV = 2,
     };
     enum DescriptorHeapIndex : uint32_t
     {

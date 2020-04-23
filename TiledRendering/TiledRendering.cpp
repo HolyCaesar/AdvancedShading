@@ -111,7 +111,7 @@ void TiledRendering::LoadPipeline()
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_DSVHeap)) != S_OK);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = 2;
+		desc.NumDescriptors = e_iHeapEnd;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavHeap)) != S_OK);
 		m_cbvSrvUavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -467,8 +467,8 @@ void TiledRendering::LoadComputeShaderResources()
 		// Create compute root signature
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[e_numRootParameters];
 		//ranges[e_rootParameterSampler].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0);
-		ranges[e_rootParameterSRV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-		ranges[e_rootParameterUAV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+		ranges[e_rootParameterSRV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, e_cSRV, 0);
+		ranges[e_rootParameterUAV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, e_cUAV, 0);
 
 		CD3DX12_ROOT_PARAMETER1 computeRootParameters[e_numRootParameters];
 		//computeRootParameters[e_rootParameterCB].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
@@ -545,9 +545,9 @@ void TiledRendering::LoadComputeShaderResources()
 		&textureDesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
-		IID_PPV_ARGS(&m_computeInput)));
+		IID_PPV_ARGS(&m_computeInputTex2D)));
 
-	const UINT64 csInputUploadBufferSize = GetRequiredIntermediateSize(m_computeInput.Get(), 0, 1);
+	const UINT64 csInputUploadBufferSize = GetRequiredIntermediateSize(m_computeInputTex2D.Get(), 0, 1);
 
 	//D3D12_RESOURCE_ALLOCATION_INFO info = {};
 	//info.SizeInBytes = 1024;
@@ -570,8 +570,8 @@ void TiledRendering::LoadComputeShaderResources()
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
 	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
 
-	UpdateSubresources(m_commandList.Get(), m_computeInput.Get(), csInputUploadHeap.Get(), 0, 0, 1, &computeData);
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_computeInput.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	UpdateSubresources(m_commandList.Get(), m_computeInputTex2D.Get(), csInputUploadHeap.Get(), 0, 0, 1, &computeData);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_computeInputTex2D.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Describe and create a SRV for the texture.
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -580,7 +580,7 @@ void TiledRendering::LoadComputeShaderResources()
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE csSRVHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), e_iSRV, m_cbvSrvUavDescriptorSize);
-	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_computeInput.Get(), &srvDesc, csSRVHandle);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_computeInputTex2D.Get(), &srvDesc, csSRVHandle);
 
 
 	// create compute shader UAV
@@ -610,6 +610,32 @@ void TiledRendering::LoadComputeShaderResources()
 	//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), m_computeOutput.Get(), &uavDesc, csUAVHandle);
 
 
+	// Create a structure buffer for the compute shader
+	const UINT csInputStructure = w * h * sizeof(XMFLOAT4);
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(csInputStructure),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_computeInputStructureBuffer)));
+
+	CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+	ThrowIfFailed(m_computeInputStructureBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pcsInputStructureBegin)));
+	memcpy(m_pcsInputStructureBegin, csInputArray.data(), w * h * sizeof(XMFLOAT4));
+
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Buffer.NumElements = w * h;
+	srvDesc.Buffer.StructureByteStride = sizeof(XMFLOAT4);
+	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	srvDesc.Buffer.FirstElement = 0;
+
+	csSRVHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_computeInputStructureBuffer.Get(), &srvDesc, csSRVHandle);
+
+
 	ThrowIfFailed(m_computeCommandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_computeCommandList.Get() };
 	m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
@@ -621,26 +647,6 @@ void TiledRendering::LoadComputeShaderResources()
 	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists1), ppCommandLists1);
 
 	IGraphics::g_GraphicsCore->WaitForGpu();
-
-
-	//    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-//    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-//    // sample illustrates how to use fences for efficient resource usage and to
-//    // maximize GPU utilization.
-//
-//    // Signal and increment the fence value.
-//    const UINT64 fence = m_fenceValue;
-//    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-//    m_fenceValue++;
-//
-//    // Wait until the previous frame is finished.
-//    if (m_fence->GetCompletedValue() < fence)
-//    {
-//        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-//        WaitForSingleObject(m_fenceEvent, INFINITE);
-//    }
-//
-//    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 void TiledRendering::PopulateComputeCommandList()
@@ -813,7 +819,7 @@ void TiledRendering::PopulateCommandList()
 
 	ID3D12DescriptorHeap* ppHeaps1[] = { m_srvHeapTex2D.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
-	m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeapTex2D->GetGPUDescriptorHandleForHeapStart());
+	m_commandList->SetGraphicsRootDescriptorTable(e_rootParameterSRV, m_srvHeapTex2D->GetGPUDescriptorHandleForHeapStart());
 
 
 	// Indicate that the back buffer will be used as a render target.
