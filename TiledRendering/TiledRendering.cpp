@@ -111,7 +111,7 @@ void TiledRendering::LoadPipeline()
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_DSVHeap)) != S_OK);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = 3;
+		desc.NumDescriptors = 2;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavHeap)) != S_OK);
 		m_cbvSrvUavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -525,11 +525,11 @@ void TiledRendering::LoadComputeShaderResources()
 	
 	vector<XMFLOAT4> csInputArray;
 	for (int i = 0; i < w * h; ++i)
-		csInputArray.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		csInputArray.push_back(XMFLOAT4(i + 1, i + 1, i + 1, i + 1));
 
 	D3D12_RESOURCE_DESC textureDesc = {};
 	textureDesc.MipLevels = 1;
-	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	textureDesc.Width = w;
 	textureDesc.Height = h;
 	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -538,9 +538,6 @@ void TiledRendering::LoadComputeShaderResources()
 	textureDesc.SampleDesc.Quality = 0;
 	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-	
-	// Upload index buffer data.
-	const UINT indexBufferSize = csInputArray.size() * sizeof(float);
 
 	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -552,6 +549,10 @@ void TiledRendering::LoadComputeShaderResources()
 
 	const UINT64 csInputUploadBufferSize = GetRequiredIntermediateSize(m_computeInput.Get(), 0, 1);
 
+	//D3D12_RESOURCE_ALLOCATION_INFO info = {};
+	//info.SizeInBytes = 1024;
+	//info.Alignment = 0;
+	//const D3D12_RESOURCE_DESC tempBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(info);
 	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
@@ -563,7 +564,7 @@ void TiledRendering::LoadComputeShaderResources()
 
 	D3D12_SUBRESOURCE_DATA computeData = {};
 	computeData.pData = reinterpret_cast<BYTE*>(csInputArray.data());
-	computeData.RowPitch = w * sizeof(XMFLOAT4);
+	computeData.RowPitch = w * (int)csInputArray.size() * sizeof(XMFLOAT4);
 	computeData.SlicePitch = computeData.RowPitch * h;
 
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
@@ -583,7 +584,7 @@ void TiledRendering::LoadComputeShaderResources()
 
 
 	// create compute shader UAV
-	textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, w, h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32B32A32_FLOAT, w, h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	ThrowIfFailed(
 		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -667,7 +668,7 @@ void TiledRendering::PopulateComputeCommandList()
 	//D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_computeOutput.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	//m_computeCommandList->ResourceBarrier(1, &barrier);
 
-	m_computeCommandList->Dispatch(4, 4, 1);
+	m_computeCommandList->Dispatch(128, 1, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
 	
