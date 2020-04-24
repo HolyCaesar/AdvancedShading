@@ -568,7 +568,8 @@ void TiledRendering::LoadComputeShaderResources()
 	computeData.SlicePitch = computeData.RowPitch * h;
 
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
-	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
+	//ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
+	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), nullptr));
 
 	UpdateSubresources(m_commandList.Get(), m_computeInputTex2D.Get(), csInputUploadHeap.Get(), 0, 0, 1, &computeData);
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_computeInputTex2D.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));

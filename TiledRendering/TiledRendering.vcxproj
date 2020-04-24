@@ -101,7 +101,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\DXUT\Core;..\..\DXUT\Optional;..\Core;..\Model</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\DXUT\Core;..\..\DXUT\Optional;..\Core;MyTemplateCodes;..\Model;.</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -171,6 +171,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MyTemplateCodes\SimpleComputeShader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -225,6 +226,7 @@
     <ClInclude Include="imstb_truetype.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="MyTemplateCodes\SimpleComputeShader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TiledRendering.h" />
     <ClInclude Include="Utility.h" />

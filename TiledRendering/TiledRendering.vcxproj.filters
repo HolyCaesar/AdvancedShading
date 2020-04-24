@@ -28,6 +28,9 @@
     <Filter Include="Model">
       <UniqueIdentifier>{db7a1564-dad2-4ce4-8f5f-22936cb6036a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MyTemplateCodes">
+      <UniqueIdentifier>{cbe89c0b-be4b-4757-85f8-a055ff1d01ab}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -92,6 +95,9 @@
     </ClCompile>
     <ClCompile Include="Color.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MyTemplateCodes\SimpleComputeShader.cpp">
+      <Filter>MyTemplateCodes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -199,6 +205,9 @@
     </ClInclude>
     <ClInclude Include="Color.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MyTemplateCodes\SimpleComputeShader.h">
+      <Filter>MyTemplateCodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
