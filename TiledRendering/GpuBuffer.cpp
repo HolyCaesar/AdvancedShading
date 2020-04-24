@@ -67,8 +67,12 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 
 		ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), nullptr));
 
-		//CreateDerivedViews();
+
+		// Will replace above code with the code below
+		//CommandContext::InitializeBuffer(*this, initialData, m_BufferSize);
 	}
+
+	//CreateDerivedViews();
 }
 
 // Sub-Allocate a buffer out of a pre-allocated heap.  If initial data is provided, it will be copied into the buffer using the default command context.

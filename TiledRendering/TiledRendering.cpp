@@ -258,47 +258,12 @@ void TiledRendering::LoadAssets()
 	m_commandList = IGraphics::g_GraphicsCore->g_commandList;
 
 	// Create the vertex buffer.
-	ComPtr<ID3D12Resource> vertexUploadHeap;
 	ComPtr<ID3D12Resource> indexUploadHeap;
 	m_pModel = make_shared<Model>();
 	{
 		m_pModel->Load("bunny.obj");
-		m_vertexBuffer.Create(L"TestVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
-
-		// Upload index buffer data.
-		const UINT indexBufferSize = m_pModel->m_Header.indexDataByteSize;
-
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_indexBuffer)));
-
-		const UINT64 indexUploadBufferSize = GetRequiredIntermediateSize(m_indexBuffer.Get(), 0, 1);
-
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(indexUploadBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&indexUploadHeap)));
-
-
-		D3D12_SUBRESOURCE_DATA indexData = {};
-		indexData.pData = reinterpret_cast<BYTE*>(m_pModel->m_vecIndexData.data());
-		indexData.RowPitch = indexBufferSize;
-		indexData.SlicePitch = indexData.RowPitch;
-
-		UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), indexUploadHeap.Get(), 0, 0, 1, &indexData);
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER));
-
-		// Create index buffer view.
-		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-		m_indexBufferView.SizeInBytes = indexBufferSize;
+		m_vertexBuffer.Create(L"BunnyVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
+		m_indexBuffer.Create(L"BunnyIndexBuffer", m_pModel->m_vecIndexData.size(), sizeof(uint32_t), m_pModel->m_vecIndexData.data());
 	}
 
 	// Create Depth Buffer
@@ -585,13 +550,11 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
-	//m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-
-	m_commandList->IASetIndexBuffer(&m_indexBufferView);
+	m_commandList->IASetIndexBuffer(&m_indexBuffer.IndexBufferView());
 
 
-	//m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
-	m_commandList->DrawInstanced((UINT)(m_pModel->m_vecVertexData.size()), 1, 0, 0);
+	m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
+	//m_commandList->DrawInstanced((UINT)(m_pModel->m_vecVertexData.size()), 1, 0, 0);
 
 	ImGui::Render();
 	m_commandList->SetDescriptorHeaps(1, m_srvHeap.GetAddressOf());

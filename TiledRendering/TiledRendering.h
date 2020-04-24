@@ -76,8 +76,7 @@ private:
 
     // App resources.
     StructuredBuffer m_vertexBuffer;
-    ComPtr<ID3D12Resource> m_indexBuffer;
-    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+    StructuredBuffer m_indexBuffer;
     ComPtr<ID3D12Resource> m_texture;
 
     ComPtr<ID3D12Resource> m_depthBuffer;
