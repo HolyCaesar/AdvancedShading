@@ -99,6 +99,9 @@
     <ClCompile Include="MyTemplateCodes\SimpleComputeShader.cpp">
       <Filter>MyTemplateCodes</Filter>
     </ClCompile>
+    <ClCompile Include="DX12RootSignature.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -208,6 +211,12 @@
     </ClInclude>
     <ClInclude Include="MyTemplateCodes\SimpleComputeShader.h">
       <Filter>MyTemplateCodes</Filter>
+    </ClInclude>
+    <ClInclude Include="DX12RootSignature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hash.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -153,6 +153,7 @@
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
+    <ClCompile Include="DX12RootSignature.cpp" />
     <ClCompile Include="GpuBuffer.cpp" />
     <ClCompile Include="GpuResource.cpp" />
     <ClCompile Include="GraphicsCore.cpp" />
@@ -198,10 +199,12 @@
     <ClInclude Include="Color.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
+    <ClInclude Include="DX12RootSignature.h" />
     <ClInclude Include="DXSampleHelper.h" />
     <ClInclude Include="GpuBuffer.h" />
     <ClInclude Include="GpuResource.h" />
     <ClInclude Include="GraphicsCore.h" />
+    <ClInclude Include="Hash.h" />
     <ClInclude Include="imconfig.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
