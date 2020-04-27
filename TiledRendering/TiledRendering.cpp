@@ -164,6 +164,35 @@ void TiledRendering::LoadAssets()
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+
+
+
+
+
+
+
+		// Load test root signature
+		D3D12_SAMPLER_DESC non_static_sampler;
+		non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		non_static_sampler.MipLODBias = 0.0f;
+		non_static_sampler.MaxAnisotropy = 8;
+		non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		non_static_sampler.BorderColor[0] = 1.0f;
+		non_static_sampler.BorderColor[1] = 1.0f;
+		non_static_sampler.BorderColor[2] = 1.0f;
+		non_static_sampler.BorderColor[3] = 1.0f;
+		non_static_sampler.MinLOD = 0.0f;
+		non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
+		
+		m_testRootSignature.Reset(2, 1);
+		m_testRootSignature.InitStaticSampler(0, non_static_sampler);
+		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
+		m_testRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
+		m_testRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+		m_testRootSignature.Finalize(L"TestRootSignature", rootSignatureFlags);
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -222,7 +251,8 @@ void TiledRendering::LoadAssets()
 		// Describe and create the graphics pipeline state object (PSO).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.Get();
+		//psoDesc.pRootSignature = m_rootSignature.Get();
+		psoDesc.pRootSignature = m_testRootSignature.GetSignature();
 		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
 		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -523,7 +553,8 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Set necessary state.
-	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+	//m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+	m_commandList->SetGraphicsRootSignature(m_testRootSignature.GetSignature());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

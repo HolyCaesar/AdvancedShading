@@ -14,6 +14,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "GpuBuffer.h"
+#include "DX12RootSignature.h"
 
 // Experimental classes 
 #include "SimpleComputeShader.h"
@@ -73,6 +74,7 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
     ComPtr<ID3D12PipelineState> m_pipelineState;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
+    DX12RootSignature m_testRootSignature;
 
     // App resources.
     StructuredBuffer m_vertexBuffer;
