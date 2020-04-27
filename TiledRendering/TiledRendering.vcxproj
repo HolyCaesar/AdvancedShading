@@ -172,6 +172,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MyTemplateCodes\RawExample.cpp" />
     <ClCompile Include="MyTemplateCodes\SimpleComputeShader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -229,6 +230,7 @@
     <ClInclude Include="imstb_truetype.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="MyTemplateCodes\RawExample.h" />
     <ClInclude Include="MyTemplateCodes\SimpleComputeShader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TiledRendering.h" />

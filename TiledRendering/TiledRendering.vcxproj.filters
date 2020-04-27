@@ -102,6 +102,9 @@
     <ClCompile Include="DX12RootSignature.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MyTemplateCodes\RawExample.cpp">
+      <Filter>MyTemplateCodes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -217,6 +220,9 @@
     </ClInclude>
     <ClInclude Include="Hash.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MyTemplateCodes\RawExample.h">
+      <Filter>MyTemplateCodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -30,10 +30,10 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-class TiledRendering : public Win32FrameWork
+class RawExample : public Win32FrameWork
 {
 public:
-    TiledRendering(UINT width, UINT height, std::wstring name);
+    RawExample(UINT width, UINT height, std::wstring name);
 
     virtual void OnInit();
     virtual void OnUpdate();
@@ -58,7 +58,7 @@ private:
         XMFLOAT2 uv;
     };
 
-    __declspec( align( 16 ) ) struct CBuffer 
+    __declspec(align(16)) struct CBuffer
     {
         XMMATRIX worldMatrix;
         XMMATRIX worldViewProjMatrix;
@@ -68,12 +68,12 @@ private:
     // Pipeline objects.
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissorRect;
+    ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-    ComPtr<ID3D12DescriptorHeap> m_cbvSrvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_srvHeapTex2D;
+    ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
     ComPtr<ID3D12PipelineState> m_pipelineState;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
-    UINT m_cbvSrvUavDescriptorSize;
-    DX12RootSignature m_rootSignature;
 
     // App resources.
     StructuredBuffer m_vertexBuffer;
@@ -102,24 +102,4 @@ private:
     void LoadImGUI();
     void PopulateCommandList();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
-
-
-    enum RootParameters : uint32_t
-    {
-        e_rootParameterCB = 0,
-        e_rootParameterSRV,
-        e_numRootParameters
-    };
-    // indexes of resources into the descriptor heap
-    enum DescriptorHeapCount : uint32_t
-    {
-        e_cCB = 1,
-        e_cSRV = 1,
-    };
-    enum DescriptorHeapIndex : uint32_t
-    {
-        e_iCB = 0,
-        e_iSRV = e_iCB + e_cCB,
-        e_iHeapEnd = e_iCB + e_iSRV
-    };
 };

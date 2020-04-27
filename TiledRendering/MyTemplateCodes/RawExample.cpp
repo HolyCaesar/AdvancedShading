@@ -1,15 +1,15 @@
 #include "stdafx.h"
-#include "TiledRendering.h"
+#include "RawExample.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void TiledRendering::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+void RawExample::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam);
 
 	m_modelViewCamera.HandleMessages(hWnd, message, wParam, lParam);
 }
 
-TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
+RawExample::RawExample(UINT width, UINT height, std::wstring name) :
 	Win32FrameWork(width, height, name),
 	//m_frameIndex(0),
 	m_pCbvDataBegin(nullptr),
@@ -20,7 +20,7 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 {
 }
 
-void TiledRendering::ShowImGUI()
+void RawExample::ShowImGUI()
 {
 	static bool show_demo_window = true;
 	static bool show_another_window = false;
@@ -69,7 +69,7 @@ void TiledRendering::ShowImGUI()
 	}
 }
 
-void TiledRendering::OnInit()
+void RawExample::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
@@ -78,7 +78,7 @@ void TiledRendering::OnInit()
 }
 
 // Load the rendering pipeline dependencies.
-void TiledRendering::LoadPipeline()
+void RawExample::LoadPipeline()
 {
 	UINT dxgiFactoryFlags = 0;
 
@@ -97,24 +97,59 @@ void TiledRendering::LoadPipeline()
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeap)) != S_OK);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = e_numRootParameters;
+		desc.NumDescriptors = 1;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvHeap)) != S_OK);
-		m_cbvSrvUavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeapTex2D)) != S_OK);
+
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		desc.NumDescriptors = 1;
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvHeap)) != S_OK);
 
 		desc.NumDescriptors = 1;
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_DSVHeap)) != S_OK);
 	}
-	
+
 }
 
 // Load the sample assets.
-void TiledRendering::LoadAssets()
+void RawExample::LoadAssets()
 {
 	// Create a root signature consisting of a descriptor table with a single CBV
 	{
+		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1; // Use highest version
+		if (FAILED(IGraphics::g_GraphicsCore->g_pD3D12Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+		ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		rootParameters[1].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_PIXEL);
+
+		D3D12_STATIC_SAMPLER_DESC sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.MipLODBias = 0;
+		sampler.MaxAnisotropy = 0;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
+		sampler.ShaderRegister = 0;
+		sampler.RegisterSpace = 0;
+		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		// Allow input layout and deny unecessary access to certain pipeline stages
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -122,28 +157,13 @@ void TiledRendering::LoadAssets()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 		//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
-		// Load test root signature
-		D3D12_SAMPLER_DESC non_static_sampler;
-		non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
-		non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		non_static_sampler.MipLODBias = 0.0f;
-		non_static_sampler.MaxAnisotropy = 8;
-		non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		non_static_sampler.BorderColor[0] = 1.0f;
-		non_static_sampler.BorderColor[1] = 1.0f;
-		non_static_sampler.BorderColor[2] = 1.0f;
-		non_static_sampler.BorderColor[3] = 1.0f;
-		non_static_sampler.MinLOD = 0.0f;
-		non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
-		
-		m_rootSignature.Reset(2, 1);
-		m_rootSignature.InitStaticSampler(0, non_static_sampler);
-		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_rootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_rootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-		m_rootSignature.Finalize(L"TestRootSignature", rootSignatureFlags);
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, rootSignatureFlags);
+
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -202,7 +222,7 @@ void TiledRendering::LoadAssets()
 		// Describe and create the graphics pipeline state object (PSO).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.GetSignature();
+		psoDesc.pRootSignature = m_rootSignature.Get();
 		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
 		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -253,13 +273,13 @@ void TiledRendering::LoadAssets()
 		optimizedClearValue.DepthStencil = { 1.0f, 0 };
 
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_width, m_height,
-			1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&optimizedClearValue,
-		IID_PPV_ARGS(&m_depthBuffer)
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_width, m_height,
+				1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&optimizedClearValue,
+			IID_PPV_ARGS(&m_depthBuffer)
 		));
 
 		// Update the depth-stencil view.
@@ -271,28 +291,6 @@ void TiledRendering::LoadAssets()
 
 		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDepthStencilView(m_depthBuffer.Get(), &dsv,
 			m_DSVHeap->GetCPUDescriptorHandleForHeapStart());
-	}
-
-	// Create the constant buffer
-	{
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_constantBuffer)));
-
-		// Describe and create a constant buffer view.
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = (sizeof(CBuffer) + 255) & ~255;    // CB size is required to be 256-byte aligned.
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateConstantBufferView(&cbvDesc, m_cbvSrvHeap->GetCPUDescriptorHandleForHeapStart());
-
-		CD3DX12_RANGE readRange(0, 0);
-		ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
-
 	}
 
 	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
@@ -350,8 +348,7 @@ void TiledRendering::LoadAssets()
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvHeap->GetCPUDescriptorHandleForHeapStart(), e_iSRV, m_cbvSrvUavDescriptorSize);
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHandle);
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeapTex2D->GetCPUDescriptorHandleForHeapStart());
 	}
 
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -359,7 +356,27 @@ void TiledRendering::LoadAssets()
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
+	// Create the constant buffer
+	{
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_constantBuffer)));
 
+		// Describe and create a constant buffer view.
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = (sizeof(CBuffer) + 255) & ~255;    // CB size is required to be 256-byte aligned.
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+
+		CD3DX12_RANGE readRange(0, 0);
+		ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
+		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+	}
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
@@ -379,7 +396,7 @@ void TiledRendering::LoadAssets()
 	}
 }
 
-std::vector<UINT8> TiledRendering::GenerateTextureData()
+std::vector<UINT8> RawExample::GenerateTextureData()
 {
 	const UINT rowPitch = TextureWidth * TexturePixelSize;
 	const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
@@ -415,7 +432,7 @@ std::vector<UINT8> TiledRendering::GenerateTextureData()
 	return data;
 }
 
-void TiledRendering::LoadImGUI()
+void RawExample::LoadImGUI()
 {
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -437,7 +454,7 @@ void TiledRendering::LoadImGUI()
 }
 
 // Update frame-based values.
-void TiledRendering::OnUpdate()
+void RawExample::OnUpdate()
 {
 	m_modelViewCamera.FrameMove(ImGui::GetIO().DeltaTime);
 
@@ -453,7 +470,7 @@ void TiledRendering::OnUpdate()
 }
 
 // Render the scene.
-void TiledRendering::OnRender()
+void RawExample::OnRender()
 {
 	ShowImGUI();
 
@@ -473,7 +490,7 @@ void TiledRendering::OnRender()
 	IGraphics::g_GraphicsCore->MoveToNextFrame();
 }
 
-void TiledRendering::OnDestroy()
+void RawExample::OnDestroy()
 {
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
@@ -492,7 +509,7 @@ void TiledRendering::OnDestroy()
 	IGraphics::g_GraphicsCore->Shutdown();
 }
 
-void TiledRendering::PopulateCommandList()
+void RawExample::PopulateCommandList()
 {
 	// Command list allocators can only be reset when the associated 
 	// command lists have finished execution on the GPU; apps should use 
@@ -506,26 +523,15 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Set necessary state.
-	m_commandList->SetGraphicsRootSignature(m_rootSignature.GetSignature());
+	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-	//ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
-	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	//m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
+	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
+	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
 
-	//ID3D12DescriptorHeap* ppHeaps1[] = { m_srvHeapTex2D.Get() };
-	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
-	//m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeapTex2D->GetGPUDescriptorHandleForHeapStart());
-
-	ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvHeap.Get() };
+	ID3D12DescriptorHeap* ppHeaps1[] = { m_srvHeapTex2D.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
-
-	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvHeap->GetGPUDescriptorHandleForHeapStart();
-	m_commandList->SetGraphicsRootDescriptorTable(
-		e_rootParameterSRV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, e_iSRV, m_cbvSrvUavDescriptorSize));
-	m_commandList->SetGraphicsRootDescriptorTable(
-		e_rootParameterCB,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, e_iCB, m_cbvSrvUavDescriptorSize));
+	m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeapTex2D->GetGPUDescriptorHandleForHeapStart());
 
 
 	// Indicate that the back buffer will be used as a render target.
