@@ -191,46 +191,11 @@ void TiledRendering::LoadAssets()
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
-			//{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			//{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
-
-		//// Describe and create the graphics pipeline state object (PSO).
-		//D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		//psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		//psoDesc.pRootSignature = m_rootSignature.GetSignature();
-		//psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		//psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-		//psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		//psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		//psoDesc.DepthStencilState.DepthEnable = TRUE;
-		//psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		//psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		//psoDesc.DepthStencilState.StencilEnable = TRUE;
-		//psoDesc.DepthStencilState.StencilReadMask = 0xFF;
-		//psoDesc.DepthStencilState.StencilWriteMask = 0xFF;
-		//// Stencil operations if pixel is front-facing
-		//psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		//psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_INCR;
-		//psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		//psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		//// Stencil operations if pixel is back-facing
-		//psoDesc.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		//psoDesc.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_DECR;
-		//psoDesc.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		//psoDesc.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		//psoDesc.SampleMask = UINT_MAX;
-		//psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		//psoDesc.NumRenderTargets = 1;
-		//psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		//psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-		//psoDesc.SampleDesc.Count = 1;
-		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-
 
 		m_pipelineState.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		m_pipelineState.SetRootSignature(m_rootSignature);
@@ -524,14 +489,6 @@ void TiledRendering::PopulateCommandList()
 
 	// Set necessary state.
 	m_commandList->SetGraphicsRootSignature(m_rootSignature.GetSignature());
-
-	//ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
-	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	//m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
-
-	//ID3D12DescriptorHeap* ppHeaps1[] = { m_srvHeapTex2D.Get() };
-	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
-	//m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeapTex2D->GetGPUDescriptorHandleForHeapStart());
 
 	ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
