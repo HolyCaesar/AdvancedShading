@@ -199,42 +199,59 @@ void TiledRendering::LoadAssets()
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
-		// Describe and create the graphics pipeline state object (PSO).
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.GetSignature();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState.DepthEnable = TRUE;
-		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		psoDesc.DepthStencilState.StencilEnable = TRUE;
-		psoDesc.DepthStencilState.StencilReadMask = 0xFF;
-		psoDesc.DepthStencilState.StencilWriteMask = 0xFF;
-		// Stencil operations if pixel is front-facing
-		psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_INCR;
-		psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		// Stencil operations if pixel is back-facing
-		psoDesc.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		psoDesc.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_DECR;
-		psoDesc.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		psoDesc.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		psoDesc.SampleMask = UINT_MAX;
-		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-		psoDesc.SampleDesc.Count = 1;
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		//// Describe and create the graphics pipeline state object (PSO).
+		//D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		//psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+		//psoDesc.pRootSignature = m_rootSignature.GetSignature();
+		//psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+		//psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+		//psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		//psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		//psoDesc.DepthStencilState.DepthEnable = TRUE;
+		//psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		//psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		//psoDesc.DepthStencilState.StencilEnable = TRUE;
+		//psoDesc.DepthStencilState.StencilReadMask = 0xFF;
+		//psoDesc.DepthStencilState.StencilWriteMask = 0xFF;
+		//// Stencil operations if pixel is front-facing
+		//psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		//psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_INCR;
+		//psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		//psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		//// Stencil operations if pixel is back-facing
+		//psoDesc.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		//psoDesc.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_DECR;
+		//psoDesc.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		//psoDesc.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		//psoDesc.SampleMask = UINT_MAX;
+		//psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		//psoDesc.NumRenderTargets = 1;
+		//psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		//psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+		//psoDesc.SampleDesc.Count = 1;
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+
+		m_pipelineState.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		m_pipelineState.SetRootSignature(m_rootSignature);
+		m_pipelineState.SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+		m_pipelineState.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
+		m_pipelineState.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		m_pipelineState.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		m_pipelineState.SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL, 
+			D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+		m_pipelineState.SetSampleMask(UINT_MAX);
+		m_pipelineState.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		m_pipelineState.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+		m_pipelineState.Finalize();
+
 	}
 
 	// Create the command list.
 	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.GetPSO(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
 	m_commandList = IGraphics::g_GraphicsCore->g_commandList;
 
 	// Create the vertex buffer.
@@ -502,7 +519,7 @@ void TiledRendering::PopulateCommandList()
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.Get()));
+	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_pipelineState.GetPSO()));
 
 
 	// Set necessary state.

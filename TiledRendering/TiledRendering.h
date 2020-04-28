@@ -15,6 +15,7 @@
 #include "Model.h"
 #include "GpuBuffer.h"
 #include "DX12RootSignature.h"
+#include "DX12PipelineState.h"
 
 // Experimental classes 
 #include "SimpleComputeShader.h"
@@ -70,10 +71,10 @@ private:
     CD3DX12_RECT m_scissorRect;
     ComPtr<ID3D12DescriptorHeap> m_srvHeap;
     ComPtr<ID3D12DescriptorHeap> m_cbvSrvHeap;
-    ComPtr<ID3D12PipelineState> m_pipelineState;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
     UINT m_cbvSrvUavDescriptorSize;
     DX12RootSignature m_rootSignature;
+    GraphicsPSO m_pipelineState;
 
     // App resources.
     StructuredBuffer m_vertexBuffer;
@@ -102,7 +103,6 @@ private:
     void LoadImGUI();
     void PopulateCommandList();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
-
 
     enum RootParameters : uint32_t
     {

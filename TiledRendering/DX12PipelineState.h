@@ -22,6 +22,8 @@ public:
 		return *m_RootSignature;
 	}
 
+    ID3D12PipelineState* GetPSO() { return m_PSO; }
+
 protected:
 	const DX12RootSignature* m_RootSignature;
 	ID3D12PipelineState* m_PSO;
