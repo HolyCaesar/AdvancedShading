@@ -83,6 +83,7 @@ private:
 
     ComPtr<ID3D12Resource> m_depthBuffer;
     ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
+    DepthBuffer m_testDepthBuffer;
 
     ComPtr<ID3D12Resource> m_constantBuffer;
     CBuffer m_constantBufferData;

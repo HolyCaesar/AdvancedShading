@@ -107,7 +107,6 @@ void TiledRendering::LoadPipeline()
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_DSVHeap)) != S_OK);
 	}
-	
 }
 
 // Load the sample assets.
@@ -229,6 +228,8 @@ void TiledRendering::LoadAssets()
 	}
 
 	// Create Depth Buffer
+	m_testDepthBuffer.Create(L"TestDepthBuffer", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 	{
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
@@ -506,15 +507,18 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(IGraphics::g_GraphicsCore->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), IGraphics::g_GraphicsCore->s_FrameIndex, IGraphics::g_GraphicsCore->m_rtvDescriptorSize);
-	auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+	//auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto dsvHandle = m_testDepthBuffer.GetDSV();
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+	//m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	//m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_testDepthBuffer.GetClearDepth(), m_testDepthBuffer.GetClearStencil(), 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());

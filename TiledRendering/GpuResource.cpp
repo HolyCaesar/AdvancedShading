@@ -585,6 +585,7 @@ void DepthBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Heig
 
     D3D12_CLEAR_VALUE ClearValue = {};
     ClearValue.Format = Format;
+    ClearValue.DepthStencil = { m_ClearDepth, m_ClearStencil };
     CreateTextureResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, ResourceDesc, ClearValue, VidMemPtr);
     CreateDerivedViews(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Format);
 }
@@ -597,6 +598,7 @@ void DepthBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Heig
 
     D3D12_CLEAR_VALUE ClearValue = {};
     ClearValue.Format = Format;
+    ClearValue.DepthStencil = { m_ClearDepth, m_ClearStencil };
     CreateTextureResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, ResourceDesc, ClearValue, VidMemPtr);
     CreateDerivedViews(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Format);
 }
