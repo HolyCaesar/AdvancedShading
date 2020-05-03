@@ -10,7 +10,7 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = e_numRootParameters;
+		desc.NumDescriptors = e_cCB;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvUavSrvHeap)) != S_OK);
 		m_cbvUavSrvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -53,10 +53,12 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 	non_static_sampler.MinLOD = 0.0f;
 	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
-	m_computeRootSignature.Reset(4, 1);
-	m_computeRootSignature.InitStaticSampler(0, non_static_sampler);
+	m_computeRootSignature.Reset(e_numRootParameters + 1, 0);
+	//m_computeRootSignature.InitStaticSampler(0, non_static_sampler);
 	m_computeRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB);
-	m_computeRootSignature[e_rootParameterUAV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, e_cUAV);
+	//m_computeRootSignature[e_rootParameterUAV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, e_cUAV);
+	m_computeRootSignature[e_rootParameterUAV].InitAsBufferUAV(0);
+	m_computeRootSignature[2].InitAsBufferUAV(1);
 	//m_computeRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV);
 	m_computeRootSignature.Finalize(L"GridFrustumPassRootSignature");
 
@@ -71,7 +73,7 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
 		ComPtr<ID3DBlob> errorMessages;
-		HRESULT hr = D3DCompileFromFile(L"GridFrustumPassCS.hlsl", nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &computeShader, &errorMessages);
+		HRESULT hr = D3DCompileFromFile(L"GridFrustumPass.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CS_GridFrustumPass", "cs_5_1", compileFlags, 0, &computeShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -98,8 +100,12 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 	// Prepare for Output of Grid
 	m_BlockSizeX = ceil(ScreenWidth * 1.0f / m_TiledSize);
 	m_BlockSizeY = ceil(ScreenHeight * 1.0f / m_TiledSize);
-	m_CSGridFrustumOutputSB.Create(L"GridFrustumsPassOutputBuffer", m_BlockSizeX * m_BlockSizeY, sizeof(m_BlockSizeX));
+	m_CSGridFrustumOutputSB.Create(L"GridFrustumsPassOutputBuffer", m_BlockSizeX * m_BlockSizeY, sizeof(Frustum));
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CSGridFrustumOutputSB.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	// Debug Buffer
+	m_CSDebugUAV.Create(L"DebugUAV", m_BlockSizeX * m_BlockSizeY, sizeof(float));
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CSDebugUAV.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Create the constant buffer for DispatchParams
 	{
@@ -119,9 +125,12 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 
 		CD3DX12_RANGE readRange(0, 0);
 		ThrowIfFailed(m_dispatchParamsCB->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDispatchParams)));
-		m_dispatchParamsData.blockSize = XMUINT2(16, 16);
-		m_dispatchParamsData.numThreadGroups = XMUINT3(1, 1, 1);
-		m_dispatchParamsData.numThreads = XMUINT3(1, 1, 1);
+		m_dispatchParamsData.numThreadGroups = XMUINT3(ceil(1.0f * m_BlockSizeX / m_TiledSize), ceil(1.0f * m_BlockSizeY / m_TiledSize), 1);
+		m_dispatchParamsData.numThreads = XMUINT3(m_BlockSizeX, m_BlockSizeY, 1);
+		m_dispatchParamsData.blockSize = XMUINT2(m_TiledSize, m_TiledSize);
+		m_dispatchParamsData.padding1 = 1;
+		m_dispatchParamsData.padding2 = 1;
+		m_dispatchParamsData.padding3 = XMUINT2(1, 1);
 		memcpy(m_pCbvDispatchParams, &m_dispatchParamsData, sizeof(m_dispatchParamsData));
 	}
 
@@ -155,11 +164,11 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 
 	WaitForComputeShader();
 
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandList->Close());
-	ID3D12CommandList* ppCommandLists1[] = { IGraphics::g_GraphicsCore->g_commandList.Get() };
-	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists1), ppCommandLists1);
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandList->Close());
+	//ID3D12CommandList* ppCommandLists1[] = { IGraphics::g_GraphicsCore->g_commandList.Get() };
+	//IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists1), ppCommandLists1);
 
-	IGraphics::g_GraphicsCore->WaitForGpu();
+	//IGraphics::g_GraphicsCore->WaitForGpu();
 }
 
 void GridFrustumsPass::ExecuteOnCS()
@@ -179,9 +188,13 @@ void GridFrustumsPass::ExecuteOnCS()
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
 		e_rootParameterUAV,
 		m_CSGridFrustumOutputSB.GetGpuVirtualAddress());
+	m_computeCommandList->SetComputeRootUnorderedAccessView(
+		2,
+		m_CSDebugUAV.GetGpuVirtualAddress());
 
 
-	m_computeCommandList->Dispatch(m_BlockSizeX, m_BlockSizeY, 1);
+	m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	//m_computeCommandList->Dispatch(1, 1, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
 

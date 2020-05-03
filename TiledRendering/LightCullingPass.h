@@ -11,7 +11,7 @@ using namespace std;
 class GridFrustumsPass
 {
 public:
-    GridFrustumsPass(uint32_t TiledSize) :
+    GridFrustumsPass(uint32_t TiledSize = 16) :
         m_TiledSize(TiledSize),
         m_BlockSizeX(1), m_BlockSizeY(1)
     {
@@ -43,17 +43,19 @@ private:
     ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
 
     // Grid Frustum Calculation Pass Resources
-    //ComPtr<ID3D12Resource> m_GridFrustumInput;
-    //ComPtr<ID3D12Resource> m_GridFrustumOutputSB;
     StructuredBuffer m_CSGridFrustumOutputSB;
+    StructuredBuffer m_CSDebugUAV;
 
     ComPtr<ID3D12DescriptorHeap> m_cbvUavSrvHeap;
     UINT m_cbvUavSrvDescriptorSize;
     __declspec( align( 16 ) ) struct DispatchParams
     {
         XMUINT3 numThreadGroups;  // Number of groups dispatched
+        UINT padding1;
         XMUINT3 numThreads;       // Totla number of threads dispatched
+        UINT padding2;
         XMUINT2 blockSize;        // 
+        XMUINT2 padding3;
     };
     ComPtr<ID3D12Resource> m_dispatchParamsCB;
     DispatchParams m_dispatchParamsData;
@@ -63,6 +65,7 @@ private:
     {
         XMMATRIX InverseProjection;
         XMUINT2 ScreenDimensions;
+        XMUINT2 Padding;
     };
     ComPtr<ID3D12Resource> m_screenToViewParamsCB;
     ScreenToViewParams m_screenToViewParamsData;
@@ -86,19 +89,19 @@ private:
     enum DescriptorHeapCount : uint32_t
     {
         e_cCB = 2,
-        e_cUAV = 1,
+        e_cUAV = 2,
         //e_cSRV = 0,
     };
     enum DescriptorHeapIndex : uint32_t
     {
         e_iCB = 0,
-        //e_iUAV = e_iCB + e_cCB,
-        //e_iSRV = e_iUAV + e_cUAV,
-        //e_iHeapEnd = e_iSRV + e_cSRV
         e_iUAV = e_iCB + e_cCB,
-        //e_iSRV = e_iUAV + e_cUAV,
-        //e_iHeapEnd = e_iSRV + e_cSRV
         e_iHeapEnd = e_iUAV + e_cUAV
+    };
+
+    __declspec( align( 16 ) ) struct Frustum
+    {
+        XMFLOAT4 planes[4];   // left, right, top, bottom frustum planes.
     };
 
     void WaitForComputeShader();

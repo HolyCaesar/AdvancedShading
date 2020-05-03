@@ -16,6 +16,7 @@
 #include "GpuBuffer.h"
 #include "DX12RootSignature.h"
 #include "DX12PipelineState.h"
+#include "LightCullingPass.h"
 
 // Experimental classes 
 #include "SimpleComputeShader.h"
@@ -94,9 +95,6 @@ private:
     // Model
     shared_ptr<Model> m_pModel;
 
-    // Compute Shader
-    SimpleComputeShader m_simpleCS;
-
     void LoadPipeline();
     void LoadAssets();
     void LoadImGUI();
@@ -121,4 +119,11 @@ private:
         e_iSRV = e_iCB + e_cCB,
         e_iHeapEnd = e_iCB + e_iSRV
     };
+
+
+    // Compute Shader Demo
+    //SimpleComputeShader m_simpleCS;
+
+public:
+   GridFrustumsPass m_GridFrustumsPass;
 };

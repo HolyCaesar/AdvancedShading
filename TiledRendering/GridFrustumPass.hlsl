@@ -1,4 +1,3 @@
-
 #include "CommonIncl.hlsl"
 
 #define BLOCK_SIZE 16 
@@ -14,14 +13,18 @@ struct ComputeShaderInput
 cbuffer DispatchParams : register(b0)
 {
     uint3 numThreadGroups;  // Number of groups dispatched
+    uint padding1;
     uint3 numThreads;       // Totla number of threads dispatched
+    uint padding2;
     uint2 blockSize;        // 
+    uint2 padding3;
 }
 
 cbuffer ScreenToViewParams : register(b1)
 {
     float4x4 InverseProjection;
     uint2 ScreenDimensions;
+    uint2 Padding;
 }
 
 float4 ClipToView(float4 clip)
@@ -44,8 +47,18 @@ float4 ScreenToView(float4 screenCoordinates)
     return ClipToView(clip);
 }
 
+struct test
+{
+    float data;
+};
 
-RWStructuredBuffer<Frustum> out_Frustums : register(u0);
+struct FrustumOut
+{
+    float4 plane[4];
+};
+
+RWStructuredBuffer<FrustumOut> out_Frustums : register(u0);
+RWStructuredBuffer<uint> debugUAV : register(u1);
 
 // Calculate the view frustum for each tiled in the view space
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
@@ -72,20 +85,27 @@ void CS_GridFrustumPass(ComputeShaderInput Input)
 
     // Build the frustum planes from the view space points
     Frustum frustum;
-
+    FrustumOut Out;
     // Left plane
     frustum.planes[0] = ComputePlane(eyePos, tiledVerticesInViewSpace[2], tiledVerticesInViewSpace[0]);
+    Out.plane[0] = float4(frustum.planes[0].N, frustum.planes[0].d);
     // Right plane
     frustum.planes[1] = ComputePlane(eyePos, tiledVerticesInViewSpace[1], tiledVerticesInViewSpace[3]);
+    Out.plane[1] = float4(frustum.planes[1].N, frustum.planes[1].d);
     // Top plane
     frustum.planes[2] = ComputePlane(eyePos, tiledVerticesInViewSpace[0], tiledVerticesInViewSpace[1]);
+    Out.plane[2] = float4(frustum.planes[2].N, frustum.planes[2].d);
     // Bottom plane
     frustum.planes[3] = ComputePlane(eyePos, tiledVerticesInViewSpace[3], tiledVerticesInViewSpace[2]);
+    Out.plane[3] = float4(frustum.planes[3].N, frustum.planes[3].d);
+
 
     // Store the computed frustum in the output buffer
     if (Input.dispatchThreadID.x < numThreads.x && Input.dispatchThreadID.y < numThreads.y)
     {
         uint idx = Input.dispatchThreadID.x + (Input.dispatchThreadID.y * numThreads.x);
-        out_Frustums[idx] = frustum;
+        //out_Frustums[idx] = frustum;
+        out_Frustums[idx] = Out;
+        debugUAV[idx] = idx;
     }
 }

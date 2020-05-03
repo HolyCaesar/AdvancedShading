@@ -73,8 +73,7 @@ void TiledRendering::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
-	//LoadComputeShaderResources();
-	m_simpleCS.OnInit();
+	//m_simpleCS.OnInit();
 }
 
 // Load the rendering pipeline dependencies.
@@ -107,6 +106,8 @@ void TiledRendering::LoadPipeline()
 // Load the sample assets.
 void TiledRendering::LoadAssets()
 {
+
+
 	// Create a root signature consisting of a descriptor table with a single CBV
 	{
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -131,7 +132,7 @@ void TiledRendering::LoadAssets()
 		non_static_sampler.BorderColor[3] = 1.0f;
 		non_static_sampler.MinLOD = 0.0f;
 		non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
-		
+
 		m_rootSignature.Reset(2, 1);
 		m_rootSignature.InitStaticSampler(0, non_static_sampler);
 		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -197,7 +198,7 @@ void TiledRendering::LoadAssets()
 		m_pipelineState.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
 		m_pipelineState.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		m_pipelineState.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		m_pipelineState.SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL, 
+		m_pipelineState.SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
 			D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
 			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
 			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
@@ -307,17 +308,8 @@ void TiledRendering::LoadAssets()
 		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHandle);
 	}
 
-	// Close the command list and execute it to begin the initial GPU setup.
-	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-
-
-	// Create synchronization objects and wait until assets have been uploaded to the GPU.
+	// Camera Setup
 	{
-		IGraphics::g_GraphicsCore->WaitForGpu();
-
 		// Setup the camera's view parameters
 		static const XMVECTORF32 s_Eye = { 0.0f, 0.0f, -6.0f, 0.f };
 		static const XMVECTORF32 s_At = { 0.0f, 0.0f, 0.0f, 0.f };
@@ -327,9 +319,24 @@ void TiledRendering::LoadAssets()
 		m_modelViewCamera.SetProjParams(XM_PI / 4, fAspectRatio, 0.01f, 10000.0f);
 		m_modelViewCamera.SetWindow(m_width, m_height);
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
-
-		LoadImGUI();
 	}
+
+
+
+	// Test Area
+	m_GridFrustumsPass.SetTiledDimension(16);
+	m_GridFrustumsPass.Init(L"GridFrustumPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
+
+
+
+	// Close the command list and execute it to begin the initial GPU setup.
+	ThrowIfFailed(m_commandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	IGraphics::g_GraphicsCore->WaitForGpu();
+
+	LoadImGUI();
 }
 
 std::vector<UINT8> TiledRendering::GenerateTextureData()
@@ -410,7 +417,8 @@ void TiledRendering::OnRender()
 {
 	ShowImGUI();
 
-	m_simpleCS.OnExecuteCS();
+	//m_simpleCS.OnExecuteCS();
+	m_GridFrustumsPass.ExecuteOnCS();
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
