@@ -31,6 +31,9 @@
     <Filter Include="MyTemplateCodes">
       <UniqueIdentifier>{cbe89c0b-be4b-4757-85f8-a055ff1d01ab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="TiledForwardRendering">
+      <UniqueIdentifier>{6e462f9e-168f-4dff-a2a2-a8935c351de0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -106,6 +109,9 @@
       <Filter>MyTemplateCodes</Filter>
     </ClCompile>
     <ClCompile Include="DX12PipelineState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LightCullingPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -230,12 +236,21 @@
     <ClInclude Include="DX12PipelineState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LightCullingPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="csShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="CommonIncl.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GridFrustumPass.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

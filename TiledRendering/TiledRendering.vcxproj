@@ -172,6 +172,7 @@
     <ClCompile Include="imgui_widgets.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="LightCullingPass.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MyTemplateCodes\RawExample.cpp" />
     <ClCompile Include="MyTemplateCodes\SimpleComputeShader.cpp" />
@@ -232,6 +233,7 @@
     <ClInclude Include="imstb_truetype.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="LightCullingPass.h" />
     <ClInclude Include="MyTemplateCodes\RawExample.h" />
     <ClInclude Include="MyTemplateCodes\SimpleComputeShader.h" />
     <ClInclude Include="stdafx.h" />
@@ -242,11 +244,19 @@
     <ClInclude Include="Win32FrameWork.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="CommonIncl.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="csShader.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CSMain</EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="GridFrustumPass.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CS_GridFrustumPass</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

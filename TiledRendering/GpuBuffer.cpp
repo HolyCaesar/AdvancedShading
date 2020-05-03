@@ -72,7 +72,7 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 		//CommandContext::InitializeBuffer(*this, initialData, m_BufferSize);
 	}
 
-	//CreateDerivedViews();
+	CreateDerivedViews();
 }
 
 // Sub-Allocate a buffer out of a pre-allocated heap.  If initial data is provided, it will be copied into the buffer using the default command context.
