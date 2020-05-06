@@ -323,7 +323,7 @@ void TiledRendering::LoadAssets()
 
 
 
-	// Test Area
+	// Grid Frustum Pass Creation
 	m_GridFrustumsPass.SetTiledDimension(16);
 	m_GridFrustumsPass.Init(L"GridFrustumPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 

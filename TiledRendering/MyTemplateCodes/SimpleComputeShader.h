@@ -46,6 +46,7 @@ private:
     ComPtr<ID3D12Resource> m_computeInputTex2D;
     ComPtr<ID3D12Resource> m_computeInputStructureBuffer;
     ComPtr<ID3D12Resource> m_computeOutput;
+    ComPtr<ID3D12Resource> m_computeOutputSB;
     UINT8* m_pcsInputStructureBegin;
 
     ComPtr<ID3D12Fence> m_computeFence;
@@ -66,7 +67,7 @@ private:
     enum DescriptorHeapCount : uint32_t
     {
         //e_cCB = 1,
-        e_cUAV = 1,
+        e_cUAV = 2,
         e_cSRV = 2,
     };
     enum DescriptorHeapIndex : uint32_t

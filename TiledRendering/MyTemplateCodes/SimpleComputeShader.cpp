@@ -241,7 +241,40 @@ void SimpleComputeShader::LoadComputeShaderResources()
 	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
 	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), nullptr, nullptr, csUAVHandle);
-	//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), m_computeOutput.Get(), &uavDesc, csUAVHandle);
+
+
+	// Create compute shader UAV (structure buffer)
+	D3D12_RESOURCE_DESC Desc = {};
+	Desc.Alignment = 0;
+	Desc.DepthOrArraySize = 1;
+	Desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	Desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	Desc.Format = DXGI_FORMAT_UNKNOWN;
+	Desc.Height = 1;
+	Desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	Desc.MipLevels = 1;
+	Desc.SampleDesc.Count = 1;
+	Desc.SampleDesc.Quality = 0;
+	Desc.Width = (UINT64)(w * h * sizeof(float));
+
+	ThrowIfFailed(
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&Desc,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			nullptr,
+			IID_PPV_ARGS(&m_computeOutputSB)));
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
+	UAVDesc.Buffer.CounterOffsetInBytes = 0;
+	UAVDesc.Buffer.NumElements = (UINT)(w * h);
+	UAVDesc.Buffer.StructureByteStride = sizeof(float);
+	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE csUAVHandle1(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), e_iUAV + 1, m_cbvSrvUavDescriptorSize);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutputSB.Get(), nullptr, &UAVDesc, csUAVHandle1);
 
 
 	// Create a structure buffer for the compute shader
