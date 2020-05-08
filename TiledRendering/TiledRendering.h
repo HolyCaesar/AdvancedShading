@@ -95,11 +95,32 @@ private:
     // Model
     shared_ptr<Model> m_pModel;
 
+    // Pre-Depth pass resources
+    DepthBuffer m_preDepthPass;
+    ColorBuffer m_preDepthPassRTV;
+    DX12RootSignature m_preDepthPassRootSignature;
+    GraphicsPSO m_preDepthPassPSO;
+    
+    // Grid FrustumsPass Calculation
+    GridFrustumsPass m_GridFrustumsPass;
+
+    // Light Culling Pass
+    DX12RootSignature m_lightCullingRootSignature;
+    GraphicsPSO m_lightCullingPSO;
+    
+
+    // Compute Shader Demo
+    //SimpleComputeShader m_simpleCS;
+
+
     void LoadPipeline();
     void LoadAssets();
     void LoadImGUI();
     void PopulateCommandList();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
+
+    void LoadPreDepthPassAssets();
+    void PreDepthPass();
 
     enum RootParameters : uint32_t
     {
@@ -119,11 +140,4 @@ private:
         e_iSRV = e_iCB + e_cCB,
         e_iHeapEnd = e_iCB + e_iSRV
     };
-
-
-    // Compute Shader Demo
-    //SimpleComputeShader m_simpleCS;
-
-public:
-   GridFrustumsPass m_GridFrustumsPass;
 };

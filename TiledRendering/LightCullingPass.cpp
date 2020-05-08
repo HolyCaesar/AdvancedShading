@@ -163,12 +163,6 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 	m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	WaitForComputeShader();
-
-	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandList->Close());
-	//ID3D12CommandList* ppCommandLists1[] = { IGraphics::g_GraphicsCore->g_commandList.Get() };
-	//IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists1), ppCommandLists1);
-
-	//IGraphics::g_GraphicsCore->WaitForGpu();
 }
 
 void GridFrustumsPass::ExecuteOnCS()
