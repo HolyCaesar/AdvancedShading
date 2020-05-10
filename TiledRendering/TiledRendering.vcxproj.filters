@@ -253,6 +253,9 @@
     <FxCompile Include="GridFrustumPass.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="LightCullingPass.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\MiniEngineMath\Functions.inl">

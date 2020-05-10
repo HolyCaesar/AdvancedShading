@@ -6,6 +6,7 @@
 #define POINT_LIGHT 0
 #define SPOT_LIGHT 1
 #define DIRECTIONAL_LIGHT 2
+#define NUM_LIGHTS 8
 
 struct Material
 {
@@ -147,4 +148,78 @@ Plane ComputePlane(float3 p0, float3 p1, float3 p2)
     plane.N = normalize(cross(v0, v1));
     plane.d = dot(plane.N, p0);
     return plane;
+}
+
+// Check to see if a sphere is fully behind (inside the negative halfspace of) a plane.
+// Source: Real-time collision detection, Christer Ericson (2005)
+bool SphereInsidePlane(Sphere sphere, Plane plane)
+{
+    return dot(plane.N, sphere.c) - plane.d < -sphere.r;
+}
+
+// Check to see if a ponit is fully behind (inside the negative halfspace of) a plane
+bool PointInsidePlane(float3 p, Plane plane)
+{
+    return dot(plane.N, p) - plane.d < 0;
+}
+
+// Check to see if a cone if fully behind (inside the negative halfspace of) a plane.
+bool ConeInsidePlane(Cone cone, Plane plane)
+{
+    // Compute the farthest point on the end of the cone to the positive space of the plane.
+    float3 m = cross(cross(plane.N, cone.d), cone.d);
+    float3 Q = cone.T + cone.d * cone.h - m * cone.r;
+
+    // The cone is in the negative halfspace of the plane if both
+    // the tip of the cone and the farthest point on the end of the cone to the 
+    // positive halfspace of the plane are both inside the negative halfspace 
+    // of the plane.
+    return PointInsidePlane(cone.T, plane) && PointInsidePlane(Q, plane);
+}
+
+// Check to see of a light is partially contained within the frustum
+bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar)
+{
+    bool result = true;
+
+    // First check depth: If the sphere is either fully in front of the near clipping plane, or fully behind the far clipping plane, then the light can be discarded
+    // Note: Here, the view vector points in the -Z axis
+    // so the far depth value will be approaching -infinity.
+    if (sphere.c.z - sphere.r > zNear || sphere.c.z + sphere.r < zFar)
+    {
+        result = false;
+    }
+
+    for (int i = 0; i < 4 && result; ++i)
+    {
+        if (SphereInsidePlane(sphere, frustum.planes[i]))
+        {
+            result = false;
+        }
+    }
+    return result;
+}
+
+bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
+{
+    bool result = true;
+
+    Plane nearPlane = { float3(0, 0, -1), -zNear };
+    Plane farPlane = { float3(0, 0, 1), zFar };
+
+    // First check the near and far clipping planes
+    if (ConeInsidePlane(cone, nearPlane) || ConeInsidePlane(cone, farPlane))
+    {
+        result = false;
+    }
+
+    // Then check frustum planes
+    for (int i = 0; i < 4 && result; ++i)
+    {
+        if (ConeInsidePlane(cone, frustum.planes[i]))
+        {
+            result = false;
+        }
+    }
+    return result;
 }
