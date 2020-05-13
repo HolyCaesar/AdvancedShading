@@ -234,6 +234,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="LightCullingPass.h" />
+    <ClInclude Include="Lights.h" />
     <ClInclude Include="MyTemplateCodes\RawExample.h" />
     <ClInclude Include="MyTemplateCodes\SimpleComputeShader.h" />
     <ClInclude Include="stdafx.h" />
