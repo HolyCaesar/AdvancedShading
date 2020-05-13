@@ -63,10 +63,10 @@ globallycoherent RWStructuredBuffer<uint> o_LightIndexCounter : register(u0);
 globallycoherent RWStructuredBuffer<uint> t_LightIndexCounter : register(u1);
 
 // Light index lists and light grids
-RWStructuredBuffer<uint> o_LightIndexList : register(u3);
-RWStructuredBuffer<uint> t_LightIndexList : register(u4);
-RWTexture2D<uint2> o_LightGrid : register(u5);
-RWTexture2D<uint2> t_LightGrid : register(u6);
+RWStructuredBuffer<uint> o_LightIndexList : register(u2);
+RWStructuredBuffer<uint> t_LightIndexList : register(u3);
+RWTexture2D<uint2> o_LightGrid : register(u4);
+RWTexture2D<uint2> t_LightGrid : register(u5);
 
 // Group shared variables
 groupshared uint uMinDepth;
@@ -105,7 +105,7 @@ void t_AppendLight(uint lightIndex)
 
 // Calculate the view frustum for each tiled in the view space
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
-void CS_GridFrustumPass(ComputeShaderInput Input)
+void CS_LightCullingPass(ComputeShaderInput Input)
 {
     int2 texCoord = Input.dispatchThreadID.xy;
     float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
