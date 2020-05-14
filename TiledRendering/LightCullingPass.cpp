@@ -272,18 +272,22 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	non_static_sampler.MinLOD = 0.0f;
 	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
-	m_computeRootSignature.Reset(e_numRootParameters + 1, 0);
+	m_computeRootSignature.Reset(e_numRootParameters, 0);
 	//m_computeRootSignature.InitStaticSampler(0, non_static_sampler);
 	m_computeRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB);
 	m_computeRootSignature[e_rootParameterOLightIndexCounterUAV].InitAsBufferUAV(0);
 	m_computeRootSignature[e_rootParameterTLightIndexCounterUAV].InitAsBufferUAV(1);
+
 	m_computeRootSignature[e_rootParameterOLightIndexListUAV].InitAsBufferUAV(2);
 	m_computeRootSignature[e_rootParameterTLightIndexListUAV].InitAsBufferUAV(3);
-	m_computeRootSignature[e_rootParameterOLightGridUAV].InitAsBufferUAV(4);
-	m_computeRootSignature[e_rootParameterTLightGridUAV].InitAsBufferUAV(5);
+	m_computeRootSignature[e_rootParameterOLightGridUAV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 1);
+	m_computeRootSignature[e_rootParameterTLightGridUAV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 5, 1);
+	//m_computeRootSignature[e_rootParameterOLightGridUAV].InitAsBufferUAV(4);
+	//m_computeRootSignature[e_rootParameterTLightGridUAV].InitAsBufferUAV(5);
 	m_computeRootSignature[e_rootParameterFrustumSRV].InitAsBufferSRV(0);
 	m_computeRootSignature[e_rootParameterLightsSRV].InitAsBufferSRV(1);
-	m_computeRootSignature[e_rootParameterDepthSRV].InitAsBufferSRV(2);
+	//m_computeRootSignature[e_rootParameterDepthSRV].InitAsBufferSRV(2);
+	m_computeRootSignature[e_rootParameterDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
 	// TODO need to add RW texture to the room signature
 	//m_computeRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV);
 	m_computeRootSignature.Finalize(L"LightCullingPassRootSignature");
@@ -442,9 +446,12 @@ void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& Frust
 		e_rootParameterTLightIndexListUAV,
 		m_tLightIndexList.GetGpuVirtualAddress());
 	// OLightGrid
-	m_computeCommandList->SetComputeRootUnorderedAccessView(
+	m_computeCommandList->SetComputeRootDescriptorTable(
 		e_rootParameterOLightGridUAV,
 		m_oLightGrid.GetGpuVirtualAddress());
+	//m_computeCommandList->SetComputeRootUnorderedAccessView(
+	//	e_rootParameterOLightGridUAV,
+	//	m_oLightGrid.GetGpuVirtualAddress());
 	// TLightGrid
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
 		e_rootParameterTLightGridUAV,
@@ -465,7 +472,8 @@ void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& Frust
 	//	2,
 	//	m_CSDebugUAV.GetGpuVirtualAddress());
 
-	m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	//m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	m_computeCommandList->Dispatch(1, 1, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
 
@@ -493,4 +501,11 @@ void LightCullingPass::WaitForComputeShader()
 void LightCullingPass::Destroy()
 {
 	// TODO
+}
+
+void LightCullingPass::UpdateLightBuffer(vector<Light>& lightList)
+{
+	m_Lights.Destroy();
+	m_Lights.Create(L"LightLists", lightList.size(), sizeof(Light), lightList.data());
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Lights.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }

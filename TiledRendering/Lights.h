@@ -67,9 +67,10 @@ __declspec(align(16)) struct Light
     LightType   m_Type;
 
     XMFLOAT2 m_Padding;
+
     //--------------------------------------------------------------(16 bytes )
     //--------------------------------------------------------------( 16 * 7 = 112 bytes )
-    Light::Light()
+    Light()
         : m_PositionWS(0, 0, 0, 1)
         , m_DirectionWS(0, 0, -1, 0)
         , m_PositionVS(0, 0, 0, 1)

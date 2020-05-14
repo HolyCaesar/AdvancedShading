@@ -326,6 +326,7 @@ void TiledRendering::LoadAssets()
 	m_GridFrustumsPass.SetTiledDimension(16);
 	m_GridFrustumsPass.Init(L"GridFrustumPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
+	m_LightCullingPass.Init(L"LightCullingPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
 
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -522,6 +523,8 @@ void TiledRendering::OnRender()
 	//m_simpleCS.OnExecuteCS();
 	m_GridFrustumsPass.ExecuteOnCS();
 
+	///m_LightCullingPass.ExecuteOnCS(m_depthBuffer, m_GridFrustumsPass.m_CSGridFrustumOutputSB);
+
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
@@ -656,4 +659,65 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_commandList->Close());
+}
+
+// Lights generation
+void TiledRendering::GenerateLights(uint32_t numLights)
+{
+	uint32_t lightsPerDimension = static_cast<uint32_t>(ceil(cbrt(numLights)));
+	// TODO hard code the light spawing space here
+	XMFLOAT3 minPoint(-10.0f, -10.0f, -10.0f);
+	XMFLOAT3 maxPoint(10.0f, 10.0f, 10.0f);
+	XMFLOAT3 bounds(maxPoint.x - minPoint.x, maxPoint.y - minPoint.y, maxPoint.z - minPoint.z);
+
+	m_lightsList.clear();
+	m_lightsList.resize(numLights);
+	for (int i = 0; i < numLights; ++i)
+	{
+		Light& light = m_lightsList[i];
+		// Uniformly distribute lights
+		XMFLOAT3 pos;
+		pos.x = (i % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+		pos.y = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+		pos.z = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension) / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+
+		light.m_PositionWS = XMFLOAT4(
+			pos.x * bounds.x + minPoint.x, 
+			pos.y * bounds.y + minPoint.y, 
+			pos.z * bounds.z + minPoint.z, 
+			1.0f);
+		// Random distribution (TODO may need a switch to choose which method to use)
+		//pos.x = (rand() / INT_MAX) * bounds.x;
+		//pos.y = (rand() / INT_MAX) * bounds.y;
+		//pos.z = (rand() / INT_MAX) * bounds.z;
+		//light.m_PositionWS = XMFLOAT4(pos.x, pos.y, pos.z, 1.0f);
+
+		// TODO may need a uniform random generator here
+		light.m_Color.x = max(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.y = max(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.z = max(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.w = 1.0f;
+
+		light.m_DirectionWS = XMFLOAT4(
+			-light.m_PositionWS.x,
+			-light.m_PositionWS.y,
+			-light.m_PositionWS.z,
+			0.0f);
+		float minRange(0.1f), maxRange(1000.0f);
+		light.m_Range = minRange + (1.0f * rand() / INT_MAX) * maxRange;
+		float minSpotAngle(0.1f * XM_PI / 180.0f), maxSpotAngle(30.0f * XM_PI / 180.0f);
+		light.m_SpotlightAngle = minSpotAngle + (1.0f * rand() / INT_MAX) * maxSpotAngle;
+
+		// Use probablity to generate three different types lights
+		float fLightPropability = (1.0f * rand() / INT_MAX);
+		// TODO hard coding the light types for debugging purpose
+		light.m_Type = Light::LightType::Point;
+	}
+
+	UpdateLightsBuffer();
+}
+
+void TiledRendering::UpdateLightsBuffer()
+{
+	
 }

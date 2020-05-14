@@ -5,6 +5,7 @@
 #include "DX12PipelineState.h"
 #include "GpuResource.h"
 #include "GpuBuffer.h"
+#include "Lights.h"
 
 using namespace std;
 
@@ -30,6 +31,10 @@ public:
     void ExecuteOnCS();
     void Destroy();
 
+    // Grid Frustum Calculation Pass Resources
+    StructuredBuffer m_CSGridFrustumOutputSB;
+    StructuredBuffer m_CSDebugUAV;
+
 private:
     uint32_t m_TiledSize;
     uint32_t m_BlockSizeX;
@@ -42,9 +47,6 @@ private:
     ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
     ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
 
-    // Grid Frustum Calculation Pass Resources
-    StructuredBuffer m_CSGridFrustumOutputSB;
-    StructuredBuffer m_CSDebugUAV;
 
     ComPtr<ID3D12DescriptorHeap> m_cbvUavSrvHeap;
     UINT m_cbvUavSrvDescriptorSize;
@@ -111,10 +113,10 @@ private:
 class LightCullingPass
 {
 public:
-    LightCullingPass()
-    {
-
-    }
+    LightCullingPass(uint32_t TiledSize = 16) :
+        m_TiledSize(TiledSize),
+        m_BlockSizeX(1), m_BlockSizeY(1)
+    {}
     ~LightCullingPass()
     {
         Destroy();
@@ -122,6 +124,7 @@ public:
 
     void Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint32_t ScreenHeight,
         XMMATRIX inverseProjection = XMMatrixIdentity());
+    void UpdateLightBuffer(vector<Light>& lighList);
     void ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& FrustumIn);
     void Destroy();
 

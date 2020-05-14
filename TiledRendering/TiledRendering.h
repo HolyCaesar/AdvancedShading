@@ -11,6 +11,7 @@
 #include "imgui_impl_dx12.h"
 
 #include "GraphicsCore.h"
+#include "Lights.h"
 #include "Camera.h"
 #include "Model.h"
 #include "GpuBuffer.h"
@@ -105,8 +106,8 @@ private:
     GridFrustumsPass m_GridFrustumsPass;
 
     // Light Culling Pass
-    DX12RootSignature m_lightCullingRootSignature;
-    GraphicsPSO m_lightCullingPSO;
+    vector<Light> m_lightsList;
+    LightCullingPass m_LightCullingPass;
     
 
     // Compute Shader Demo
@@ -121,6 +122,11 @@ private:
 
     void LoadPreDepthPassAssets();
     void PreDepthPass();
+
+    // GenerateLights
+    void GenerateLights(uint32_t numLights);
+    // Update Lights Buffer
+    void UpdateLightsBuffer();
 
     enum RootParameters : uint32_t
     {
