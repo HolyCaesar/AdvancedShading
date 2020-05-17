@@ -148,11 +148,16 @@ private:
 	// Light Culling Resource
     StructuredBuffer m_oLightIndexCounter;
     StructuredBuffer m_tLightIndexCounter;
-
     StructuredBuffer m_oLightIndexList;
     StructuredBuffer m_tLightIndexList;
-    ColorBuffer m_oLightGrid;
-    ColorBuffer m_tLightGrid;
+
+    ComPtr<ID3D12DescriptorHeap> m_uavHeap;
+    UINT m_uavDescriptorSize;
+    ComPtr<ID3D12Resource> m_oLightGrid;
+    ComPtr<ID3D12Resource> m_tLightGrid;
+    
+    //ColorBuffer m_oLightGrid;
+    //ColorBuffer m_tLightGrid;
 
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
@@ -218,5 +223,25 @@ private:
 
 private:
     void WaitForComputeShader();
+    void CreateGPUTex2DSRVResource(
+        wstring name, 
+        uint32_t width, 
+        uint32_t height,
+        uint32_t elementSize, 
+        DXGI_FORMAT format, 
+        ComPtr<ID3D12Resource> pResource,
+        uint32_t heapOffset,
+        void* initData = nullptr
+    );
+    void CreateGPUTex2DUAVResource(
+        wstring name,
+        uint32_t width,
+        uint32_t height,
+        uint32_t elementSize,
+        DXGI_FORMAT format,
+        ComPtr<ID3D12Resource> pResource,
+        uint32_t heapOffset,
+        void* initData = nullptr
+    );
 };
 
