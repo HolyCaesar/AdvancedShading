@@ -296,8 +296,8 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	//m_computeRootSignature[e_rootParameterTLightGridUAV].InitAsBufferUAV(5);
 	m_computeRootSignature[e_rootParameterFrustumSRV].InitAsBufferSRV(0);
 	m_computeRootSignature[e_rootParameterLightsSRV].InitAsBufferSRV(1);
-	//m_computeRootSignature[e_rootParameterDepthSRV].InitAsBufferSRV(2);
-	m_computeRootSignature[e_rootParameterDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
+	m_computeRootSignature[e_rootParameterDepthSRV].InitAsBufferSRV(2);
+	//m_computeRootSignature[e_rootParameterDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
 	// TODO need to add RW texture to the room signature
 	//m_computeRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV);
 	m_computeRootSignature.Finalize(L"LightCullingPassRootSignature");
@@ -435,7 +435,7 @@ void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& Frust
 	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvUavSrvHeap->GetGPUDescriptorHandleForHeapStart();
 	D3D12_GPU_DESCRIPTOR_HANDLE uavHandle = m_uavHeap->GetGPUDescriptorHandleForHeapStart();
 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvUavSrvHeap.Get(), m_uavHeap.Get() };
+	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvUavSrvHeap.Get() };
 	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	//m_computeCommandList->SetComputeRootConstantBufferView(e_rootParameterCB, m_computeHeap);
@@ -458,14 +458,6 @@ void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& Frust
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
 		e_rootParameterTLightIndexListUAV,
 		m_tLightIndexList.GetGpuVirtualAddress());
-	// OLightGrid
-	m_computeCommandList->SetComputeRootDescriptorTable(
-		e_rootParameterOLightGridUAV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 0, m_uavDescriptorSize));
-	// TLightGrid
-	m_computeCommandList->SetComputeRootDescriptorTable(
-		e_rootParameterTLightGridUAV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 1, m_uavDescriptorSize));
 
 	// Frustum SRV
 	m_computeCommandList->SetComputeRootShaderResourceView(
@@ -479,6 +471,17 @@ void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& Frust
 	m_computeCommandList->SetComputeRootShaderResourceView(
 		e_rootParameterDepthSRV,
 		DepthVS.GetGpuVirtualAddress());
+
+	ID3D12DescriptorHeap* ppHeaps2[] = { m_uavHeap.Get() };
+	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
+	// OLightGrid
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_rootParameterOLightGridUAV,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 0, m_uavDescriptorSize));
+	// TLightGrid
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_rootParameterTLightGridUAV,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 1, m_uavDescriptorSize));
 
 	//m_computeCommandList->SetComputeRootUnorderedAccessView(
 	//	2,
