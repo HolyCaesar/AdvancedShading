@@ -125,7 +125,11 @@ public:
     void Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint32_t ScreenHeight,
         XMMATRIX inverseProjection = XMMatrixIdentity());
     void UpdateLightBuffer(vector<Light>& lighList);
-    void ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& FrustumIn);
+    void ExecuteOnCS(
+        StructuredBuffer& FrustumIn, 
+        ComPtr<ID3D12DescriptorHeap>& depthBufferHeap, 
+        uint32_t depthBufferOffset
+    );
     void Destroy();
 
 private:

@@ -296,8 +296,8 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	//m_computeRootSignature[e_rootParameterTLightGridUAV].InitAsBufferUAV(5);
 	m_computeRootSignature[e_rootParameterFrustumSRV].InitAsBufferSRV(0);
 	m_computeRootSignature[e_rootParameterLightsSRV].InitAsBufferSRV(1);
-	m_computeRootSignature[e_rootParameterDepthSRV].InitAsBufferSRV(2);
-	//m_computeRootSignature[e_rootParameterDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
+	//m_computeRootSignature[e_rootParameterDepthSRV].InitAsBufferSRV(2);
+	m_computeRootSignature[e_rootParameterDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
 	// TODO need to add RW texture to the room signature
 	//m_computeRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV);
 	m_computeRootSignature.Finalize(L"LightCullingPassRootSignature");
@@ -427,13 +427,16 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	WaitForComputeShader();
 }
 
-void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& FrustumIn)
+void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn, 
+	ComPtr<ID3D12DescriptorHeap>& depthBufferHeap,
+	uint32_t depthBufferOffset)
 {
 	ThrowIfFailed(m_computeCommandList->Reset(m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.GetPSO()));
 
 	m_computeCommandList->SetComputeRootSignature(m_computeRootSignature.GetSignature());
 	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvUavSrvHeap->GetGPUDescriptorHandleForHeapStart();
 	D3D12_GPU_DESCRIPTOR_HANDLE uavHandle = m_uavHeap->GetGPUDescriptorHandleForHeapStart();
+	D3D12_GPU_DESCRIPTOR_HANDLE dsvHandle = depthBufferHeap->GetGPUDescriptorHandleForHeapStart();
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvUavSrvHeap.Get() };
 	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -467,13 +470,17 @@ void LightCullingPass::ExecuteOnCS(DepthBuffer& DepthVS, StructuredBuffer& Frust
 	m_computeCommandList->SetComputeRootShaderResourceView(
 		e_rootParameterLightsSRV,
 		m_Lights.GetGpuVirtualAddress());
-	// Depth SRV
-	m_computeCommandList->SetComputeRootShaderResourceView(
-		e_rootParameterDepthSRV,
-		DepthVS.GetGpuVirtualAddress());
 
-	ID3D12DescriptorHeap* ppHeaps2[] = { m_uavHeap.Get() };
+	ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };
 	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
+	// Depth SRV
+	uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_rootParameterDepthSRV,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(dsvHandle, depthBufferOffset, dsvDescriptorSize));
+
+	ID3D12DescriptorHeap* ppHeaps3[] = { m_uavHeap.Get() };
+	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps3), ppHeaps3);
 	// OLightGrid
 	m_computeCommandList->SetComputeRootDescriptorTable(
 		e_rootParameterOLightGridUAV,

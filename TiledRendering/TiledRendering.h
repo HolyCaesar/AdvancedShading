@@ -83,7 +83,9 @@ private:
     StructuredBuffer m_indexBuffer;
     ComPtr<ID3D12Resource> m_texture;
 
-    DepthBuffer m_depthBuffer;
+    DepthBuffer m_depthBufferFinal;
+    ComPtr<ID3D12Resource> m_depthBuffer;
+    ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
 
     ComPtr<ID3D12Resource> m_constantBuffer;
     CBuffer m_constantBufferData;
@@ -138,12 +140,12 @@ private:
     enum DescriptorHeapCount : uint32_t
     {
         e_cCB = 1,
-        e_cSRV = 1,
+        e_cSRV = 2,
     };
     enum DescriptorHeapIndex : uint32_t
     {
         e_iCB = 0,
         e_iSRV = e_iCB + e_cCB,
-        e_iHeapEnd = e_iCB + e_iSRV
+        e_iHeapEnd = e_cSRV + e_iSRV
     };
 };
