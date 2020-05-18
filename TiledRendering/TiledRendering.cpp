@@ -562,7 +562,7 @@ void TiledRendering::OnRender()
 	//m_simpleCS.OnExecuteCS();
 	m_GridFrustumsPass.ExecuteOnCS();
 
-	//m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_DSVHeap, 0);
+	m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
 
 
 	// Record all the commands we need to render the scene into the command list.
@@ -616,7 +616,8 @@ void TiledRendering::PreDepthPass()
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, e_iCB, m_cbvSrvUavDescriptorSize));
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_preDepthPassRTV.GetRTV();
-	auto dsvHandle = m_preDepthPass.GetDSV();
+	auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+	//auto dsvHandle = m_preDepthPass.GetDSV();
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
@@ -624,7 +625,8 @@ void TiledRendering::PreDepthPass()
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_preDepthPass.GetClearDepth(), m_preDepthPass.GetClearStencil(), 0, nullptr);
+	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	//m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_preDepthPass.GetClearDepth(), m_preDepthPass.GetClearStencil(), 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
@@ -633,6 +635,11 @@ void TiledRendering::PreDepthPass()
 	m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
 
 	ThrowIfFailed(m_commandList->Close());
+
+	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	IGraphics::g_GraphicsCore->WaitForGpu();
 }
 
 

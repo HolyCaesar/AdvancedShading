@@ -471,10 +471,10 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 		e_rootParameterLightsSRV,
 		m_Lights.GetGpuVirtualAddress());
 
+	// Depth SRV
 	ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };
 	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
-	// Depth SRV
-	uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_computeCommandList->SetComputeRootDescriptorTable(
 		e_rootParameterDepthSRV,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(dsvHandle, depthBufferOffset, dsvDescriptorSize));
