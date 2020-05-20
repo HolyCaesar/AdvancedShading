@@ -359,14 +359,11 @@ void TiledRendering::LoadAssets()
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
 	}
 
-
-
 	// Grid Frustum Pass Creation
 	m_GridFrustumsPass.SetTiledDimension(16);
 	m_GridFrustumsPass.Init(L"GridFrustumPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
 	m_LightCullingPass.Init(L"LightCullingPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
-
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -470,6 +467,10 @@ void TiledRendering::LoadPreDepthPassAssets()
 	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassRTV.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
+	// Generate lights
+	GenerateLights(8);
+	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
+
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
@@ -563,7 +564,6 @@ void TiledRendering::OnRender()
 	m_GridFrustumsPass.ExecuteOnCS();
 
 	m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
-
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();

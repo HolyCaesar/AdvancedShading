@@ -107,6 +107,7 @@ void t_AppendLight(uint lightIndex)
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_LightCullingPass(ComputeShaderInput Input)
 {
+
     int2 texCoord = Input.dispatchThreadID.xy;
     float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
 
@@ -139,6 +140,11 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // Clipping plane for minimum depth value (used for testing lights within the bounds of opaque geometry)
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
 
+    if (Input.groupIndex == 0)
+    {
+        t_AppendLight(0);
+        o_AppendLight(0);
+    }
 
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled
@@ -154,47 +160,46 @@ void CS_LightCullingPass(ComputeShaderInput Input)
                 Sphere sphere = { light.PositionVS.xyz, light.Range };
                 if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
                 {
-                    //// Add light to light list for transparent geometry
-                    //t_AppendLight(i);
+                    // Add light to light list for transparent geometry
+                    t_AppendLight(i);
 
-                    //if (!SphereInsidePlane(sphere, minPlane))
-                    //{
-                    //    // Add light to light list for opaque geometry
-                    //    o_AppendLight(i);
-                    //}
+                    if (!SphereInsidePlane(sphere, minPlane))
+                    {
+                        // Add light to light list for opaque geometry
+                        o_AppendLight(i);
+                    }
                 }
             }
             break;
-            //case SPOT_LIGHT:
-            //{
-            //    float coneRadius = tan(radians(light.SpotlightAngle)) * light.Range;
-            //    Cone cone = { light.PositionVS.xyz, light.Range, light.DirectionVS.xyz, coneRadius };
-            //    if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
-            //    {
-            //        // Add light to light list for transparent geometry
-            //        t_AppendLight(i);
+            case SPOT_LIGHT:
+            {
+                float coneRadius = tan(radians(light.SpotlightAngle)) * light.Range;
+                Cone cone = { light.PositionVS.xyz, light.Range, light.DirectionVS.xyz, coneRadius };
+                if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
+                {
+                    // Add light to light list for transparent geometry
+                    t_AppendLight(i);
 
-            //        if (!ConeInsidePlane(cone, minPlane))
-            //        {
-            //            // Add light to light list for opaque geometry
-            //            o_AppendLight(i);
-            //        }
-            //    }
-            //}
-            //break;
-            //case DIRECTIONAL_LIGHT:
-            //{
-            //    t_AppendLight(i);
-            //    o_AppendLight(i);
-            //}
-            //break;
+                    if (!ConeInsidePlane(cone, minPlane))
+                    {
+                        // Add light to light list for opaque geometry
+                        o_AppendLight(i);
+                    }
+                }
+            }
+            break;
+            case DIRECTIONAL_LIGHT:
+            {
+                t_AppendLight(i);
+                o_AppendLight(i);
+            }
+            break;
             }
         }
     }
 
     // Wait till all threads in group have caught up
     GroupMemoryBarrierWithGroupSync();
-    return;
 
     // Update global memory with visible light buffer.
     // First update the light grid (only thread 0 in group needs to do this)
@@ -219,7 +224,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // For transparent geometry
     for (int i = Input.groupIndex; i < t_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
     {
-        t_LightIndexList[t_LightIndexStartOffset + i] + t_LightList[i];
+        t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
     }
 
     // TODO may add some debug buffer here

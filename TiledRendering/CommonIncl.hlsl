@@ -106,11 +106,13 @@ struct Light
     //--------------------------------------------------------------( 16 * 7 = 112 bytes )
 };
 
-struct Plane
-{
-    float3 N;   // Plane normal.
-    float  d;   // Distance to origin.
-};
+//struct Plane
+//{
+//    float3 N;   // Plane normal.
+//    float  d;   // Distance to origin.
+//};
+
+typedef float4 Plane;
 
 struct Sphere
 {
@@ -145,8 +147,12 @@ Plane ComputePlane(float3 p0, float3 p1, float3 p2)
     float3 v0 = p1 - p0;
     float3 v1 = p2 - p0;
 
-    plane.N = normalize(cross(v0, v1));
-    plane.d = dot(plane.N, p0);
+    //plane.N = normalize(cross(v0, v1));
+    //plane.d = dot(plane.N, p0);
+
+    float3 planeNormal = normalize(cross(v0, v1));
+    float planeConst = dot(planeNormal, p0);
+    plane = float4(planeNormal, planeConst);
     return plane;
 }
 
@@ -154,20 +160,23 @@ Plane ComputePlane(float3 p0, float3 p1, float3 p2)
 // Source: Real-time collision detection, Christer Ericson (2005)
 bool SphereInsidePlane(Sphere sphere, Plane plane)
 {
-    return dot(plane.N, sphere.c) - plane.d < -sphere.r;
+    //return dot(plane.N, sphere.c) - plane.d < -sphere.r;
+    return dot(plane.xyz, sphere.c) - plane.w < -sphere.r;
 }
 
 // Check to see if a ponit is fully behind (inside the negative halfspace of) a plane
 bool PointInsidePlane(float3 p, Plane plane)
 {
-    return dot(plane.N, p) - plane.d < 0;
+    //return dot(plane.N, p) - plane.d < 0;
+    return dot(plane.xyz, p) - plane.w < 0;
 }
 
 // Check to see if a cone if fully behind (inside the negative halfspace of) a plane.
 bool ConeInsidePlane(Cone cone, Plane plane)
 {
     // Compute the farthest point on the end of the cone to the positive space of the plane.
-    float3 m = cross(cross(plane.N, cone.d), cone.d);
+    //float3 m = cross(cross(plane.N, cone.d), cone.d);
+    float3 m = cross(cross(plane.xyz, cone.d), cone.d);
     float3 Q = cone.T + cone.d * cone.h - m * cone.r;
 
     // The cone is in the negative halfspace of the plane if both
