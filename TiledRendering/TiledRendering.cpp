@@ -765,5 +765,14 @@ void TiledRendering::GenerateLights(uint32_t numLights)
 
 void TiledRendering::UpdateLightsBuffer()
 {
-	
+	XMMATRIX viewMatrix = m_modelViewCamera.GetViewMatrix();
+
+	for (auto& light : m_lightsList)
+	{
+		XMVECTOR posVecWS = XMLoadFloat4(&light.m_PositionWS);
+		XMStoreFloat4(&light.m_PositionVS, XMVector4Transform(posVecWS, viewMatrix));
+
+		XMVECTOR dirVecWS = XMLoadFloat4(&light.m_DirectionWS);
+		XMStoreFloat4(&light.m_DirectionVS, XMVector4Transform(dirVecWS, viewMatrix));
+	}
 }

@@ -17,6 +17,7 @@ StructuredBuffer<float4> csInputStructure : register(t1);
 
 RWTexture2D<float4> csOutput : register(u0);
 RWStructuredBuffer<frustum> csOutputSB : register(u1);
+RWTexture2D<uint2> testOutput : register(u2);
 //AppendStructuredBuffer<float4> csOutput: register(u0);    // UAV: Processed indirect commands
 
 [numthreads(threadBlockSize, 1, 1)]
@@ -31,6 +32,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     float4 val2 = csInputStructure[index];
     //csOutput[idx] = float4(2.0f, 2.0f, 2.0f, 2.0f);
     csOutput[uint2(index, 0)] = val1 + val2;
+    testOutput[uint2(index, 0)] = uint2(1, 1);
 
     frustum f;
     f.p[0].data = float4(index, index, index, index);

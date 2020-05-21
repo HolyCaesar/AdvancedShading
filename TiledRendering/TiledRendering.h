@@ -113,7 +113,7 @@ private:
     
 
     // Compute Shader Demo
-    //SimpleComputeShader m_simpleCS;
+    SimpleComputeShader m_simpleCS;
 
 
     void LoadPipeline();

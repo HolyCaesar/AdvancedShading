@@ -165,6 +165,8 @@ private:
 
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
+    StructuredBuffer m_testUAVBuffer;
+
 
     ComPtr<ID3D12DescriptorHeap> m_cbvUavSrvHeap;
     UINT m_cbvUavSrvDescriptorSize;
@@ -205,13 +207,14 @@ private:
         e_rootParameterFrustumSRV,
         e_rootParameterLightsSRV,
         e_rootParameterDepthSRV,
+        e_rootParameterDebugUAV,
         e_numRootParameters
     };
     // indexes of resources into the descriptor heap
     enum DescriptorHeapCount : uint32_t
     {
         e_cCB = 2,
-        e_cUAV = 6,
+        e_cUAV = 7,
         e_cSRV = 3,
     };
     enum DescriptorHeapIndex : uint32_t

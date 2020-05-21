@@ -68,6 +68,9 @@ RWStructuredBuffer<uint> t_LightIndexList : register(u3);
 RWTexture2D<uint2> o_LightGrid : register(u4);
 RWTexture2D<uint2> t_LightGrid : register(u5);
 
+// Debug UAV
+RWStructuredBuffer<float4> debugBuffer : register(u6);
+
 // Group shared variables
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
@@ -107,7 +110,6 @@ void t_AppendLight(uint lightIndex)
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_LightCullingPass(ComputeShaderInput Input)
 {
-
     int2 texCoord = Input.dispatchThreadID.xy;
     float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
 
@@ -120,6 +122,9 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         o_LightCount = 0;
         t_LightCount = 0;
         GroupFrustum = in_Frustums[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)];
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x + (Input.groupID.y * numThreadGroups.x), 0, 0, 0);
+        //debugBuffer[1] = float4(Input.groupID.x + (Input.groupID.y * numThreadGroups.x), 1, 1, 1);
+        //debugBuffer[Input.groupID.x] = float4(Input.groupID.x, Input.groupID.y, 1, 1);
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -140,12 +145,6 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // Clipping plane for minimum depth value (used for testing lights within the bounds of opaque geometry)
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
 
-    if (Input.groupIndex == 0)
-    {
-        t_AppendLight(0);
-        o_AppendLight(0);
-    }
-
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled
     for (uint i = Input.groupIndex; i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
@@ -158,42 +157,53 @@ void CS_LightCullingPass(ComputeShaderInput Input)
             case POINT_LIGHT:
             {
                 Sphere sphere = { light.PositionVS.xyz, light.Range };
+                //if (Input.dispatchThreadID.x == 0 && Input.dispatchThreadID.y == 0 && Input.dispatchThreadID.z == 0)
+                //{
+                //    debugBuffer[0] = float4(sphere.c, sphere.r);
+                //    //debugBuffer[1] = float4(nearClipVS, maxDepthVS, 0.0, 0.0);
+                //}
+                sphere.c = float3(0, 1.0f, 0.5f);
+                sphere.r = 5.0f;
+                nearClipVS = 0.2f;
+                maxDepthVS = 15.0f;
+
+
                 if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
                 {
-                    // Add light to light list for transparent geometry
-                    t_AppendLight(i);
+        //            //// Add light to light list for transparent geometry
+        //            //t_AppendLight(i);
 
-                    if (!SphereInsidePlane(sphere, minPlane))
-                    {
-                        // Add light to light list for opaque geometry
-                        o_AppendLight(i);
-                    }
+        //            //if (!SphereInsidePlane(sphere, minPlane))
+        //            //{
+        //            //    // Add light to light list for opaque geometry
+        //            //    o_AppendLight(i);
+        //            //}
                 }
             }
             break;
-            case SPOT_LIGHT:
-            {
-                float coneRadius = tan(radians(light.SpotlightAngle)) * light.Range;
-                Cone cone = { light.PositionVS.xyz, light.Range, light.DirectionVS.xyz, coneRadius };
-                if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
-                {
-                    // Add light to light list for transparent geometry
-                    t_AppendLight(i);
+            //case SPOT_LIGHT:
+            //{
+            //    float coneRadius = tan(radians(light.SpotlightAngle)) * light.Range;
+            //    Cone cone = { light.PositionVS.xyz, light.Range, light.DirectionVS.xyz, coneRadius };
+            //    if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
+            //    {
+            //        // Add light to light list for transparent geometry
+            //        t_AppendLight(i);
 
-                    if (!ConeInsidePlane(cone, minPlane))
-                    {
-                        // Add light to light list for opaque geometry
-                        o_AppendLight(i);
-                    }
-                }
-            }
-            break;
-            case DIRECTIONAL_LIGHT:
-            {
-                t_AppendLight(i);
-                o_AppendLight(i);
-            }
-            break;
+            //        if (!ConeInsidePlane(cone, minPlane))
+            //        {
+            //            // Add light to light list for opaque geometry
+            //            o_AppendLight(i);
+            //        }
+            //    }
+            //}
+            //break;
+            //case DIRECTIONAL_LIGHT:
+            //{
+            //    t_AppendLight(i);
+            //    o_AppendLight(i);
+            //}
+            //break;
             }
         }
     }
@@ -201,6 +211,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // Wait till all threads in group have caught up
     GroupMemoryBarrierWithGroupSync();
 
+    return;
     // Update global memory with visible light buffer.
     // First update the light grid (only thread 0 in group needs to do this)
     if (Input.groupIndex == 0)

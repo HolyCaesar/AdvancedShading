@@ -300,6 +300,10 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	m_computeRootSignature[e_rootParameterDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
 	// TODO need to add RW texture to the room signature
 	//m_computeRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV);
+
+
+	m_computeRootSignature[e_rootParameterDebugUAV].InitAsBufferUAV(6);
+
 	m_computeRootSignature.Finalize(L"LightCullingPassRootSignature");
 
 	// Create compute PSO
@@ -354,6 +358,10 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	// Transparent LightIndexList
 	m_tLightIndexList.Create(L"T_LightIndexList", m_BlockSizeX * m_BlockSizeY * AVERAGE_OVERLAPPING_LIGHTS, sizeof(UINT));
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightIndexList.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	// Test Debug buffer
+	m_testUAVBuffer.Create(L"DebuggerBuffer", m_BlockSizeX * m_BlockSizeY, sizeof(XMFLOAT4));
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testUAVBuffer.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Opaque LightGrid
 	//m_oLightGrid.Create(L"OpageLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_FLOAT);
@@ -438,6 +446,14 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 	D3D12_GPU_DESCRIPTOR_HANDLE uavHandle = m_uavHeap->GetGPUDescriptorHandleForHeapStart();
 	D3D12_GPU_DESCRIPTOR_HANDLE dsvHandle = depthBufferHeap->GetGPUDescriptorHandleForHeapStart();
 
+	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvUavSrvHeap.Get() };
+	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	//m_computeCommandList->SetComputeRootConstantBufferView(e_rootParameterCB, m_computeHeap);
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_rootParameterCB,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, 0, m_cbvUavSrvDescriptorSize));
+
 
 	// OLightIndexCounterUAV
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
@@ -456,6 +472,12 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 		e_rootParameterTLightIndexListUAV,
 		m_tLightIndexList.GetGpuVirtualAddress());
 
+	// Test Buffer
+	m_computeCommandList->SetComputeRootUnorderedAccessView(
+		e_rootParameterDebugUAV,
+		m_testUAVBuffer.GetGpuVirtualAddress());
+
+
 	// Frustum SRV
 	m_computeCommandList->SetComputeRootShaderResourceView(
 		e_rootParameterFrustumSRV,
@@ -465,13 +487,7 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 		e_rootParameterLightsSRV,
 		m_Lights.GetGpuVirtualAddress());
 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_cbvUavSrvHeap.Get() };
-	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-	//m_computeCommandList->SetComputeRootConstantBufferView(e_rootParameterCB, m_computeHeap);
-	m_computeCommandList->SetComputeRootDescriptorTable(
-		e_rootParameterCB,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, 0, m_cbvUavSrvDescriptorSize));
 
 	// Depth SRV
 	ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };

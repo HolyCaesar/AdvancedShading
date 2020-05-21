@@ -43,6 +43,14 @@ void SimpleComputeShader::OnExecuteCS()
 		e_rootParameterUAV,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, e_iUAV, m_cbvSrvUavDescriptorSize));
 
+
+	D3D12_GPU_DESCRIPTOR_HANDLE testHandle = m_testHeap->GetGPUDescriptorHandleForHeapStart();
+	ID3D12DescriptorHeap* ppHeaps1[] = { m_testHeap.Get() };
+	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		2,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(testHandle, 0, m_cbvSrvUavDescriptorSize));
+
 	// Reset the UAV counter for this frame.
 	//m_computeCommandList->CopyBufferRegion(m_processedCommandBuffers[m_frameIndex].Get(), CommandBufferCounterOffset, m_processedCommandBufferCounterReset.Get(), 0, sizeof(UINT));
 
@@ -67,6 +75,11 @@ void SimpleComputeShader::LoadPipeline()
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavHeap)) != S_OK);
 	m_cbvSrvUavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	desc.NumDescriptors = 1;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_testHeap)) != S_OK);
 
 	// Create compute shader resource
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -99,16 +112,18 @@ void SimpleComputeShader::LoadComputeShaderResources()
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 
 		// Create compute root signature
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[e_numRootParameters];
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[e_numRootParameters + 1];
 		//ranges[e_rootParameterSampler].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0);
 		ranges[e_rootParameterSRV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, e_cSRV, 0);
 		ranges[e_rootParameterUAV].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, e_cUAV, 0);
+		ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2);
 
-		CD3DX12_ROOT_PARAMETER1 computeRootParameters[e_numRootParameters];
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[e_numRootParameters + 1];
 		//computeRootParameters[e_rootParameterCB].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		//computeRootParameters[e_rootParameterSampler].InitAsDescriptorTable(1, &ranges[e_rootParameterSampler]);
 		computeRootParameters[e_rootParameterSRV].InitAsDescriptorTable(1, &ranges[e_rootParameterSRV]);
 		computeRootParameters[e_rootParameterUAV].InitAsDescriptorTable(1, &ranges[e_rootParameterUAV]);
+		computeRootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 		computeRootSignatureDesc.Init_1_1(_countof(computeRootParameters), computeRootParameters);
@@ -217,7 +232,7 @@ void SimpleComputeShader::LoadComputeShaderResources()
 	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_computeInputTex2D.Get(), &srvDesc, csSRVHandle);
 
 
-	// create compute shader UAV
+	// create compute shader RWTexture2D UAV
 	textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32B32A32_FLOAT, w, h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	ThrowIfFailed(
 		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
@@ -241,6 +256,36 @@ void SimpleComputeShader::LoadComputeShaderResources()
 	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
 	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), nullptr, nullptr, csUAVHandle);
+
+
+	// Test RWTexture2D
+	textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32_UINT, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	ThrowIfFailed(
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			nullptr,
+			IID_PPV_ARGS(&m_test)));
+
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE testHandle(m_testHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_cbvSrvUavDescriptorSize);
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_test.Get(), &srvDesc, testHandle);
+
+	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	uavDesc.Buffer.FirstElement = 0;
+	uavDesc.Buffer.NumElements = 128 * 128;
+	uavDesc.Buffer.StructureByteStride = sizeof(XMFLOAT2);
+	uavDesc.Buffer.CounterOffsetInBytes = 128 * 128 * sizeof(XMFLOAT2);
+	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_test.Get(), nullptr, nullptr, testHandle);
 
 
 	// Create compute shader UAV (structure buffer)

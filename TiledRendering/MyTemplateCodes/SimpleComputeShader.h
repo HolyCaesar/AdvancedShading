@@ -49,6 +49,11 @@ private:
     ComPtr<ID3D12Resource> m_computeOutputSB;
     UINT8* m_pcsInputStructureBegin;
 
+
+    ComPtr<ID3D12DescriptorHeap> m_testHeap;
+    ComPtr<ID3D12Resource> m_test;
+
+
     ComPtr<ID3D12Fence> m_computeFence;
     uint64_t m_computeFenceValue;
     HANDLE m_computeFenceEvent;
