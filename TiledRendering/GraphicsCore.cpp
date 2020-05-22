@@ -74,7 +74,7 @@ namespace IGraphics
 				if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 					continue;
 
-				if (desc.DedicatedVideoMemory > MaxSize && SUCCEEDED(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice))))
+				if (desc.DedicatedVideoMemory > MaxSize&& SUCCEEDED(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice))))
 				{
 					hardwareAdapter->GetDesc1(&desc);
 					Utility::Printf(L"D3D12-capable hardware found:  %s (%u MB)\n", desc.Description, desc.DedicatedVideoMemory >> 20);
@@ -177,10 +177,10 @@ namespace IGraphics
 
 	void GraphicsCore::Terminate(void)
 	{
-//		g_CommandManager.IdleGPU();
-//#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-//		s_SwapChain1->SetFullscreenState(FALSE, nullptr);
-//#endif
+		//		g_CommandManager.IdleGPU();
+		//#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+		//		s_SwapChain1->SetFullscreenState(FALSE, nullptr);
+		//#endif
 	}
 
 	void GraphicsCore::Shutdown()
@@ -256,6 +256,46 @@ namespace IGraphics
 		// Set the fence value for the next frame.
 		m_fenceValue[s_FrameIndex] = currentFenceValue + 1;
 	}
+
+	// Temp Compute shader definitions
+	void GraphicsCore::InitializeCS(void)
+	{
+		// Create compute shader resource
+		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+		SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
+
+		SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator)));
+
+		SUCCEEDED(g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_computeFence)));
+		m_computeFenceValue = 1;
+
+		// Create an event handle to use for frame synchronization.
+		m_computeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (m_computeFenceEvent == nullptr)
+		{
+			SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
+		}
+
+		// CommandList
+		SUCCEEDED(g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_computeCommandList)));
+	}
+
+	void GraphicsCore::WaitForComputeShaderGpu()
+	{
+		// Signal and increment the fence value.
+		const UINT64 fence = m_computeFenceValue;
+		SUCCEEDED(m_computeCommandQueue->Signal(m_computeFence.Get(), fence));
+		m_computeFenceValue++;
+
+		// Wait until the previous frame is finished.
+		if (m_computeFence->GetCompletedValue() < fence)
+		{
+			SUCCEEDED(m_computeFence->SetEventOnCompletion(fence, m_computeFenceEvent));
+			WaitForSingleObject(m_computeFenceEvent, INFINITE);
+		}
+	}
 }
 
 // Old Implementation
@@ -280,3 +320,5 @@ namespace IGraphics
 //
 //    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 //}
+
+
