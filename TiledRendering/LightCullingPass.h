@@ -43,11 +43,6 @@ private:
     DX12RootSignature m_computeRootSignature;
     ComputePSO m_computePSO;
 
-    ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
-    ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
-    ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
-
-
     ComPtr<ID3D12DescriptorHeap> m_cbvUavSrvHeap;
     UINT m_cbvUavSrvDescriptorSize;
     __declspec( align( 16 ) ) struct DispatchParams
@@ -72,11 +67,6 @@ private:
     ComPtr<ID3D12Resource> m_screenToViewParamsCB;
     ScreenToViewParams m_screenToViewParamsData;
     UINT8* m_pCbvScreenToViewParams;
-
-
-    ComPtr<ID3D12Fence> m_computeFence;
-    uint64_t m_computeFenceValue;
-    HANDLE m_computeFenceEvent;
 
     // Indexes for the root parameter table
     enum RootParameters : uint32_t
@@ -106,7 +96,7 @@ private:
         XMFLOAT4 planes[4];   // left, right, top, bottom frustum planes.
     };
 
-    void WaitForComputeShader();
+    //void WaitForComputeShader();
 };
 
 // Light Culling Pass

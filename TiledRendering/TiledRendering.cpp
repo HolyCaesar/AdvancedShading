@@ -84,7 +84,7 @@ void TiledRendering::LoadPipeline()
 
 	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
 	IGraphics::g_GraphicsCore->Initialize();
-
+	IGraphics::g_GraphicsCore->InitializeCS();
 
 	// Create descriptor heaps.
 	{
@@ -563,7 +563,7 @@ void TiledRendering::OnRender()
 	//m_simpleCS.OnExecuteCS();
 	m_GridFrustumsPass.ExecuteOnCS();
 
-	m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
+	//m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
