@@ -6,6 +6,7 @@
 void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t ScreenHeight, 
 	XMMATRIX inverseProjection)
 {
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), nullptr));
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 
@@ -226,6 +227,7 @@ void GridFrustumsPass::Destroy()
 void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint32_t ScreenHeight,
 	XMMATRIX inverseProjection)
 {
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), nullptr));
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 
@@ -246,26 +248,26 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 		m_cbvUavSrvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
-	// Create compute shader resource
-	{
-		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
+	//// Create compute shader resource
+	//{
+	//	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+	//	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	//	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
 
-		for (int n = 0; n < SWAP_CHAIN_BUFFER_COUNT; ++n)
-			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator[n])));
+	//	for (int n = 0; n < SWAP_CHAIN_BUFFER_COUNT; ++n)
+	//		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator[n])));
 
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_computeFence)));
-		m_computeFenceValue = 1;
+	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_computeFence)));
+	//	m_computeFenceValue = 1;
 
-		// Create an event handle to use for frame synchronization.
-		m_computeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_computeFenceEvent == nullptr)
-		{
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		}
-	}
+	//	// Create an event handle to use for frame synchronization.
+	//	m_computeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	//	if (m_computeFenceEvent == nullptr)
+	//	{
+	//		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+	//	}
+	//}
 
 	// Load test root signature
 	D3D12_SAMPLER_DESC non_static_sampler;
@@ -338,7 +340,7 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 		m_computePSO.Finalize();
 	}
 
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.GetPSO(), IID_PPV_ARGS(&m_computeCommandList)));
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.GetPSO(), IID_PPV_ARGS(&m_computeCommandList)));
 
 
 	// Prepare for Output of Grid
@@ -429,18 +431,19 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 		memcpy(m_pCbvScreenToViewParams, &m_screenToViewParamsData, sizeof(m_screenToViewParamsData));
 	}
 
-	ThrowIfFailed(m_computeCommandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_computeCommandList.Get() };
-	m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { IGraphics::g_GraphicsCore->m_computeCommandList.Get() };
+	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	WaitForComputeShader();
+	IGraphics::g_GraphicsCore->WaitForComputeShaderGpu();
 }
 
 void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn, 
 	ComPtr<ID3D12DescriptorHeap>& depthBufferHeap,
 	uint32_t depthBufferOffset)
 {
-	ThrowIfFailed(m_computeCommandList->Reset(m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.GetPSO()));
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_computePSO.GetPSO()));
+	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList = IGraphics::g_GraphicsCore->m_computeCommandList;
 
 	m_computeCommandList->SetComputeRootSignature(m_computeRootSignature.GetSignature());
 	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvUavSrvHeap->GetGPUDescriptorHandleForHeapStart();
@@ -513,31 +516,31 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 	//	2,
 	//	m_CSDebugUAV.GetGpuVirtualAddress());
 
-	//m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
-	m_computeCommandList->Dispatch(1, 1, 1);
+	m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	//m_computeCommandList->Dispatch(10, 10, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
 
 	ID3D12CommandList* tmpList = m_computeCommandList.Get();
-	m_computeCommandQueue->ExecuteCommandLists(1, &tmpList);
+	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(1, &tmpList);
 
-	WaitForComputeShader();
+	IGraphics::g_GraphicsCore->WaitForComputeShaderGpu();
 }
 
-void LightCullingPass::WaitForComputeShader()
-{
-	// Signal and increment the fence value.
-	const UINT64 fence = m_computeFenceValue;
-	ThrowIfFailed(m_computeCommandQueue->Signal(m_computeFence.Get(), fence));
-	m_computeFenceValue++;
-
-	// Wait until the previous frame is finished.
-	if (m_computeFence->GetCompletedValue() < fence)
-	{
-		ThrowIfFailed(m_computeFence->SetEventOnCompletion(fence, m_computeFenceEvent));
-		WaitForSingleObject(m_computeFenceEvent, INFINITE);
-	}
-}
+//void LightCullingPass::WaitForComputeShader()
+//{
+//	// Signal and increment the fence value.
+//	const UINT64 fence = m_computeFenceValue;
+//	ThrowIfFailed(m_computeCommandQueue->Signal(m_computeFence.Get(), fence));
+//	m_computeFenceValue++;
+//
+//	// Wait until the previous frame is finished.
+//	if (m_computeFence->GetCompletedValue() < fence)
+//	{
+//		ThrowIfFailed(m_computeFence->SetEventOnCompletion(fence, m_computeFenceEvent));
+//		WaitForSingleObject(m_computeFenceEvent, INFINITE);
+//	}
+//}
 
 void LightCullingPass::Destroy()
 {

@@ -563,7 +563,7 @@ void TiledRendering::OnRender()
 	//m_simpleCS.OnExecuteCS();
 	m_GridFrustumsPass.ExecuteOnCS();
 
-	//m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
+	m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();

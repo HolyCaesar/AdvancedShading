@@ -280,6 +280,7 @@ namespace IGraphics
 
 		// CommandList
 		SUCCEEDED(g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_computeCommandList)));
+		m_computeCommandList->Close();
 	}
 
 	void GraphicsCore::WaitForComputeShaderGpu()

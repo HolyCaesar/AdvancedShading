@@ -131,13 +131,13 @@ private:
 	DX12RootSignature m_computeRootSignature;
 	ComputePSO m_computePSO;
 
-	ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
-	ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
-	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
+	//ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
+	//ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
+	//ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
 
-    ComPtr<ID3D12Fence> m_computeFence;
-    uint64_t m_computeFenceValue;
-    HANDLE m_computeFenceEvent;
+ //   ComPtr<ID3D12Fence> m_computeFence;
+ //   uint64_t m_computeFenceValue;
+ //   HANDLE m_computeFenceEvent;
 
 	// Light Culling Resource
     StructuredBuffer m_oLightIndexCounter;
@@ -219,7 +219,7 @@ private:
     };
 
 private:
-    void WaitForComputeShader();
+    //void WaitForComputeShader();
     void CreateGPUTex2DSRVResource(
         wstring name, 
         uint32_t width, 

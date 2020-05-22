@@ -125,6 +125,8 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x + (Input.groupID.y * numThreadGroups.x), 0, 0, 0);
         //debugBuffer[1] = float4(Input.groupID.x + (Input.groupID.y * numThreadGroups.x), 1, 1, 1);
         //debugBuffer[Input.groupID.x] = float4(Input.groupID.x, Input.groupID.y, 1, 1);
+
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x, Input.groupID.y, padding1, numThreads.x);
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -144,6 +146,12 @@ void CS_LightCullingPass(ComputeShaderInput Input)
 
     // Clipping plane for minimum depth value (used for testing lights within the bounds of opaque geometry)
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
+
+    //if (Input.groupIndex == 0)
+    //{
+    //    int idx = Input.groupID.x + (Input.groupID.y * numThreadGroups.x);
+    //    debugBuffer[idx] = float4(uMinDepth, uMaxDepth, 0, 0);
+    //}
 
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled
@@ -168,8 +176,8 @@ void CS_LightCullingPass(ComputeShaderInput Input)
                 maxDepthVS = 15.0f;
 
 
-                if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-                {
+                //if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+                //{
         //            //// Add light to light list for transparent geometry
         //            //t_AppendLight(i);
 
@@ -178,7 +186,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         //            //    // Add light to light list for opaque geometry
         //            //    o_AppendLight(i);
         //            //}
-                }
+                //}
             }
             break;
             //case SPOT_LIGHT:
