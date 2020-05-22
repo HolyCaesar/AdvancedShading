@@ -6,7 +6,6 @@
 void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t ScreenHeight, 
 	XMMATRIX inverseProjection)
 {
-	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), nullptr));
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 
@@ -96,7 +95,7 @@ void GridFrustumsPass::Init(wstring shader_file, uint32_t ScreenWidth, uint32_t 
 	}
 
 	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.GetPSO(), IID_PPV_ARGS(&m_computeCommandList)));
-
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_computePSO.GetPSO()));
 
 	// Prepare for Output of Grid
 	m_BlockSizeX = ceil(ScreenWidth * 1.0f / m_TiledSize);
@@ -227,7 +226,6 @@ void GridFrustumsPass::Destroy()
 void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint32_t ScreenHeight,
 	XMMATRIX inverseProjection)
 {
-	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), nullptr));
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 
@@ -247,27 +245,6 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvUavSrvHeap)) != S_OK);
 		m_cbvUavSrvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
-
-	//// Create compute shader resource
-	//{
-	//	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	//	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	//	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
-
-	//	for (int n = 0; n < SWAP_CHAIN_BUFFER_COUNT; ++n)
-	//		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator[n])));
-
-	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_computeFence)));
-	//	m_computeFenceValue = 1;
-
-	//	// Create an event handle to use for frame synchronization.
-	//	m_computeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	//	if (m_computeFenceEvent == nullptr)
-	//	{
-	//		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-	//	}
-	//}
 
 	// Load test root signature
 	D3D12_SAMPLER_DESC non_static_sampler;
@@ -340,6 +317,7 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 		m_computePSO.Finalize();
 	}
 
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_computePSO.GetPSO()));
 	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_computePSO.GetPSO(), IID_PPV_ARGS(&m_computeCommandList)));
 
 
@@ -365,6 +343,24 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	// Test Debug buffer
 	m_testUAVBuffer.Create(L"DebuggerBuffer", m_BlockSizeX * m_BlockSizeY, sizeof(XMFLOAT4));
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testUAVBuffer.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	//struct pjb
+	//{
+	//	XMFLOAT4 planes[4];
+	//};
+	//vector<pjb> sao;
+	//for (int i = 0; i < 80 * 45; ++i)
+	//{
+	//	pjb p;
+	//	p.planes[0] = XMFLOAT4(1, 1, 1, 1);
+	//	p.planes[1] = XMFLOAT4(2, 2, 2, 2);
+	//	p.planes[2] = XMFLOAT4(3, 3, 3, 3);
+	//	p.planes[3] = XMFLOAT4(4, 4, 4, 4);
+	//	sao.push_back(p);
+	//}
+
+	//m_testSB.Create(L"TestFrustum", 80 * 45, sizeof(pjb), sao.data());
+	//IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testUAVBuffer.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Opaque LightGrid
 	//m_oLightGrid.Create(L"OpageLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_FLOAT);
@@ -458,7 +454,6 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 		e_rootParameterCB,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, 0, m_cbvUavSrvDescriptorSize));
 
-
 	// OLightIndexCounterUAV
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
 		e_rootParameterOLightIndexCounterUAV,
@@ -480,44 +475,45 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
 		e_rootParameterDebugUAV,
 		m_testUAVBuffer.GetGpuVirtualAddress());
-
+	//// Test Frustum SRV
+	//m_computeCommandList->SetComputeRootShaderResourceView(
+	//	e_rootParameterFrustumSRV,
+	//	m_testSB.GetGpuVirtualAddress());
 
 	// Frustum SRV
 	m_computeCommandList->SetComputeRootShaderResourceView(
 		e_rootParameterFrustumSRV,
 		FrustumIn.GetGpuVirtualAddress());
 	// Lights SRV
-	m_computeCommandList->SetComputeRootShaderResourceView(
-		e_rootParameterLightsSRV,
-		m_Lights.GetGpuVirtualAddress());
-
-
+	//m_computeCommandList->SetComputeRootShaderResourceView(
+	//	e_rootParameterLightsSRV,
+	//	m_Lights.GetGpuVirtualAddress());
 
 	// Depth SRV
-	ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };
-	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
-	uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_computeCommandList->SetComputeRootDescriptorTable(
-		e_rootParameterDepthSRV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(dsvHandle, depthBufferOffset, dsvDescriptorSize));
+	//ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };
+	//m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
+	//uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	//m_computeCommandList->SetComputeRootDescriptorTable(
+	//	e_rootParameterDepthSRV,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(dsvHandle, depthBufferOffset, dsvDescriptorSize));
 
-	ID3D12DescriptorHeap* ppHeaps3[] = { m_uavHeap.Get() };
-	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps3), ppHeaps3);
-	// OLightGrid
-	m_computeCommandList->SetComputeRootDescriptorTable(
-		e_rootParameterOLightGridUAV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 0, m_uavDescriptorSize));
-	// TLightGrid
-	m_computeCommandList->SetComputeRootDescriptorTable(
-		e_rootParameterTLightGridUAV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 1, m_uavDescriptorSize));
+	//ID3D12DescriptorHeap* ppHeaps3[] = { m_uavHeap.Get() };
+	//m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps3), ppHeaps3);
+	//// OLightGrid
+	//m_computeCommandList->SetComputeRootDescriptorTable(
+	//	e_rootParameterOLightGridUAV,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 0, m_uavDescriptorSize));
+	//// TLightGrid
+	//m_computeCommandList->SetComputeRootDescriptorTable(
+	//	e_rootParameterTLightGridUAV,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(uavHandle, 1, m_uavDescriptorSize));
 
 	//m_computeCommandList->SetComputeRootUnorderedAccessView(
 	//	2,
 	//	m_CSDebugUAV.GetGpuVirtualAddress());
 
 	m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
-	//m_computeCommandList->Dispatch(10, 10, 1);
+	//m_computeCommandList->Dispatch(1, 1, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
 

@@ -239,8 +239,9 @@ void TiledRendering::LoadAssets()
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_width, m_height,
-				1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+				1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+			//D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_COMMON,
 			&optimizedClearValue,
 			IID_PPV_ARGS(&m_depthBuffer)
 		));
@@ -263,6 +264,8 @@ void TiledRendering::LoadAssets()
 		SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvHeap->GetCPUDescriptorHandleForHeapStart(), 2, m_cbvSrvUavDescriptorSize);
 		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_depthBuffer.Get(), &SRVDesc, srvHandle);
+
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_depthBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 	}
 
 	// Create the constant buffer
@@ -460,7 +463,6 @@ void TiledRendering::LoadPreDepthPassAssets()
 	}
 
 	// Create Depth Buffer
-
 	m_preDepthPass.Create(L"PreDepthPassDepthBuffer", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPass.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
@@ -604,6 +606,9 @@ void TiledRendering::PreDepthPass()
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
 	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_preDepthPassPSO.GetPSO()));
 
+	// Transmit the state of the depth buffer from SRV to DSV
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_depthBuffer.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
 	// Set necessary state.
 	m_commandList->SetGraphicsRootSignature(m_preDepthPassRootSignature.GetSignature());
 
@@ -634,6 +639,8 @@ void TiledRendering::PreDepthPass()
 
 	m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
 
+	// Transmit the state of the depth buffer from SRV to DSV
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_depthBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 	ThrowIfFailed(m_commandList->Close());
 
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };

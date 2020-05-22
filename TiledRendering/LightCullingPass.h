@@ -131,14 +131,6 @@ private:
 	DX12RootSignature m_computeRootSignature;
 	ComputePSO m_computePSO;
 
-	//ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator[SWAP_CHAIN_BUFFER_COUNT];
-	//ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
-	//ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
-
- //   ComPtr<ID3D12Fence> m_computeFence;
- //   uint64_t m_computeFenceValue;
- //   HANDLE m_computeFenceEvent;
-
 	// Light Culling Resource
     StructuredBuffer m_oLightIndexCounter;
     StructuredBuffer m_tLightIndexCounter;
@@ -156,6 +148,7 @@ private:
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
     StructuredBuffer m_testUAVBuffer;
+    StructuredBuffer m_testSB;
 
 
     ComPtr<ID3D12DescriptorHeap> m_cbvUavSrvHeap;

@@ -27,10 +27,10 @@ cbuffer ScreenToViewParams : register(b1)
     uint2 Padding;
 }
 
-struct FrustumIn
-{
-    float4 plane[4];
-};
+//struct FrustumIn
+//{
+//    float4 plane[4];
+//};
 
 float4 ClipToView(float4 clip)
 {
@@ -52,7 +52,7 @@ float4 ScreenToView(float4 screenCoordinates)
     return ClipToView(clip);
 }
 
-StructuredBuffer<FrustumIn> in_Frustums : register(t0);
+StructuredBuffer<Frustum> in_Frustums : register(t0);
 StructuredBuffer<Light> Lights : register(t1);
 Texture2D DepthTextureVS : register(t2);
 
@@ -111,7 +111,8 @@ void t_AppendLight(uint lightIndex)
 void CS_LightCullingPass(ComputeShaderInput Input)
 {
     int2 texCoord = Input.dispatchThreadID.xy;
-    float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
+    //float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
+    float fDepth = 0.5f;
 
     uint uDepth = asuint(fDepth);
 
@@ -122,12 +123,10 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         o_LightCount = 0;
         t_LightCount = 0;
         GroupFrustum = in_Frustums[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)];
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x + (Input.groupID.y * numThreadGroups.x), 0, 0, 0);
-        //debugBuffer[1] = float4(Input.groupID.x + (Input.groupID.y * numThreadGroups.x), 1, 1, 1);
-        //debugBuffer[Input.groupID.x] = float4(Input.groupID.x, Input.groupID.y, 1, 1);
-
-        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x, Input.groupID.y, padding1, numThreads.x);
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, uMaxDepth);
     }
+    return;
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -178,14 +177,14 @@ void CS_LightCullingPass(ComputeShaderInput Input)
 
                 //if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
                 //{
-        //            //// Add light to light list for transparent geometry
-        //            //t_AppendLight(i);
+                //    //// Add light to light list for transparent geometry
+                //    //t_AppendLight(i);
 
-        //            //if (!SphereInsidePlane(sphere, minPlane))
-        //            //{
-        //            //    // Add light to light list for opaque geometry
-        //            //    o_AppendLight(i);
-        //            //}
+                //    //if (!SphereInsidePlane(sphere, minPlane))
+                //    //{
+                //    //    // Add light to light list for opaque geometry
+                //    //    o_AppendLight(i);
+                //    //}
                 //}
             }
             break;
@@ -219,6 +218,11 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // Wait till all threads in group have caught up
     GroupMemoryBarrierWithGroupSync();
 
+    //if (Input.groupIndex == 0)
+    //{
+    //    debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(ScreenDimensions.x, ScreenDimensions.y, numThreads.x, numThreads.y);
+    //}
+    //return;
     return;
     // Update global memory with visible light buffer.
     // First update the light grid (only thread 0 in group needs to do this)
