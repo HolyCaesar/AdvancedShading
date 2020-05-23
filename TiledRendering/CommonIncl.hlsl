@@ -8,6 +8,8 @@
 #define DIRECTIONAL_LIGHT 2
 #define NUM_LIGHTS 8
 
+typedef float4 Plane;
+
 struct Material
 {
     float4  GlobalAmbient;
@@ -112,7 +114,6 @@ struct Light
 //    float  d;   // Distance to origin.
 //};
 
-typedef float4 Plane;
 
 struct Sphere
 {

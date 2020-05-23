@@ -54,7 +54,7 @@ float4 ScreenToView(float4 screenCoordinates)
 
 StructuredBuffer<Frustum> in_Frustums : register(t0);
 StructuredBuffer<Light> Lights : register(t1);
-Texture2D DepthTextureVS : register(t2);
+Texture2D<float> DepthTextureVS : register(t2);
 
 // Global counter for current index into the light index list.
 // "o_" prefix indicates light lists for opaque geometry while 
