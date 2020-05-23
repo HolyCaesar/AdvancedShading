@@ -123,8 +123,8 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         o_LightCount = 0;
         t_LightCount = 0;
         GroupFrustum = in_Frustums[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)];
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, uMaxDepth);
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, uMaxDepth);
     }
     return;
 
