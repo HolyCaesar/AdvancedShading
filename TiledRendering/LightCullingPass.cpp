@@ -234,6 +234,12 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_uavHeap)) != S_OK);
 		m_uavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		desc.NumDescriptors = 1; // One SRV 
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvHeap)) != S_OK);
+		m_srvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	{
@@ -344,23 +350,6 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	m_testUAVBuffer.Create(L"DebuggerBuffer", m_BlockSizeX * m_BlockSizeY, sizeof(XMFLOAT4));
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testUAVBuffer.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
-	//struct pjb
-	//{
-	//	XMFLOAT4 planes[4];
-	//};
-	//vector<pjb> sao;
-	//for (int i = 0; i < 80 * 45; ++i)
-	//{
-	//	pjb p;
-	//	p.planes[0] = XMFLOAT4(1, 1, 1, 1);
-	//	p.planes[1] = XMFLOAT4(2, 2, 2, 2);
-	//	p.planes[2] = XMFLOAT4(3, 3, 3, 3);
-	//	p.planes[3] = XMFLOAT4(4, 4, 4, 4);
-	//	sao.push_back(p);
-	//}
-
-	//m_testSB.Create(L"TestFrustum", 80 * 45, sizeof(pjb), sao.data());
-	//IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testUAVBuffer.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Opaque LightGrid
 	//m_oLightGrid.Create(L"OpageLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_FLOAT);
@@ -375,6 +364,81 @@ void LightCullingPass::Init(std::wstring ShaderFile, uint32_t ScreenWidth, uint3
 	// Debug Buffer
 	//m_CSDebugUAV.Create(L"DebugUAV", m_BlockSizeX * m_BlockSizeY, sizeof(float));
 	//IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CSDebugUAV.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	/*Test SRV*/
+	ComPtr<ID3D12Resource> csInputUploadHeapTest;
+	{
+		uint32_t w(ScreenWidth), h(ScreenHeight);
+		vector<float> csInputArray;
+		for (int i = 0; i < w * h; ++i)
+			csInputArray.push_back(i + 1);
+			//csInputArray.push_back(XMFLOAT4(i + 1, i + 1, i + 1, i + 1));
+
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.MipLevels = 1;
+		textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		textureDesc.Width = w;
+		textureDesc.Height = h;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&m_computeInputTex2D)));
+
+		const UINT64 csInputUploadBufferSize = GetRequiredIntermediateSize(m_computeInputTex2D.Get(), 0, 1);
+
+		//D3D12_RESOURCE_ALLOCATION_INFO info = {};
+		//info.SizeInBytes = 1024;
+		//info.Alignment = 0;
+		//const D3D12_RESOURCE_DESC tempBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(info);
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(csInputUploadBufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&csInputUploadHeapTest)));
+
+
+		D3D12_SUBRESOURCE_DATA computeData = {};
+		computeData.pData = reinterpret_cast<BYTE*>(csInputArray.data());
+		//computeData.RowPitch = w * (int)csInputArray.size() * sizeof(float);
+		computeData.RowPitch = w * sizeof(float);
+		computeData.SlicePitch = computeData.RowPitch * h;
+
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), nullptr));
+
+		UpdateSubresources(IGraphics::g_GraphicsCore->g_commandList.Get(), m_computeInputTex2D.Get(), csInputUploadHeapTest.Get(), 0, 0, 1, &computeData);
+
+		// Describe and create a SRV for the texture.
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = textureDesc.Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE csSRVHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), 0, m_srvDescriptorSize);
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_computeInputTex2D.Get(), &srvDesc, csSRVHandle);
+
+		IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_computeInputTex2D.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	}
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandList->Close());
+	ID3D12CommandList* ppCommandLists1[] = { IGraphics::g_GraphicsCore->g_commandList.Get() };
+	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists1), ppCommandLists1);
+	IGraphics::g_GraphicsCore->WaitForGpu();
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), nullptr));
+
+
 
 	// Create the constant buffer for DispatchParams
 	{
@@ -454,6 +518,7 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 		e_rootParameterCB,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, 0, m_cbvUavSrvDescriptorSize));
 
+
 	// OLightIndexCounterUAV
 	m_computeCommandList->SetComputeRootUnorderedAccessView(
 		e_rootParameterOLightIndexCounterUAV,
@@ -489,13 +554,22 @@ void LightCullingPass::ExecuteOnCS(StructuredBuffer& FrustumIn,
 		e_rootParameterLightsSRV,
 		m_Lights.GetGpuVirtualAddress());
 
-	// Depth SRV
-	ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };
+	ID3D12DescriptorHeap* ppHeaps2[] = { m_srvHeap.Get() };
 	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
 	uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_computeCommandList->SetComputeRootDescriptorTable(
 		e_rootParameterDepthSRV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(dsvHandle, depthBufferOffset, dsvDescriptorSize));
+		m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+
+	// Depth SRV
+	//ID3D12DescriptorHeap* ppHeaps2[] = { depthBufferHeap.Get() };
+	//m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
+	//uint32_t dsvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	//m_computeCommandList->SetComputeRootDescriptorTable(
+	//	e_rootParameterDepthSRV,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(dsvHandle, depthBufferOffset, dsvDescriptorSize));
+
+
 
 	//ID3D12DescriptorHeap* ppHeaps3[] = { m_uavHeap.Get() };
 	//m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps3), ppHeaps3);

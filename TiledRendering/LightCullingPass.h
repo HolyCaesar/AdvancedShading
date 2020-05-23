@@ -35,6 +35,12 @@ public:
     StructuredBuffer m_CSGridFrustumOutputSB;
     StructuredBuffer m_CSDebugUAV;
 
+
+    ComPtr<ID3D12Resource> m_computeInputTex2D;
+    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    UINT m_srvDescriptorSize;
+
+
 private:
     uint32_t m_TiledSize;
     uint32_t m_BlockSizeX;
@@ -148,7 +154,14 @@ private:
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
     StructuredBuffer m_testUAVBuffer;
-    StructuredBuffer m_testSB;
+
+
+
+    ComPtr<ID3D12Resource> m_computeInputTex2D;
+    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    UINT m_srvDescriptorSize;
+
+
 
 
     ComPtr<ID3D12DescriptorHeap> m_cbvUavSrvHeap;

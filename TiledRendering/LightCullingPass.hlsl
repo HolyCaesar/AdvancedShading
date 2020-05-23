@@ -111,8 +111,8 @@ void t_AppendLight(uint lightIndex)
 void CS_LightCullingPass(ComputeShaderInput Input)
 {
     int2 texCoord = Input.dispatchThreadID.xy;
-    //float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
-    float fDepth = 0.5f;
+    float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
+    //float fDepth = 0.5f;
 
     uint uDepth = asuint(fDepth);
 
@@ -124,7 +124,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         t_LightCount = 0;
         GroupFrustum = in_Frustums[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)];
         debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
-        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, uMaxDepth);
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, fDepth);
     }
     return;
 
