@@ -60,6 +60,7 @@ struct FrustumOut
 //RWStructuredBuffer<FrustumOut> out_Frustums : register(u0);
 RWStructuredBuffer<Frustum> out_Frustums : register(u0);
 RWStructuredBuffer<uint> debugUAV : register(u1);
+Texture2D<float> testBuffer : register(t0);
 
 // Calculate the view frustum for each tiled in the view space
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
@@ -107,6 +108,6 @@ void CS_GridFrustumPass(ComputeShaderInput Input)
         uint idx = Input.dispatchThreadID.x + (Input.dispatchThreadID.y * numThreads.x);
         out_Frustums[idx] = frustum;
         //out_Frustums[idx] = Out;
-        debugUAV[idx] = idx;
+        debugUAV[idx] = idx + testBuffer.Load(int3(1, 0, 0), 0).r;
     }
 }

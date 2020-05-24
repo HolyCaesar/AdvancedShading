@@ -37,9 +37,6 @@ public:
 
 
     ComPtr<ID3D12Resource> m_computeInputTex2D;
-    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-    UINT m_srvDescriptorSize;
-
 
 private:
     uint32_t m_TiledSize;
@@ -155,11 +152,7 @@ private:
 
     StructuredBuffer m_testUAVBuffer;
 
-
-
     ComPtr<ID3D12Resource> m_computeInputTex2D;
-    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-    UINT m_srvDescriptorSize;
 
 
 
