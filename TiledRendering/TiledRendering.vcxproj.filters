@@ -114,6 +114,9 @@
     <ClCompile Include="LightCullingPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DX12ResStruct.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -236,10 +239,13 @@
     <ClInclude Include="DX12PipelineState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Lights.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="LightCullingPass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Lights.h">
+    <ClInclude Include="DX12ResStruct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

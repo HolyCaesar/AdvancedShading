@@ -830,3 +830,198 @@ void LightCullingPass::CreateGPUTex2DUAVResource(
 
 	//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_computeOutput.Get(), nullptr, nullptr, csUAVHandle);
 }
+
+
+
+
+
+void ForwardPlusLightCulling::Init(
+	uint32_t ScreenWidth, uint32_t ScreenHeight,
+	XMMATRIX inverseProjection,
+	ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap,
+	UINT& gCbvSrvUavOffset)
+{
+	// Create the constant buffer for DispatchParams
+	{
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_dispatchParamsCB.pResource)));
+
+		// Describe and create a constant buffer view.
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_dispatchParamsCB.pResource->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = (sizeof(DispatchParams) + 255) & ~255;    // CB size is required to be 256-byte aligned.
+		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(gCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), gCbvSrvUavOffset, 32);
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateConstantBufferView(&cbvDesc, cbvHandle);
+
+		CD3DX12_RANGE readRange(0, 0);
+		ThrowIfFailed(m_dispatchParamsCB.pResource->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDispatchParams)));
+	
+		m_dispatchParamsCB.mUsageState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		m_dispatchParamsCB.uCbvDescriptorOffset = gCbvSrvUavOffset;
+		++gCbvSrvUavOffset;
+	}
+
+	// Create the constant buffer for ScreenToViewParams
+	{
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_screenToViewParamsCB.pResource)));
+
+		// Describe and create a constant buffer view.
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_screenToViewParamsCB.pResource->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = (sizeof(ScreenToViewParams) + 255) & ~255;    // CB size is required to be 256-byte aligned.
+		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(gCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), gCbvSrvUavOffset, 32);
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateConstantBufferView(&cbvDesc, cbvHandle);
+
+		CD3DX12_RANGE readRange(0, 0);
+		ThrowIfFailed(m_screenToViewParamsCB.pResource->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvScreenToViewParams)));
+
+		m_screenToViewParamsCB.mUsageState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		m_screenToViewParamsCB.uCbvDescriptorOffset = gCbvSrvUavOffset;
+		++gCbvSrvUavOffset;
+	}
+
+	// Load Grid Frustum Asset
+	LoadGridFrustumAsset(ScreenWidth, ScreenHeight, inverseProjection, gCbvSrvUavDescriptorHeap, gCbvSrvUavOffset);
+}
+
+void ForwardPlusLightCulling::Resize()
+{
+
+}
+
+void ForwardPlusLightCulling::Destroy()
+{
+
+}
+
+void ForwardPlusLightCulling::ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap)
+{
+	ExecuteGridFrustumCS(gCbvSrvuavDescriptorHeap);
+}
+
+/****************/
+// Grid Frustum
+/****************/
+void ForwardPlusLightCulling::LoadGridFrustumAsset(
+	uint32_t ScreenWidth, uint32_t ScreenHeight, 
+	XMMATRIX inverseProjection,
+	ComPtr<ID3D12DescriptorHeap> gDescriptorHeap,
+	UINT& gCbvSrvUavOffset)
+{
+	// Root Signature
+	{
+		m_GridFrustumRootSignature.Reset(e_GridFrustumNumRootParameters, 0);
+		m_GridFrustumRootSignature[e_GridFrustumDispatchRootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1);
+		m_GridFrustumRootSignature[e_GridFrustumScreenToViewRootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+		m_GridFrustumRootSignature[e_GridFrustumRootParameterUAV].InitAsBufferUAV(0);
+		m_GridFrustumRootSignature[e_GridFrustumRootParameterDebugUAV].InitAsBufferUAV(1);
+		m_GridFrustumRootSignature.Finalize(L"GridFrustumPassRootSignature");
+	}
+
+	// Create compute PSO
+	{
+		ComPtr<ID3DBlob> computeShader;
+		ComPtr<ID3DBlob> error;
+
+#if defined(_DEBUG)
+		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+
+		ComPtr<ID3DBlob> errorMessages;
+		HRESULT hr = D3DCompileFromFile(L"GridFrustumPass.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CS_GridFrustumPass", "cs_5_1", compileFlags, 0, &computeShader, &errorMessages);
+		if (FAILED(hr) && errorMessages)
+		{
+			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 3000; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
+		}
+#else
+		UINT compileFlags = 0;
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"GridFrustumPass.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CS_GridFrustumPass", "cs_5_1", compileFlags, 0, &pixelShader, nullptr));
+#endif
+
+		m_GridFrustumComputePSO.SetRootSignature(m_GridFrustumRootSignature);
+		m_GridFrustumComputePSO.SetComputeShader(CD3DX12_SHADER_BYTECODE(computeShader.Get()));
+		m_GridFrustumComputePSO.Finalize();
+	}
+
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_GridFrustumComputePSO.GetPSO()));
+
+	// Grid result UAV
+	m_BlockSizeX = ceil(ScreenWidth * 1.0f / m_TiledSize);
+	m_BlockSizeY = ceil(ScreenHeight * 1.0f / m_TiledSize);
+	m_CSGridFrustumOutputSB.Create(L"GridFrustumsPassOutputBuffer", m_BlockSizeX * m_BlockSizeY, sizeof(Frustum));
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CSGridFrustumOutputSB.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	// Debug Buffer
+	m_CSDebugUAV.Create(L"DebugUAV", m_BlockSizeX * m_BlockSizeY, sizeof(float));
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_CSDebugUAV.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	// Update the dispatch parameter constant buffer
+	m_dispatchParamsData.numThreadGroups = XMUINT3(ceil(1.0f * m_BlockSizeX / m_TiledSize), ceil(1.0f * m_BlockSizeY / m_TiledSize), 1);
+	m_dispatchParamsData.numThreads = XMUINT3(m_BlockSizeX, m_BlockSizeY, 1);
+	m_dispatchParamsData.blockSize = XMUINT2(m_TiledSize, m_TiledSize);
+	m_dispatchParamsData.padding1 = 1;
+	m_dispatchParamsData.padding2 = 1;
+	m_dispatchParamsData.padding3 = XMUINT2(1, 1);
+	memcpy(m_pCbvDispatchParams, &m_dispatchParamsData, sizeof(m_dispatchParamsData));
+
+	// Update the screen to view parameter constant buffer
+	m_screenToViewParamsData.InverseProjection = inverseProjection;
+	m_screenToViewParamsData.ScreenDimensions = XMUINT2(ScreenWidth, ScreenHeight);
+	memcpy(m_pCbvScreenToViewParams, &m_screenToViewParamsData, sizeof(m_screenToViewParamsData));
+
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { IGraphics::g_GraphicsCore->m_computeCommandList.Get() };
+	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	IGraphics::g_GraphicsCore->WaitForComputeShaderGpu();
+}
+
+void ForwardPlusLightCulling::ExecuteGridFrustumCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap)
+{
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_GridFrustumComputePSO.GetPSO()));
+	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList = IGraphics::g_GraphicsCore->m_computeCommandList;
+
+	m_computeCommandList->SetComputeRootSignature(m_GridFrustumRootSignature.GetSignature());
+	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = gCbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+	ID3D12DescriptorHeap* ppHeaps[] = { gCbvSrvUavDescriptorHeap.Get() };
+	m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_GridFrustumDispatchRootParameterCB,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_dispatchParamsCB.uCbvDescriptorOffset, 32));
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_GridFrustumScreenToViewRootParameterCB,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_screenToViewParamsCB.uCbvDescriptorOffset, 32));
+	m_computeCommandList->SetComputeRootUnorderedAccessView(
+		e_GridFrustumRootParameterUAV,
+		m_CSGridFrustumOutputSB.GetGpuVirtualAddress());
+	m_computeCommandList->SetComputeRootUnorderedAccessView(
+		e_GridFrustumRootParameterDebugUAV,
+		m_CSDebugUAV.GetGpuVirtualAddress());
+
+	m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	//m_computeCommandList->Dispatch(1, 1, 1);
+
+	ThrowIfFailed(m_computeCommandList->Close());
+
+	ID3D12CommandList* tmpList = m_computeCommandList.Get();
+	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(1, &tmpList);
+
+	IGraphics::g_GraphicsCore->WaitForComputeShaderGpu();
+}

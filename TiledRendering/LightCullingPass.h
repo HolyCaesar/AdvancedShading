@@ -3,6 +3,7 @@
 #include "GraphicsCore.h"
 #include "DX12RootSignature.h"
 #include "DX12PipelineState.h"
+#include "DX12ResStruct.h"
 #include "GpuResource.h"
 #include "GpuBuffer.h"
 #include "Lights.h"
@@ -34,7 +35,6 @@ public:
     // Grid Frustum Calculation Pass Resources
     StructuredBuffer m_CSGridFrustumOutputSB;
     StructuredBuffer m_CSDebugUAV;
-
 
     ComPtr<ID3D12Resource> m_computeInputTex2D;
 
@@ -241,3 +241,96 @@ private:
     );
 };
 
+
+
+
+
+
+class ForwardPlusLightCulling
+{
+public:
+    ForwardPlusLightCulling() :
+        m_TiledSize(16), m_BlockSizeX(1), m_BlockSizeY(1)
+    {}
+    ~ForwardPlusLightCulling()
+    {}
+
+    void Init(
+        uint32_t ScreenWidth, uint32_t ScreenHeight,
+        XMMATRIX inverseProjection,
+        ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap,
+        UINT& gCbvSrvUavOffset);
+    void Resize();
+    void Destroy();
+    void ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap);
+
+    void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
+    // Common Resources
+private:
+    uint32_t m_TiledSize;
+    uint32_t m_BlockSizeX;
+    uint32_t m_BlockSizeY;
+
+    __declspec(align(16)) struct DispatchParams
+    {
+        XMUINT3 numThreadGroups;  // Number of groups dispatched
+        UINT padding1;
+        XMUINT3 numThreads;       // Totla number of threads dispatched
+        UINT padding2;
+        XMUINT2 blockSize;        // threads in x and y dimension of a thread group
+        XMUINT2 padding3;
+    };
+    DX12Resource m_dispatchParamsCB;
+    DispatchParams m_dispatchParamsData;
+    UINT8* m_pCbvDispatchParams;
+
+    __declspec(align(16)) struct ScreenToViewParams
+    {
+        XMMATRIX InverseProjection;
+        XMUINT2 ScreenDimensions;
+        XMUINT2 Padding;
+    };
+    DX12Resource m_screenToViewParamsCB;
+    ScreenToViewParams m_screenToViewParamsData;
+    UINT8* m_pCbvScreenToViewParams;
+
+    __declspec(align(16)) struct Frustum
+    {
+        XMFLOAT4 planes[4];   // left, right, top, bottom frustum planes.
+    };
+
+    // Frustum calculation
+private:
+    DX12RootSignature m_GridFrustumRootSignature;
+    ComputePSO m_GridFrustumComputePSO;
+
+    // Compute Shader Resource
+    StructuredBuffer m_CSGridFrustumOutputSB;
+    StructuredBuffer m_CSDebugUAV;
+
+    // Indexes for the root parameter table
+    enum GridFrustumRootParameters : uint32_t
+    {
+        e_GridFrustumDispatchRootParameterCB = 0,
+        e_GridFrustumScreenToViewRootParameterCB,
+        e_GridFrustumRootParameterUAV,
+        e_GridFrustumRootParameterDebugUAV,
+        e_GridFrustumNumRootParameters
+    };
+    enum GridFrustumDescriptorHeapCount : uint32_t
+    {
+        e_cGridFrustumCB = 2,
+        e_cGridFrustumUAV = 2,
+    };
+
+    void LoadGridFrustumAsset(
+        uint32_t ScreenWidth, uint32_t ScreenHeight, 
+        XMMATRIX inverseProjection,
+        ComPtr<ID3D12DescriptorHeap> gDescriptorHeap,
+        UINT& gCbvSrvUavOffset);
+
+    void ExecuteGridFrustumCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap);
+
+    // Light Culling
+private:
+};
