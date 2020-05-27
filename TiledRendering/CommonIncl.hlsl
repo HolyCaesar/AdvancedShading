@@ -191,6 +191,7 @@ bool ConeInsidePlane(Cone cone, Plane plane)
 bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar)
 {
     bool result = true;
+    return true;
 
     // First check depth: If the sphere is either fully in front of the near clipping plane, or fully behind the far clipping plane, then the light can be discarded
     // Note: Here, the view vector points in the -Z axis
@@ -208,6 +209,11 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
         }
     }
     return result;
+}
+
+bool isOk()
+{
+    return true;
 }
 
 bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)

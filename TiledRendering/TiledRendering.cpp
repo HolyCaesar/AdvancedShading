@@ -99,7 +99,7 @@ void TiledRendering::LoadPipeline()
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&imGuiHeap)) != S_OK);
 
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = 1024;
+		desc.NumDescriptors = 256;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavHeap)) != S_OK);
 		m_cbvSrvUavDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -385,7 +385,7 @@ void TiledRendering::LoadAssets()
 
 	// Generate lights
 	GenerateLights(8);
-	//m_LightCullingPass.UpdateLightBuffer(m_lightsList);
+	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -580,9 +580,6 @@ void TiledRendering::OnRender()
 	m_LightCullingPass.ExecuteCS(m_cbvSrvUavHeap, m_preDepthPassBuffer.uSrvDescriptorOffset);
 
 	////m_simpleCS.OnExecuteCS();
-	//m_GridFrustumsPass.ExecuteOnCS();
-
-	//m_LightCullingPass.ExecuteOnCS(m_GridFrustumsPass.m_CSGridFrustumOutputSB, m_cbvSrvHeap, 2);
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
