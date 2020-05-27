@@ -636,7 +636,7 @@ void ForwardPlusLightCulling::Destroy()
 void ForwardPlusLightCulling::ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap, UINT preDepthPassHeapOffset)
 {
 	ExecuteGridFrustumCS(gCbvSrvuavDescriptorHeap);
-	//ExecuteLightCullingCS(gCbvSrvuavDescriptorHeap, preDepthPassHeapOffset);
+	ExecuteLightCullingCS(gCbvSrvuavDescriptorHeap, preDepthPassHeapOffset);
 }
 
 void ForwardPlusLightCulling::CreateGPUTex2DUAVResource(
