@@ -173,6 +173,7 @@ public:
     void ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap);
 
     void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
+    void UpdateLightBuffer(vector<Light>& lightList);
     // Common Resources
 private:
     uint32_t m_TiledSize;
@@ -207,6 +208,12 @@ private:
         XMFLOAT4 planes[4];   // left, right, top, bottom frustum planes.
     };
 
+    void CreateGPUTex2DUAVResource(
+        wstring name, uint32_t width, uint32_t height,
+        uint32_t elementSize, DXGI_FORMAT format,
+        ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap,
+        UINT& heapOffset, DX12Resource& pResource, void* initData);
+
     // Frustum calculation
 private:
     DX12RootSignature m_GridFrustumRootSignature;
@@ -237,8 +244,52 @@ private:
         ComPtr<ID3D12DescriptorHeap> gDescriptorHeap,
         UINT& gCbvSrvUavOffset);
 
+    void UpdateGridFrustumCB();
     void ExecuteGridFrustumCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap);
 
     // Light Culling
 private:
+    const uint32_t AVERAGE_OVERLAPPING_LIGHTS = 200;
+
+    DX12RootSignature m_LightCullingComputeRootSignature;
+    ComputePSO m_LightCullingComputePSO;
+
+    // Light Culling Resource
+    StructuredBuffer m_oLightIndexCounter;
+    StructuredBuffer m_tLightIndexCounter;
+    StructuredBuffer m_oLightIndexList;
+    StructuredBuffer m_tLightIndexList;
+    StructuredBuffer m_testUAVBuffer;
+
+    DX12Resource m_oLightGrid;
+    DX12Resource m_tLightGrid;
+
+    StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
+
+    // Indexes for the root parameter table
+    enum LightCullingRootParameters : uint32_t
+    {
+        e_LightCullingDispatchCB = 0,
+        e_LightCullingScreenToViewRootCB,
+        e_LightCullingOLightIndexCounterUAV,
+        e_LightCullingTLightIndexCounterUAV,
+        e_LightCullingOLightIndexListUAV,
+        e_LightCullingTLightIndexListUAV,
+        e_LightCullingOLightGridUAV,
+        e_LightCullingTLightGridUAV,
+        e_LightCullingFrustumSRV,
+        e_LightCullingLightsSRV,
+        e_LightCullingDepthSRV,
+        e_LightCullingDebugUAV,
+        e_LightCullingNumRootParameters
+    };
+
+    void LoadLightCullingAsset(
+        uint32_t ScreenWidth, uint32_t ScreenHeight,
+        XMMATRIX inverseProjection,
+        ComPtr<ID3D12DescriptorHeap> gDescriptorHeap,
+        UINT& gCbvSrvUavOffset);
+
+    void UpdateLightCullingCB();
+    void ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap, UINT preDepthBufHeapOffset);
 };
