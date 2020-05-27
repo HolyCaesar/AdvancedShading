@@ -577,7 +577,7 @@ void TiledRendering::OnRender()
 	// Get depth in the screen space
 	PreDepthPass();
 
-	m_LightCullingPass.ExecuteCS(m_cbvSrvUavHeap);
+	m_LightCullingPass.ExecuteCS(m_cbvSrvUavHeap, m_preDepthPassBuffer.uSrvDescriptorOffset);
 
 	////m_simpleCS.OnExecuteCS();
 	//m_GridFrustumsPass.ExecuteOnCS();

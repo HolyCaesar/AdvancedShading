@@ -170,7 +170,7 @@ public:
         UINT& gCbvSrvUavOffset);
     void Resize();
     void Destroy();
-    void ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap);
+    void ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap, UINT preDepthPassHeapOffset);
 
     void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
     void UpdateLightBuffer(vector<Light>& lightList);

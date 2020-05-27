@@ -620,6 +620,7 @@ void ForwardPlusLightCulling::Init(
 
 	// Load Grid Frustum Asset
 	LoadGridFrustumAsset(ScreenWidth, ScreenHeight, inverseProjection, gCbvSrvUavDescriptorHeap, gCbvSrvUavOffset);
+	LoadLightCullingAsset(ScreenWidth, ScreenHeight, inverseProjection, gCbvSrvUavDescriptorHeap, gCbvSrvUavOffset);
 }
 
 void ForwardPlusLightCulling::Resize()
@@ -632,9 +633,10 @@ void ForwardPlusLightCulling::Destroy()
 
 }
 
-void ForwardPlusLightCulling::ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap)
+void ForwardPlusLightCulling::ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap, UINT preDepthPassHeapOffset)
 {
 	ExecuteGridFrustumCS(gCbvSrvuavDescriptorHeap);
+	//ExecuteLightCullingCS(gCbvSrvuavDescriptorHeap, preDepthPassHeapOffset);
 }
 
 void ForwardPlusLightCulling::CreateGPUTex2DUAVResource(
@@ -824,7 +826,7 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 {
 	m_LightCullingComputeRootSignature.Reset(e_LightCullingNumRootParameters, 0);
 	m_LightCullingComputeRootSignature[e_LightCullingDispatchCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1);
-	m_LightCullingComputeRootSignature[e_LightCullingScreenToViewRootCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1);
+	m_LightCullingComputeRootSignature[e_LightCullingScreenToViewRootCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
 	m_LightCullingComputeRootSignature[e_LightCullingOLightIndexCounterUAV].InitAsBufferUAV(0);
 	m_LightCullingComputeRootSignature[e_LightCullingTLightIndexCounterUAV].InitAsBufferUAV(1);
 	m_LightCullingComputeRootSignature[e_LightCullingOLightIndexListUAV].InitAsBufferUAV(2);
@@ -908,6 +910,12 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, 
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_tLightGrid, nullptr);
+
+	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { IGraphics::g_GraphicsCore->m_computeCommandList.Get() };
+	IGraphics::g_GraphicsCore->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	IGraphics::g_GraphicsCore->WaitForComputeShaderGpu();
 }
 
 void ForwardPlusLightCulling::UpdateLightCullingCB()
