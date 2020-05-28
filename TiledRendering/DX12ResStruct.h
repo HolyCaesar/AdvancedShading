@@ -15,6 +15,7 @@ struct DX12Resource
     }
 
     ComPtr<ID3D12Resource> pResource;
+    ComPtr<ID3D12Resource> pResourceUAVCounter;
     UINT uSrvDescriptorOffset;
     UINT uUavDescriptorOffset;
     UINT uCbvDescriptorOffset;

@@ -211,11 +211,6 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
     return result;
 }
 
-bool isOk()
-{
-    return true;
-}
-
 bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
 {
     bool result = true;

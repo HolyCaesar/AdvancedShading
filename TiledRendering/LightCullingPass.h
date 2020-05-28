@@ -30,6 +30,14 @@ public:
 
     void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
     void UpdateLightBuffer(vector<Light>& lightList);
+
+    // Get result
+    UINT GetOpaqueLightGridSRVHeapOffset() { return m_oLightGrid.uSrvDescriptorOffset; }
+    D3D12_GPU_VIRTUAL_ADDRESS GetOpaqueLightLightIndexList() { return m_oLightIndexList.GetGpuVirtualAddress(); }
+
+    UINT GetTransparentLightGridSRVHeapOffset() { return m_tLightGrid.uSrvDescriptorOffset; }
+    D3D12_GPU_VIRTUAL_ADDRESS GetTransparentLightIndexList() { return m_tLightIndexList.GetGpuVirtualAddress(); }
+    
     // Common Resources
 private:
     uint32_t m_TiledSize;
@@ -116,6 +124,7 @@ private:
     StructuredBuffer m_oLightIndexList;
     StructuredBuffer m_tLightIndexList;
     StructuredBuffer m_testUAVBuffer;
+    DX12Resource     m_testUAVTex2D;
 
     DX12Resource m_oLightGrid;
     DX12Resource m_tLightGrid;
@@ -137,6 +146,7 @@ private:
         e_LightCullingLightsSRV,
         e_LightCullingDepthSRV,
         e_LightCullingDebugUAV,
+        e_LightCullingDebugUAVTex2D,
         e_LightCullingNumRootParameters
     };
 

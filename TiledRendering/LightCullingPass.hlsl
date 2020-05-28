@@ -1,6 +1,10 @@
 #include "CommonIncl.hlsl"
 
-#define BLOCK_SIZE 16 
+//#define BLOCK_SIZE 16 
+#ifndef BLOCK_SIZE
+#pragma message( "BLOCK_SIZE undefined. Default to 16.")
+#define BLOCK_SIZE 16 // should be defined by the application.
+#endif
 
 struct ComputeShaderInput
 {
@@ -26,11 +30,6 @@ cbuffer ScreenToViewParams : register(b1)
     uint2 ScreenDimensions;
     uint2 Padding;
 }
-
-//struct FrustumIn
-//{
-//    float4 plane[4];
-//};
 
 float4 ClipToView(float4 clip)
 {
@@ -70,6 +69,7 @@ RWTexture2D<uint2> t_LightGrid : register(u5);
 
 // Debug UAV
 RWStructuredBuffer<float4> debugBuffer : register(u6);
+RWTexture2D<float2> debugTex2D : register(u7);
 
 // Group shared variables
 groupshared uint uMinDepth;
@@ -100,14 +100,14 @@ void t_AppendLight(uint lightIndex)
 {
     uint index;
     InterlockedAdd(t_LightCount, 1, index);
-    //if (index < 1024)
-    //{
-    //    t_LightList[index] = lightIndex;
-    //}
+    if (index < 1024)
+    {
+        t_LightList[index] = lightIndex;
+    }
 }
 
 // Calculate the view frustum for each tiled in the view space
-[numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
+[numthreads( BLOCK_SIZE, BLOCK_SIZE, 1 )]
 void CS_LightCullingPass(ComputeShaderInput Input)
 {
     int2 texCoord = Input.dispatchThreadID.xy;
@@ -123,8 +123,11 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         o_LightCount = 0;
         t_LightCount = 0;
         GroupFrustum = in_Frustums[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)];
-        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
+        o_LightGrid[Input.groupID.xy] = uint2(0, 0); // Reset
+        t_LightGrid[Input.groupID.xy] = uint2(0, 0); // Reset
+
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(BLOCK_SIZE, BLOCK_SIZE, 0, 0);
         //uint idx = Input.groupID.x + (Input.groupID.y * numThreadGroups.x);
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x, Input.groupID.y, numThreadGroups.x, idx);
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, fDepth);
@@ -139,6 +142,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
 
     float fMinDepth = asfloat(uMinDepth);
     float fMaxDepth = asfloat(uMaxDepth);
+
     
     // Convert depth values to view space
     float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
@@ -148,11 +152,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // Clipping plane for minimum depth value (used for testing lights within the bounds of opaque geometry)
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
 
-    //if (Input.groupIndex == 0)
-    //{
-    //    int idx = Input.groupID.x + (Input.groupID.y * numThreadGroups.x);
-    //    debugBuffer[idx] = float4(uMinDepth, uMaxDepth, 0, 0);
-    //}
+    debugTex2D[Input.dispatchThreadID.xy] = float2(minDepthVS, maxDepthVS);
 
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled
@@ -166,10 +166,6 @@ void CS_LightCullingPass(ComputeShaderInput Input)
             case POINT_LIGHT:
             {
                 Sphere sphere = { light.PositionVS.xyz, light.Range };
-                sphere.c = float3(0, 1.0f, 0.5f);
-                sphere.r = 5.0f;
-                nearClipVS = 0.2f;
-                maxDepthVS = 15.0f;
 
                 if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
                 {
@@ -224,7 +220,6 @@ void CS_LightCullingPass(ComputeShaderInput Input)
 
         InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
         t_LightGrid[Input.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
-
 
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
     }

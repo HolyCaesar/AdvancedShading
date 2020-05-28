@@ -135,6 +135,21 @@ void ForwardPlusLightCulling::CreateGPUTex2DUAVResource(
 	++heapOffset;
 
 	pResource.pResource->SetName(name.c_str());
+
+	//// Create Counter Buffer
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+	//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+	//	D3D12_HEAP_FLAG_NONE,
+	//	&resourceDesc,
+	//	D3D12_RESOURCE_STATE_GENERIC_READ,
+	//	nullptr,
+	//	IID_PPV_ARGS(&pResource.pResourceUAVCounter)));
+
+	//UINT8* pMappedCounterReset = nullptr;
+	//CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+	//ThrowIfFailed(pResource.pResourceUAVCounter->Map(0, &readRange, reinterpret_cast<void**>(&pMappedCounterReset)));
+	//ZeroMemory(pMappedCounterReset, sizeof(XMUINT2));
+	//pResource.pResourceUAVCounter->Unmap(0, nullptr);
 }
 
 void ForwardPlusLightCulling::UpdateLightBuffer(vector<Light>& lightList)
@@ -292,6 +307,7 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 	m_LightCullingComputeRootSignature[e_LightCullingLightsSRV].InitAsBufferSRV(1);
 	m_LightCullingComputeRootSignature[e_LightCullingDepthSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
 	m_LightCullingComputeRootSignature[e_LightCullingDebugUAV].InitAsBufferUAV(6);
+	m_LightCullingComputeRootSignature[e_LightCullingDebugUAVTex2D].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 7, 1);
 
 	m_LightCullingComputeRootSignature.Finalize(L"LightCullingPassRootSignature");
 
@@ -305,8 +321,17 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 #if defined(_DEBUG)
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
+		vector<D3D_SHADER_MACRO> vShaderMacro;
+		string name("BLOCK_SIZE"), definition(to_string(m_TiledSize));
+		char* c_name = new char[name.size() + 1];
+		char* c_definition = new char[definition.size() + 1];
+		strncpy_s(c_name, name.size() + 1, name.c_str(), name.size());
+		strncpy_s(c_definition, definition.size() + 1, definition.c_str(), definition.size());
+		vShaderMacro.push_back({ c_name, c_definition });
+		vShaderMacro.push_back({ 0, 0 });
+
 		ComPtr<ID3DBlob> errorMessages;
-		HRESULT hr = D3DCompileFromFile(L"LightCullingPass.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CS_LightCullingPass", "cs_5_1", compileFlags, 0, &computeShader, &errorMessages);
+		HRESULT hr = D3DCompileFromFile(L"LightCullingPass.hlsl", vShaderMacro.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "CS_LightCullingPass", "cs_5_1", compileFlags, 0, &computeShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -366,6 +391,13 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, 
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_tLightGrid, nullptr);
+
+	// Debug texture2D
+	CreateGPUTex2DUAVResource(
+		L"DebuggerTex2D", ScreenWidth, ScreenHeight, 
+		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_FLOAT,
+		gDescriptorHeap, gCbvSrvUavOffset, 
+		m_testUAVTex2D, nullptr);
 
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { IGraphics::g_GraphicsCore->m_computeCommandList.Get() };
@@ -429,6 +461,10 @@ void ForwardPlusLightCulling::ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap>
 		e_LightCullingTLightGridUAV,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_tLightGrid.uUavDescriptorOffset, 32));
 
+	m_computeCommandList->SetComputeRootDescriptorTable(
+		e_LightCullingDebugUAVTex2D,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_testUAVTex2D.uUavDescriptorOffset, 32));
+
 	// Reset the UAV counter for this frame.
 	m_computeCommandList->CopyBufferRegion(m_oLightIndexCounter.GetResource(), 0, m_oLightIndexCounter.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
 	m_computeCommandList->CopyBufferRegion(m_tLightIndexCounter.GetResource(), 0, m_tLightIndexCounter.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
@@ -436,8 +472,8 @@ void ForwardPlusLightCulling::ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap>
 	m_computeCommandList->CopyBufferRegion(m_oLightIndexList.GetResource(), 0, m_oLightIndexList.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
 	m_computeCommandList->CopyBufferRegion(m_tLightIndexList.GetResource(), 0, m_tLightIndexList.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
 
-	//m_computeCommandList->CopyBufferRegion(m_oLightGrid.pResource.Get(), 0, , 0, sizeof(UINT));
-	//m_computeCommandList->CopyBufferRegion(m_tLightIndexList.GetResource(), 0, m_tLightIndexList.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
+	//m_computeCommandList->CopyBufferRegion(m_oLightGrid.pResource.Get(), 0, m_oLightGrid.pResourceUAVCounter.Get(), 0, sizeof(UINT));
+	//m_computeCommandList->CopyBufferRegion(m_tLightGrid.pResource.Get(), 0, m_tLightGrid.pResourceUAVCounter.Get(), 0, sizeof(UINT));
 
 
 	// Frustum SRV

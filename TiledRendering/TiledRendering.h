@@ -141,12 +141,6 @@ private:
     DX12RootSignature m_preDepthPassRootSignature;
     GraphicsPSO m_preDepthPassPSO;
     
-    //// Grid FrustumsPass Calculation
-    //GridFrustumsPass m_GridFrustumsPass;
-
-    //// Light Culling Pass
-    //LightCullingPass m_LightCullingPass;
-    
     // Light Culling Pass
     vector<Light> m_lightsList;
     ForwardPlusLightCulling m_LightCullingPass;

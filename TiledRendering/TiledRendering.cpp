@@ -142,8 +142,8 @@ void TiledRendering::LoadAssets()
 		m_sceneRootSignature.Reset(2, 1);
 		m_sceneRootSignature.InitStaticSampler(0, non_static_sampler);
 		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_sceneRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_sceneRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
+		m_sceneRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_VERTEX);
+		m_sceneRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneRootSignature.Finalize(L"SceneRootSignature", rootSignatureFlags);
 	}
 
