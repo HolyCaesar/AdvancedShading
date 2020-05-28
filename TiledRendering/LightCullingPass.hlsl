@@ -100,10 +100,10 @@ void t_AppendLight(uint lightIndex)
 {
     uint index;
     InterlockedAdd(t_LightCount, 1, index);
-    if (index < 1024)
-    {
-        t_LightList[index] = lightIndex;
-    }
+    //if (index < 1024)
+    //{
+    //    t_LightList[index] = lightIndex;
+    //}
 }
 
 // Calculate the view frustum for each tiled in the view space
@@ -123,8 +123,11 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         o_LightCount = 0;
         t_LightCount = 0;
         GroupFrustum = in_Frustums[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)];
-        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
-        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, fDepth);
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = GroupFrustum.planes[0];
+        //uint idx = Input.groupID.x + (Input.groupID.y * numThreadGroups.x);
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x, Input.groupID.y, numThreadGroups.x, idx);
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, fDepth);
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -221,6 +224,9 @@ void CS_LightCullingPass(ComputeShaderInput Input)
 
         InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
         t_LightGrid[Input.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
+
+
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
     }
 
     GroupMemoryBarrierWithGroupSync();

@@ -88,7 +88,9 @@ void ForwardPlusLightCulling::Destroy()
 
 void ForwardPlusLightCulling::ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap, UINT preDepthPassHeapOffset)
 {
+	UpdateGridFrustumCB();
 	ExecuteGridFrustumCS(gCbvSrvuavDescriptorHeap);
+	UpdateLightCullingCB();
 	ExecuteLightCullingCS(gCbvSrvuavDescriptorHeap, preDepthPassHeapOffset);
 }
 
@@ -330,12 +332,13 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 	// Prepare for Output of Grid
 	m_BlockSizeX = ceil(ScreenWidth * 1.0f / m_TiledSize);
 	m_BlockSizeY = ceil(ScreenHeight * 1.0f / m_TiledSize);
+	vector<UINT> indexCounter(1, 1);
 	// Opaque LightIndexCounter Structured Buffer
-	m_oLightIndexCounter.Create(L"O_LightIndexCounter", 1, sizeof(UINT));
+	m_oLightIndexCounter.Create(L"O_LightIndexCounter", 1, sizeof(UINT), indexCounter.data());
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightIndexCounter.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Transparent LightIndexCounter Structured Buffer
-	m_tLightIndexCounter.Create(L"T_LightIndexCounter", 1, sizeof(UINT));
+	m_tLightIndexCounter.Create(L"T_LightIndexCounter", 1, sizeof(UINT), indexCounter.data());
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightIndexCounter.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
 	// Opaque LightIndexList
@@ -352,14 +355,14 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 
 	// Opaque LightGrid
 	CreateGPUTex2DUAVResource(
-		L"OpageLightGridMap", ScreenWidth, ScreenHeight, 
+		L"OpageLightGridMap", m_BlockSizeX, m_BlockSizeY, 
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, 
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_oLightGrid, nullptr);
 
 	// Transparent LightGrid
 	CreateGPUTex2DUAVResource(
-		L"TransparentLightGridMap", ScreenWidth, ScreenHeight, 
+		L"TransparentLightGridMap", m_BlockSizeX, m_BlockSizeY, 
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, 
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_tLightGrid, nullptr);
@@ -373,7 +376,8 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 
 void ForwardPlusLightCulling::UpdateLightCullingCB()
 {
-	m_dispatchParamsData.numThreadGroups = XMUINT3(ceil(1.0f * m_BlockSizeX / m_TiledSize), ceil(1.0f * m_BlockSizeY / m_TiledSize), 1);
+	//m_dispatchParamsData.numThreadGroups = XMUINT3(ceil(1.0f * m_BlockSizeX / m_TiledSize), ceil(1.0f * m_BlockSizeY / m_TiledSize), 1);
+	m_dispatchParamsData.numThreadGroups = XMUINT3(m_BlockSizeX, m_BlockSizeY, 1);
 	m_dispatchParamsData.numThreads = XMUINT3(m_BlockSizeX, m_BlockSizeY, 1);
 	m_dispatchParamsData.blockSize = XMUINT2(m_TiledSize, m_TiledSize);
 	m_dispatchParamsData.padding1 = 1;
@@ -425,6 +429,17 @@ void ForwardPlusLightCulling::ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap>
 		e_LightCullingTLightGridUAV,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_tLightGrid.uUavDescriptorOffset, 32));
 
+	// Reset the UAV counter for this frame.
+	m_computeCommandList->CopyBufferRegion(m_oLightIndexCounter.GetResource(), 0, m_oLightIndexCounter.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
+	m_computeCommandList->CopyBufferRegion(m_tLightIndexCounter.GetResource(), 0, m_tLightIndexCounter.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
+
+	m_computeCommandList->CopyBufferRegion(m_oLightIndexList.GetResource(), 0, m_oLightIndexList.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
+	m_computeCommandList->CopyBufferRegion(m_tLightIndexList.GetResource(), 0, m_tLightIndexList.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
+
+	//m_computeCommandList->CopyBufferRegion(m_oLightGrid.pResource.Get(), 0, , 0, sizeof(UINT));
+	//m_computeCommandList->CopyBufferRegion(m_tLightIndexList.GetResource(), 0, m_tLightIndexList.GetCounterBuffer().GetResource(), 0, sizeof(UINT));
+
+
 	// Frustum SRV
 	m_computeCommandList->SetComputeRootShaderResourceView(
 		e_LightCullingFrustumSRV,
@@ -443,7 +458,8 @@ void ForwardPlusLightCulling::ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap>
 		e_LightCullingDebugUAV,
 		m_testUAVBuffer.GetGpuVirtualAddress());
 
-	m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	//m_computeCommandList->Dispatch(m_dispatchParamsData.numThreadGroups.x, m_dispatchParamsData.numThreadGroups.y, 1);
+	m_computeCommandList->Dispatch(80, 45, 1);
 	//m_computeCommandList->Dispatch(1, 1, 1);
 
 	ThrowIfFailed(m_computeCommandList->Close());
