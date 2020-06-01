@@ -70,47 +70,50 @@ float4 PSMain(PSInput input) : SV_TARGET
         color += (diffuseColor * lightIntensity);
     }
 
-    //const float4 eyePos = { 0, 0, 0, 1 };
-    //float4 posVS = float4(input.positionVS, 1.0f);
-    //float4 viewVS = normalize(eyePos - posVS);
+    const float4 eyePos = { 0, 0, 0, 1 };
+    float4 posVS = float4(input.positionVS, 1.0f);
+    float4 viewVS = normalize(eyePos - posVS);
 
-    //uint2 tileIndex = uint2(floor(input.position.xy / BLOCK_SIZE));
-    //uint startOffset = g_lightGrid[tileIndex].x;
-    //uint lightCount = g_lightGrid[tileIndex].y;
+    uint2 tileIndex = uint2(floor(input.position.xy / BLOCK_SIZE));
+    uint startOffset = g_lightGrid[tileIndex].x;
+    uint lightCount = g_lightGrid[tileIndex].y;
 
-    //LightingResult lit = (LightingResult)0;
+    LightingResult lit = (LightingResult)0;
 
-    //for (uint i = 0; i < lightCount; ++i)
-    //{
-    //    uint lightIndex = g_lightIndex[startOffset + i];
-    //    Light light = g_Lights[lightIndex];
+    for (uint i = 0; i < lightCount; ++i)
+    {
+        uint lightIndex = g_lightIndex[startOffset + i];
+        Light light = g_Lights[lightIndex];
 
-    //    LightingResult res = (LightingRes)0;
+        LightingResult res = (LightingResult)0;
 
-    //    if (!light.Enable) continue;
-    //    // Removed out of range lights
-    //    if (light.Type != DIRECTIONAL_LIGHT && length(light.PositionVS - posVS) > light.Range) continue;
+        if (!light.Enabled) continue;
+        // Removed out of range lights
+        if (light.Type != DIRECTIONAL_LIGHT && length(light.PositionVS - posVS) > light.Range) continue;
 
-    //    switch (light.Type)
-    //    {
-    //    case POINT_LIGHT:
-    //    {
-    //        res = DoPointLight(light, viewVS, posVS, input.normal);
-    //    }
-    //    case SPOT_LIGHT:
-    //    {
-    //        res = DoSpotLight(light, viewVS, posVS, input.normal);
-    //    }
-    //    case DIRECTIONAL_LIGHT:
-    //    {
-    //        res = DoDirectionalLight(light, viewVS, posVS, input.normal);
-    //    }
-    //    }
-    //    lit.lightDiffuse += res.lightDiffuse;
-    //    lit.lightSpecular += res.lightSpecular;
-    //}
+        switch (light.Type)
+        {
+        case POINT_LIGHT:
+        {
+            res = DoPointLight(light, viewVS, posVS, float4(input.normal, 0.0f));
+        }
+        break;
+        case SPOT_LIGHT:
+        {
+            res = DoSpotLight(light, viewVS, posVS, float4(input.normal, 0.0f));
+        }
+        break;
+        case DIRECTIONAL_LIGHT:
+        {
+            res = DoDirectionalLight(light, viewVS, posVS, float4(input.normal, 0.0f));
+        }
+        break;
+        }
+        lit.lightDiffuse += res.lightDiffuse;
+        lit.lightSpecular += res.lightSpecular;
+    }
 
-    //color = saturate(lit.lightDiffuse);
+    color = saturate(lit.lightDiffuse);
 
     return color;
     //return g_texture.Sample(g_sampler, input.tex);

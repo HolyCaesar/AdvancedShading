@@ -283,6 +283,7 @@ LightingResult DoPointLight(Light light, float4 ViewDir, float4 Pos, float4 Nor)
     res.lightDiffuse = DoDiffuse(light, L, Nor) * attenuation * light.Intensity;
     // TODO need material information to process this
     //res.Specular = DoSpecular(light)
+    return res;
 }
 
 LightingResult DoDirectionalLight(Light light, float4 ViewDir, float4 Pos, float4 Nor)
