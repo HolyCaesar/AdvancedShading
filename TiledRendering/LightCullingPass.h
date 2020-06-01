@@ -37,6 +37,8 @@ public:
 
     UINT GetTransparentLightGridSRVHeapOffset() { return m_tLightGrid.uSrvDescriptorOffset; }
     D3D12_GPU_VIRTUAL_ADDRESS GetTransparentLightIndexList() { return m_tLightIndexList.GetGpuVirtualAddress(); }
+
+    D3D12_GPU_VIRTUAL_ADDRESS GetLightsBuffer() { return m_Lights.GetGpuVirtualAddress(); }
     
     // Common Resources
 private:

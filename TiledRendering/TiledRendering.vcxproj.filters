@@ -256,13 +256,13 @@
     <FxCompile Include="csShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="CommonIncl.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="GridFrustumPass.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="LightCullingPass.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="CommonIncl.hlsli">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

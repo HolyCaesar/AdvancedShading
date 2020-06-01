@@ -1,21 +1,17 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-Texture2D g_texture : register(t0);
-SamplerState g_sampler : register(s0);
+#include "CommonIncl.hlsli"
+
+#ifndef BLOCK_SIZE
+#pragma message( "BLOCK_SIZE undefined. Default to 16.")
+#define BLOCK_SIZE 16 // should be defined by the application.
+#endif
+
+
 
 cbuffer ConstBuffer : register(b0)
 {
     matrix World;
+    matrix View;
     matrix WorldViewProj;
-    //float4 offset;
 };
 
 struct VSInput
@@ -27,10 +23,12 @@ struct VSInput
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
+    float4 position : SV_POSITION;  // Clip space position
+    float3 positionVS : TEXCOORD1;  // view space position
     float3 normal : NORMAL;
-    float2 tex :TEXTURE0;
+    float2 tex :TEXTURE0;           // Texture coordinate
 };
+
 
 //PSInput VSMain(float3 position : POSITION, float3 normal : NORMAL, float2 tex : TEXCOORD)
 PSInput VSMain(VSInput input)
@@ -40,12 +38,20 @@ PSInput VSMain(VSInput input)
     //result.position = mul(World, float4(input.position, 1.0f));
     result.position = mul(World, float4(input.position, 1.0f));
     result.position = mul(WorldViewProj, result.position);
+    result.positionVS = mul(View, float4(input.position, 1.0f));
     result.normal = input.normal;
     result.tex = input.tex;
 
     return result;
 }
 
+Texture2D g_texture : register(t0);
+Texture2D<float2> g_lightGrid : register(t1);
+StructuredBuffer<uint> g_lightIndex : register(t2);
+StructuredBuffer<Light> g_Lights : register(t3);
+SamplerState g_sampler : register(s0);
+
+//[earlydepthstencil]
 float4 PSMain(PSInput input) : SV_TARGET
 {
     float3 lightPos = float3(2.0f, 5.0f, 2.0f);
@@ -64,10 +70,53 @@ float4 PSMain(PSInput input) : SV_TARGET
         color += (diffuseColor * lightIntensity);
     }
 
-    //return g_texture.Sample(g_sampler, input.tex);
+    //const float4 eyePos = { 0, 0, 0, 1 };
+    //float4 posVS = float4(input.positionVS, 1.0f);
+    //float4 viewVS = normalize(eyePos - posVS);
+
+    //uint2 tileIndex = uint2(floor(input.position.xy / BLOCK_SIZE));
+    //uint startOffset = g_lightGrid[tileIndex].x;
+    //uint lightCount = g_lightGrid[tileIndex].y;
+
+    //LightingResult lit = (LightingResult)0;
+
+    //for (uint i = 0; i < lightCount; ++i)
+    //{
+    //    uint lightIndex = g_lightIndex[startOffset + i];
+    //    Light light = g_Lights[lightIndex];
+
+    //    LightingResult res = (LightingRes)0;
+
+    //    if (!light.Enable) continue;
+    //    // Removed out of range lights
+    //    if (light.Type != DIRECTIONAL_LIGHT && length(light.PositionVS - posVS) > light.Range) continue;
+
+    //    switch (light.Type)
+    //    {
+    //    case POINT_LIGHT:
+    //    {
+    //        res = DoPointLight(light, viewVS, posVS, input.normal);
+    //    }
+    //    case SPOT_LIGHT:
+    //    {
+    //        res = DoSpotLight(light, viewVS, posVS, input.normal);
+    //    }
+    //    case DIRECTIONAL_LIGHT:
+    //    {
+    //        res = DoDirectionalLight(light, viewVS, posVS, input.normal);
+    //    }
+    //    }
+    //    lit.lightDiffuse += res.lightDiffuse;
+    //    lit.lightSpecular += res.lightSpecular;
+    //}
+
+    //color = saturate(lit.lightDiffuse);
+
     return color;
+    //return g_texture.Sample(g_sampler, input.tex);
 }
 
+//[earlydepthstencil]
 float4 PS_SceneDepth(PSInput input) : SV_TARGET
 {
     return float4(0.0f, 0.0f, 0.0f, 1.0f);

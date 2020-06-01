@@ -81,21 +81,25 @@ private:
     IMath::Camera m_perspectiveCamera;
 
 private:
-    DX12RootSignature m_sceneRootSignature;
+    DX12RootSignature m_sceneOpaqueRootSignature;
+    DX12RootSignature m_sceneTransparentRootSignature;
     GraphicsPSO m_scenePSO;
 
     // Scene 
     enum SceneRootParameters : uint32_t
     {
         e_rootParameterCB = 0,
-        e_rootParameterSRV,
+        e_ModelTexRootParameterSRV,
+        e_LightGridRootParameterSRV,
+        e_LightIndexRootParameterSRV,
+        e_LightBufferRootParameterSRV,
         e_numRootParameters
     };
     // indexes of resources into the descriptor heap
     enum SceneDescriptorHeapCount : uint32_t
     {
         e_cCB = 1,
-        e_cSRV = 2,
+        e_cSRV = 1,
         e_cUAV = 0,
     };
     enum DescriptorHeapIndex : uint32_t
@@ -117,6 +121,7 @@ private:
     __declspec( align( 16 ) ) struct CBuffer 
     {
         XMMATRIX worldMatrix;
+        XMMATRIX viewMatrix;
         XMMATRIX worldViewProjMatrix;
         //XMFLOAT4 offset;
     };
@@ -164,3 +169,4 @@ private:
     // Update Lights Buffer
     void UpdateLightsBuffer();
 };
+

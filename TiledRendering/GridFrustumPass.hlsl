@@ -1,4 +1,4 @@
-#include "CommonIncl.hlsl"
+#include "CommonIncl.hlsli"
 
 #define BLOCK_SIZE 16 
 

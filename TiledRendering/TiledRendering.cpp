@@ -139,12 +139,15 @@ void TiledRendering::LoadAssets()
 		non_static_sampler.MinLOD = 0.0f;
 		non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
-		m_sceneRootSignature.Reset(2, 1);
-		m_sceneRootSignature.InitStaticSampler(0, non_static_sampler);
+		m_sceneOpaqueRootSignature.Reset(e_numRootParameters, 1);
+		m_sceneOpaqueRootSignature.InitStaticSampler(0, non_static_sampler);
 		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_sceneRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_sceneRootSignature[e_rootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
-		m_sceneRootSignature.Finalize(L"SceneRootSignature", rootSignatureFlags);
+		m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_VERTEX);
+		m_sceneOpaqueRootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
+		m_sceneOpaqueRootSignature[e_LightGridRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+		m_sceneOpaqueRootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
+		m_sceneOpaqueRootSignature[e_LightBufferRootParameterSRV].InitAsBufferSRV(3);
+		m_sceneOpaqueRootSignature.Finalize(L"SceneRootSignature", rootSignatureFlags);
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -161,7 +164,7 @@ void TiledRendering::LoadAssets()
 
 #if defined(_DEBUG)
 		ComPtr<ID3DBlob> errorMessages;
-		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorMessages);
+		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -174,7 +177,7 @@ void TiledRendering::LoadAssets()
 		errorMessages.Reset();
 		errorMessages = nullptr;
 
-		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &errorMessages);
+		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -185,8 +188,8 @@ void TiledRendering::LoadAssets()
 			exit(0);
 		}
 #else
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 #endif
 
 		// Define the vertex input layout.
@@ -199,7 +202,7 @@ void TiledRendering::LoadAssets()
 		};
 
 		m_scenePSO.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		m_scenePSO.SetRootSignature(m_sceneRootSignature);
+		m_scenePSO.SetRootSignature(m_sceneOpaqueRootSignature);
 		m_scenePSO.SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
 		m_scenePSO.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
 		m_scenePSO.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
@@ -431,7 +434,7 @@ void TiledRendering::LoadPreDepthPassAssets()
 
 #if defined(_DEBUG)
 		ComPtr<ID3DBlob> errorMessages;
-		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorMessages);
+		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -443,7 +446,7 @@ void TiledRendering::LoadPreDepthPassAssets()
 		errorMessages.Reset();
 		errorMessages = nullptr;
 
-		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "PS_SceneDepth", "ps_5_0", compileFlags, 0, &pixelShader, &errorMessages);
+		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_SceneDepth", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -453,8 +456,8 @@ void TiledRendering::LoadPreDepthPassAssets()
 			exit(0);
 		}
 #else
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 #endif
 
 		// Define the vertex input layout.
@@ -565,6 +568,7 @@ void TiledRendering::OnUpdate()
 	//XMMATRIX world = XMMatrixIdentity(), view = m_modelViewCamera.GetViewMatrix(), proj = m_modelViewCamera.GetProjMatrix();
 	XMMATRIX view = m_modelViewCamera.GetViewMatrix(), proj = m_modelViewCamera.GetProjMatrix();
 	m_constantBufferData.worldMatrix = world;
+	m_constantBufferData.viewMatrix = view;
 	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
 	memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 }
@@ -683,18 +687,27 @@ void TiledRendering::PopulateCommandList()
 
 
 	// Set necessary state.
-	m_commandList->SetGraphicsRootSignature(m_sceneRootSignature.GetSignature());
+	m_commandList->SetGraphicsRootSignature(m_sceneOpaqueRootSignature.GetSignature());
 
 	ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvUavHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
 
 	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
 	m_commandList->SetGraphicsRootDescriptorTable(
-		e_rootParameterSRV,
+		e_ModelTexRootParameterSRV,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelTexture.uSrvDescriptorOffset, m_cbvSrvUavDescriptorSize));
 	m_commandList->SetGraphicsRootDescriptorTable(
 		e_rootParameterCB,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+	m_commandList->SetGraphicsRootDescriptorTable(
+		e_LightGridRootParameterSRV,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_LightCullingPass.GetOpaqueLightGridSRVHeapOffset(), m_cbvSrvUavDescriptorSize));
+	m_commandList->SetGraphicsRootShaderResourceView(
+		e_LightIndexRootParameterSRV, 
+		m_LightCullingPass.GetOpaqueLightLightIndexList());
+	m_commandList->SetGraphicsRootShaderResourceView(
+		e_LightBufferRootParameterSRV,
+		m_LightCullingPass.GetLightsBuffer());
 
 
 	// Indicate that the back buffer will be used as a render target.

@@ -1,3 +1,5 @@
+
+#define NUM_LIGHTS 8
 #ifdef NUM_LIGHTS
 #pragma message("NUM_LIGHTS undefined. Default to 8.")
 #define NUM_LIGHTS 8
@@ -6,7 +8,6 @@
 #define POINT_LIGHT 0
 #define SPOT_LIGHT 1
 #define DIRECTIONAL_LIGHT 2
-#define NUM_LIGHTS 8
 
 typedef float4 Plane;
 
@@ -233,4 +234,80 @@ bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
         }
     }
     return result;
+}
+
+struct LightingResult
+{
+    float4 lightDiffuse;
+    float4 lightSpecular;
+};
+
+float4 DoDiffuse(Light light, float4 LightDir, float4 Nor)
+{
+    float LightEnergy = max(dot(Nor, LightDir), 0);
+    return light.Color * LightEnergy;
+}
+
+float4 DoSpecular(Light light, float4 ViewDir, float4 LightDir, float4 Nor)
+{
+    float4 R = normalize(reflect(-LightDir, Nor));
+    float RdotV = max(dot(R, ViewDir), 0);
+
+    // TODO the hard core power here will be replaced by the material power in the future
+    return light.Color * pow(RdotV, 0.5f);
+}
+
+float DoAttenuation(Light light, float d)
+{
+    return 1.0f - smoothstep(light.Range * 0.75f, light.Range, d);
+}
+
+float DoSpotCone(Light light, float4 LightDir)
+{
+    float minCos = cos(radians(light.SpotlightAngle));
+    float maxCos = lerp(minCos, 1, 0.5f);
+    float cosAngle = dot(light.DirectionVS, -LightDir);
+    return smoothstep(minCos, maxCos, cosAngle);
+}
+
+LightingResult DoPointLight(Light light, float4 ViewDir, float4 Pos, float4 Nor)
+{
+    LightingResult res;
+    
+    float4 L = light.PositionVS - Pos;
+    float distance = length(L);
+    L = L / distance;
+
+    float attenuation = DoAttenuation(light, distance);
+
+    res.lightDiffuse = DoDiffuse(light, L, Nor) * attenuation * light.Intensity;
+    // TODO need material information to process this
+    //res.Specular = DoSpecular(light)
+}
+
+LightingResult DoDirectionalLight(Light light, float4 ViewDir, float4 Pos, float4 Nor)
+{
+    LightingResult res;
+
+    float4 L = normalize(-light.DirectionVS);
+
+    res.lightDiffuse = DoDiffuse(light, L, Nor) * light.Intensity;
+
+    return res;
+}
+
+LightingResult DoSpotLight(Light light, float4 ViewDir, float4 Pos, float4 Nor)
+{
+    LightingResult res;
+
+    float4 L = light.PositionVS - Pos;
+    float distance = length(L);
+    L = L / distance;
+
+    float attenuation = DoAttenuation(light, distance);
+    float spotIntensity = DoSpotCone(light, L);
+
+    res.lightDiffuse = DoDiffuse(light, L, Nor) * attenuation * spotIntensity * light.Intensity;
+
+    return res;
 }
