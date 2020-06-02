@@ -319,7 +319,7 @@ void TiledRendering::LoadAssets()
 
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
+		D3D12_HEAP_FLAG_NONE,
 			&textureDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
@@ -364,7 +364,7 @@ void TiledRendering::LoadAssets()
 	// Camera Setup
 	{
 		// Setup the camera's view parameters
-		static const XMVECTORF32 s_Eye = { 0.0f, 0.0f, -6.0f, 0.f };
+		static const XMVECTORF32 s_Eye = { 0.0f, 0.0f, -10.0f, 0.f };
 		static const XMVECTORF32 s_At = { 0.0f, 0.0f, 0.0f, 0.f };
 		m_modelViewCamera.SetViewParams(s_Eye, s_At);
 		// Setup the camera's projection parameters
@@ -387,7 +387,7 @@ void TiledRendering::LoadAssets()
 		m_cbvSrvUavHeap, m_cbvSrvUavOffset);
 
 	// Generate lights
-	GenerateLights(8);
+	GenerateLights(1);
 	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -795,6 +795,25 @@ void TiledRendering::GenerateLights(uint32_t numLights)
 		float fLightPropability = (1.0f * rand() / INT_MAX);
 		// TODO hard coding the light types for debugging purpose
 		light.m_Type = Light::LightType::Point;
+
+
+		// Test
+		light.m_PositionWS = XMFLOAT4(0.0f, 0.0f, -2.0f, 1.0f);
+
+		light.m_Color.x = 0.5f;
+		light.m_Color.y = 0.1f;
+		light.m_Color.z = 0.7f;
+		light.m_Color.w = 1.0f;
+
+		light.m_DirectionWS = XMFLOAT4(
+			-light.m_PositionWS.x,
+			-light.m_PositionWS.y,
+			-light.m_PositionWS.z,
+			0.0f);
+
+		light.m_Range = 1.0f;
+
+		light.m_SpotlightAngle = 0.745f;
 	}
 
 	UpdateLightsBuffer();

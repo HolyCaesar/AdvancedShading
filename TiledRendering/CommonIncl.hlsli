@@ -1,5 +1,5 @@
 
-#define NUM_LIGHTS 8
+#define NUM_LIGHTS 1
 #ifdef NUM_LIGHTS
 #pragma message("NUM_LIGHTS undefined. Default to 8.")
 #define NUM_LIGHTS 8
@@ -192,7 +192,6 @@ bool ConeInsidePlane(Cone cone, Plane plane)
 bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar)
 {
     bool result = true;
-    return true;
 
     // First check depth: If the sphere is either fully in front of the near clipping plane, or fully behind the far clipping plane, then the light can be discarded
     // Note: Here, the view vector points in the -Z axis

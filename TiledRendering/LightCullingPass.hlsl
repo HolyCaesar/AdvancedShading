@@ -127,7 +127,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         t_LightGrid[Input.groupID.xy] = uint2(0, 0); // Reset
 
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
-        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(BLOCK_SIZE, BLOCK_SIZE, 0, 0);
+        debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(BLOCK_SIZE, BLOCK_SIZE, o_LightCount, t_LightCount);
         //uint idx = Input.groupID.x + (Input.groupID.y * numThreadGroups.x);
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x, Input.groupID.y, numThreadGroups.x, idx);
         //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, fDepth);
@@ -152,7 +152,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // Clipping plane for minimum depth value (used for testing lights within the bounds of opaque geometry)
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
 
-    debugTex2D[Input.dispatchThreadID.xy] = float2(minDepthVS, maxDepthVS);
+    debugTex2D[Input.dispatchThreadID.xy] = float2(nearClipVS, maxDepthVS);
 
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled
@@ -214,6 +214,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // First update the light grid (only thread 0 in group needs to do this)
     if (Input.groupIndex == 0)
     {
+        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(BLOCK_SIZE, BLOCK_SIZE, o_LightCount, t_LightCount);
         // Update light grid for opaque geometry.
         InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
         o_LightGrid[Input.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
