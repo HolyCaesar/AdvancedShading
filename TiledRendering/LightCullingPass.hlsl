@@ -150,9 +150,11 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     float nearClipVS = ScreenToView(float4(0, 0, 0, 1)).z;
 
     // Clipping plane for minimum depth value (used for testing lights within the bounds of opaque geometry)
+    //Plane minPlane = { float3(0, 0, -1), -minDepthVS };
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
 
-    debugTex2D[Input.dispatchThreadID.xy] = float2(nearClipVS, maxDepthVS);
+    //debugTex2D[Input.dispatchThreadID.xy] = float2(nearClipVS, 1.0f - maxDepthVS / 10083.0f);
+    debugTex2D[Input.dispatchThreadID.xy] = float2(minDepthVS, (1.0f - fDepth) * 100);
 
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled

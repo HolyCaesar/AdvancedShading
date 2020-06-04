@@ -114,12 +114,12 @@ void ForwardPlusLightCulling::CreateGPUTex2DUAVResource(
 		heapOffset, 
 		32);
 
-	//D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	//srvDesc.Format = format;
-	//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	//srvDesc.Texture2D.MipLevels = 1;
-	//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(pResource.Get(), &srvDesc, uavHandle);
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(pResource.pResource.Get(), &srvDesc, uavHandle);
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 	uavDesc.Format = DXGI_FORMAT_UNKNOWN;

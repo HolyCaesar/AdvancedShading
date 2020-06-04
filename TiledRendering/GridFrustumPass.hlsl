@@ -53,18 +53,18 @@ RWStructuredBuffer<uint> debugUAV : register(u1);
 
 // Calculate the view frustum for each tiled in the view space
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
-//[numthreads(blockSize, blockSize, 1)]
 void CS_GridFrustumPass(ComputeShaderInput Input)
 {
     const float3 eyePos = float3(0.0f, 0.0f, 0.0f);
 
     uint tiledBlockSize = BLOCK_SIZE;
     // Compute 4 points on the far clipping plane to use as the frustum vertices
+    // Left-hand coordinate system
     float4 tiledVerticesInScreenSpace[4];
-    tiledVerticesInScreenSpace[0] = float4(Input.dispatchThreadID.xy * tiledBlockSize, -1.0f, 1.0f);
-    tiledVerticesInScreenSpace[1] = float4(float2(Input.dispatchThreadID.x + 1, Input.dispatchThreadID.y) * tiledBlockSize, -1.0f, 1.0f);
-    tiledVerticesInScreenSpace[2] = float4(float2(Input.dispatchThreadID.x, Input.dispatchThreadID.y + 1) * tiledBlockSize, -1.0f, 1.0f);
-    tiledVerticesInScreenSpace[3] = float4(float2(Input.dispatchThreadID.x + 1, Input.dispatchThreadID.y + 1) * tiledBlockSize, -1.0f, 1.0f);
+    tiledVerticesInScreenSpace[0] = float4(Input.dispatchThreadID.xy * tiledBlockSize, 1.0f, 1.0f);
+    tiledVerticesInScreenSpace[1] = float4(float2(Input.dispatchThreadID.x + 1, Input.dispatchThreadID.y) * tiledBlockSize, 1.0f, 1.0f);
+    tiledVerticesInScreenSpace[2] = float4(float2(Input.dispatchThreadID.x, Input.dispatchThreadID.y + 1) * tiledBlockSize, 1.0f, 1.0f);
+    tiledVerticesInScreenSpace[3] = float4(float2(Input.dispatchThreadID.x + 1, Input.dispatchThreadID.y + 1) * tiledBlockSize, 1.0f, 1.0f);
 
 
     float3 tiledVerticesInViewSpace[4];

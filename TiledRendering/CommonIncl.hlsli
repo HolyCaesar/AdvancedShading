@@ -162,8 +162,8 @@ Plane ComputePlane(float3 p0, float3 p1, float3 p2)
 // Source: Real-time collision detection, Christer Ericson (2005)
 bool SphereInsidePlane(Sphere sphere, Plane plane)
 {
-    //return dot(plane.N, sphere.c) - plane.d < -sphere.r;
-    return dot(plane.xyz, sphere.c) - plane.w < -sphere.r;
+    //return dot(plane.xyz, sphere.c) - plane.w < -sphere.r; // Right-hand
+    return dot(plane.xyz, sphere.c) + plane.w > sphere.r; // Left-hand
 }
 
 // Check to see if a ponit is fully behind (inside the negative halfspace of) a plane
@@ -196,7 +196,8 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
     // First check depth: If the sphere is either fully in front of the near clipping plane, or fully behind the far clipping plane, then the light can be discarded
     // Note: Here, the view vector points in the -Z axis
     // so the far depth value will be approaching -infinity.
-    if (sphere.c.z - sphere.r > zNear || sphere.c.z + sphere.r < zFar)
+    //if (sphere.c.z - sphere.r > zNear || sphere.c.z + sphere.r < zFar) // For right hand system (camera looking at the negative z)
+    if (sphere.c.z - sphere.r > zFar || sphere.c.z + sphere.r < zNear) // For left hand system (camera looking at the positive z)
     {
         result = false;
     }
@@ -215,8 +216,12 @@ bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
 {
     bool result = true;
 
-    Plane nearPlane = { float3(0, 0, -1), -zNear };
-    Plane farPlane = { float3(0, 0, 1), zFar };
+    // Right-Hand Coordinate System
+    //Plane nearPlane = { float3(0, 0, -1), -zNear };
+    //Plane farPlane = { float3(0, 0, 1), zFar };
+    // Left-Hand Coordinate System
+    Plane nearPlane = { float3(0, 0, 1), -zNear };
+    Plane farPlane = { float3(0, 0, -1), zFar };
 
     // First check the near and far clipping planes
     if (ConeInsidePlane(cone, nearPlane) || ConeInsidePlane(cone, farPlane))
