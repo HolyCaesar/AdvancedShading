@@ -105,21 +105,22 @@ void ForwardPlusLightCulling::CreateGPUTex2DUAVResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_COMMON,
 		nullptr,
 		IID_PPV_ARGS(&pResource.pResource)));
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(
-		gCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), 
-		heapOffset, 
-		32);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = format;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
-	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(pResource.pResource.Get(), &srvDesc, uavHandle);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
+		gCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+		heapOffset,
+		32);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(pResource.pResource.Get(), &srvDesc, srvHandle);
+	pResource.uSrvDescriptorOffset = heapOffset;
+	++heapOffset;
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -129,8 +130,12 @@ void ForwardPlusLightCulling::CreateGPUTex2DUAVResource(
 	uavDesc.Buffer.StructureByteStride = elementSize;
 	uavDesc.Buffer.CounterOffsetInBytes = width * height * elementSize;
 	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(
+		gCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), 
+		heapOffset, 
+		32);
 	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(pResource.pResource.Get(), nullptr, nullptr, uavHandle);
-	pResource.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	pResource.mUsageState = D3D12_RESOURCE_STATE_COMMON;
 	pResource.uUavDescriptorOffset = heapOffset;
 	++heapOffset;
 
@@ -158,7 +163,6 @@ void ForwardPlusLightCulling::UpdateLightBuffer(vector<Light>& lightList)
 	m_Lights.Create(L"LightLists", lightList.size(), sizeof(Light), lightList.data());
 	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Lights.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }
-
 
 /****************/
 // Grid Frustum
@@ -251,6 +255,7 @@ void ForwardPlusLightCulling::UpdateGridFrustumCB()
 
 void ForwardPlusLightCulling::ExecuteGridFrustumCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap)
 {
+
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_GridFrustumComputePSO.GetPSO()));
 	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList = IGraphics::g_GraphicsCore->m_computeCommandList;
 
@@ -384,6 +389,8 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, 
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_oLightGrid, nullptr);
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
 	// Transparent LightGrid
 	CreateGPUTex2DUAVResource(
@@ -391,6 +398,8 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, 
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_tLightGrid, nullptr);
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightGrid.pResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	m_tLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
 	// Debug texture2D
 	CreateGPUTex2DUAVResource(
@@ -398,6 +407,8 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 		sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_FLOAT,
 		gDescriptorHeap, gCbvSrvUavOffset, 
 		m_testUAVTex2D, nullptr);
+	IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_testUAVTex2D.pResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	m_testUAVTex2D.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { IGraphics::g_GraphicsCore->m_computeCommandList.Get() };
@@ -420,6 +431,7 @@ void ForwardPlusLightCulling::UpdateLightCullingCB()
 
 void ForwardPlusLightCulling::ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap, UINT preDepthBufHeapOffset)
 {
+
 	ThrowIfFailed(IGraphics::g_GraphicsCore->m_computeCommandList->Reset(IGraphics::g_GraphicsCore->m_computeCommandAllocator.Get(), m_LightCullingComputePSO.GetPSO()));
 	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList = IGraphics::g_GraphicsCore->m_computeCommandList;
 

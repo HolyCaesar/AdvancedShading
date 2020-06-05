@@ -685,6 +685,7 @@ void TiledRendering::PopulateCommandList()
 	// re-recording.
 	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO()));
 
+	m_LightCullingPass.ResourceTransitionForRender(m_commandList);
 
 	// Set necessary state.
 	m_commandList->SetGraphicsRootSignature(m_sceneOpaqueRootSignature.GetSignature());
@@ -703,12 +704,11 @@ void TiledRendering::PopulateCommandList()
 		e_LightGridRootParameterSRV,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_LightCullingPass.GetOpaqueLightGridSRVHeapOffset(), m_cbvSrvUavDescriptorSize));
 	m_commandList->SetGraphicsRootShaderResourceView(
-		e_LightIndexRootParameterSRV, 
+		e_LightIndexRootParameterSRV,
 		m_LightCullingPass.GetOpaqueLightLightIndexList());
 	m_commandList->SetGraphicsRootShaderResourceView(
 		e_LightBufferRootParameterSRV,
 		m_LightCullingPass.GetLightsBuffer());
-
 
 	// Indicate that the back buffer will be used as a render target.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -740,6 +740,7 @@ void TiledRendering::PopulateCommandList()
 
 	// Indicate that the back buffer will now be used to present.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_LightCullingPass.ResourceTransitionForCS(m_commandList);
 
 	ThrowIfFailed(m_commandList->Close());
 }

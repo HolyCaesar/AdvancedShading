@@ -39,6 +39,31 @@ public:
     D3D12_GPU_VIRTUAL_ADDRESS GetTransparentLightIndexList() { return m_tLightIndexList.GetGpuVirtualAddress(); }
 
     D3D12_GPU_VIRTUAL_ADDRESS GetLightsBuffer() { return m_Lights.GetGpuVirtualAddress(); }
+
+    // TODO temporary functions for resource transition
+    void ResourceTransitionForCS(ComPtr<ID3D12GraphicsCommandList> commandList)
+    {
+        //if (m_oLightGrid.mUsageState != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+        //{
+            commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), m_oLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+            m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        //}
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightIndexList.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightGrid.pResource.Get(), m_tLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+        m_tLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightIndexList.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+    }
+    void ResourceTransitionForRender(ComPtr<ID3D12GraphicsCommandList> commandList)
+    {
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), m_oLightGrid.mUsageState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+        m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightIndexList.GetResource(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightGrid.pResource.Get(), m_tLightGrid.mUsageState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+        m_tLightGrid.mUsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightIndexList.GetResource(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+    }
     
     // Common Resources
 private:

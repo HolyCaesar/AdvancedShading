@@ -46,7 +46,7 @@ PSInput VSMain(VSInput input)
 }
 
 Texture2D g_texture : register(t0);
-Texture2D<float2> g_lightGrid : register(t1);
+Texture2D<uint2> g_lightGrid : register(t1);
 StructuredBuffer<uint> g_lightIndex : register(t2);
 StructuredBuffer<Light> g_Lights : register(t3);
 SamplerState g_sampler : register(s0);
@@ -78,6 +78,8 @@ float4 PSMain(PSInput input) : SV_TARGET
     uint2 tileIndex = uint2(floor(input.position.xy / BLOCK_SIZE));
     uint startOffset = g_lightGrid[tileIndex].x;
     uint lightCount = g_lightGrid[tileIndex].y;
+
+    //return float4(startOffset, lightCount, 0, 1);
 
     LightingResult lit = (LightingResult)0;
 
