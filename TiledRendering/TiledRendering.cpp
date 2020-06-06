@@ -142,7 +142,7 @@ void TiledRendering::LoadAssets()
 		m_sceneOpaqueRootSignature.Reset(e_numRootParameters, 1);
 		m_sceneOpaqueRootSignature.InitStaticSampler(0, non_static_sampler);
 		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_VERTEX);
+		m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_ALL);
 		m_sceneOpaqueRootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneOpaqueRootSignature[e_LightGridRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneOpaqueRootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
@@ -571,6 +571,8 @@ void TiledRendering::OnUpdate()
 	m_constantBufferData.viewMatrix = view;
 	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
 	memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+	m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
 }
 
 // Render the scene.
@@ -812,7 +814,7 @@ void TiledRendering::GenerateLights(uint32_t numLights)
 			-light.m_PositionWS.z,
 			0.0f);
 
-		light.m_Range = 1.0f;
+		light.m_Range = 100.0f;
 
 		light.m_SpotlightAngle = 0.745f;
 	}

@@ -26,7 +26,8 @@ cbuffer DispatchParams : register(b0)
 
 cbuffer ScreenToViewParams : register(b1)
 {
-    float4x4 InverseProjection;
+    matrix InverseProjection;
+    matrix ViewMatrix;
     uint2 ScreenDimensions;
     uint2 Padding;
 }
@@ -167,7 +168,10 @@ void CS_LightCullingPass(ComputeShaderInput Input)
             {
             case POINT_LIGHT:
             {
-                Sphere sphere = { light.PositionVS.xyz, light.Range };
+                //light.PositionVS = mul(ViewMatrix, light.PositionWS);
+                float4 lightVS = mul(ViewMatrix, light.PositionWS);
+                //Sphere sphere = { light.PositionVS.xyz, light.Range };
+                Sphere sphere = { lightVS.xyz, light.Range };
 
                 if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
                 {
@@ -216,15 +220,12 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     // First update the light grid (only thread 0 in group needs to do this)
     if (Input.groupIndex == 0)
     {
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(BLOCK_SIZE, BLOCK_SIZE, o_LightCount, t_LightCount);
         // Update light grid for opaque geometry.
         InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
         o_LightGrid[Input.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
 
         InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
         t_LightGrid[Input.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
-
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
     }
 
     GroupMemoryBarrierWithGroupSync();

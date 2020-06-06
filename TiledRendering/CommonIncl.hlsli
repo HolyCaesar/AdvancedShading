@@ -274,11 +274,12 @@ float DoSpotCone(Light light, float4 LightDir)
     return smoothstep(minCos, maxCos, cosAngle);
 }
 
-LightingResult DoPointLight(Light light, float4 ViewDir, float4 Pos, float4 Nor)
+LightingResult DoPointLight(Light light, float4 ViewDir, float4 Pos, float4 Nor, matrix View)
 {
     LightingResult res;
     
-    float4 L = light.PositionVS - Pos;
+    //float4 L = light.PositionVS - Pos;
+    float4 L = mul(View, light.PositionWS) - Pos;
     float distance = length(L);
     L = L / distance;
 

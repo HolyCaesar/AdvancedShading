@@ -22,7 +22,8 @@ cbuffer DispatchParams : register(b0)
 
 cbuffer ScreenToViewParams : register(b1)
 {
-    float4x4 InverseProjection;
+    matrix InverseProjection;
+    matrix ViewMatrix;
     uint2 ScreenDimensions;
     uint2 Padding;
 }

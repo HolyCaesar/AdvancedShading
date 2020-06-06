@@ -63,6 +63,7 @@ void ForwardPlusLightCulling::Init(
 		ThrowIfFailed(m_screenToViewParamsCB.pResource->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvScreenToViewParams)));
 		// Update the screen to view parameter constant buffer
 		m_screenToViewParamsData.InverseProjection = inverseProjection;
+		m_screenToViewParamsData.ViewMatrix = XMMatrixIdentity();
 		m_screenToViewParamsData.ScreenDimensions = XMUINT2(ScreenWidth, ScreenHeight);
 		memcpy(m_pCbvScreenToViewParams, &m_screenToViewParamsData, sizeof(m_screenToViewParamsData));
 
@@ -84,6 +85,11 @@ void ForwardPlusLightCulling::Resize()
 void ForwardPlusLightCulling::Destroy()
 {
 
+}
+
+void ForwardPlusLightCulling::UpdateConstantBuffer(XMMATRIX viewMatrix)
+{
+	m_screenToViewParamsData.ViewMatrix = viewMatrix;
 }
 
 void ForwardPlusLightCulling::ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap, UINT preDepthPassHeapOffset)

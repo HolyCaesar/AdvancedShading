@@ -10,7 +10,7 @@
 cbuffer ConstBuffer : register(b0)
 {
     matrix World;
-    matrix View;
+    matrix ViewMatrix;
     matrix WorldViewProj;
 };
 
@@ -36,9 +36,10 @@ PSInput VSMain(VSInput input)
     PSInput result;
 
     //result.position = mul(World, float4(input.position, 1.0f));
-    result.position = mul(World, float4(input.position, 1.0f));
-    result.position = mul(WorldViewProj, result.position);
-    result.positionVS = mul(View, float4(input.position, 1.0f));
+    //result.position = mul(World, float4(input.position, 1.0f));
+    //result.position = mul(WorldViewProj, result.position);
+    result.position = mul(WorldViewProj, float4(input.position, 1.0f));
+    result.positionVS = mul(ViewMatrix, float4(input.position, 1.0f));
     result.normal = input.normal;
     result.tex = input.tex;
 
@@ -79,7 +80,7 @@ float4 PSMain(PSInput input) : SV_TARGET
     uint startOffset = g_lightGrid[tileIndex].x;
     uint lightCount = g_lightGrid[tileIndex].y;
 
-    //return float4(startOffset, lightCount, 0, 1);
+    //return float4(lightCount, lightCount, 0.2f, 1);
 
     LightingResult lit = (LightingResult)0;
 
@@ -92,13 +93,14 @@ float4 PSMain(PSInput input) : SV_TARGET
 
         if (!light.Enabled) continue;
         // Removed out of range lights
-        if (light.Type != DIRECTIONAL_LIGHT && length(light.PositionVS - posVS) > light.Range) continue;
+        //if (light.Type != DIRECTIONAL_LIGHT && length(light.PositionVS - posVS) > light.Range) continue;
+        if (light.Type != DIRECTIONAL_LIGHT && length(mul(ViewMatrix, light.PositionWS) - posVS) > light.Range) continue;
 
         switch (light.Type)
         {
         case POINT_LIGHT:
         {
-            res = DoPointLight(light, viewVS, posVS, float4(input.normal, 0.0f));
+            res = DoPointLight(light, viewVS, posVS, float4(input.normal, 0.0f), ViewMatrix);
         }
         break;
         case SPOT_LIGHT:

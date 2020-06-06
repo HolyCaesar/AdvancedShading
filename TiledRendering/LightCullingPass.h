@@ -30,6 +30,7 @@ public:
 
     void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
     void UpdateLightBuffer(vector<Light>& lightList);
+    void UpdateConstantBuffer(XMMATRIX viewMatrix);
 
     // Get result
     UINT GetOpaqueLightGridSRVHeapOffset() { return m_oLightGrid.uSrvDescriptorOffset; }
@@ -43,11 +44,8 @@ public:
     // TODO temporary functions for resource transition
     void ResourceTransitionForCS(ComPtr<ID3D12GraphicsCommandList> commandList)
     {
-        //if (m_oLightGrid.mUsageState != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-        //{
-            commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), m_oLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-            m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        //}
+        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), m_oLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+        m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightIndexList.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
         commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightGrid.pResource.Get(), m_tLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
@@ -87,6 +85,7 @@ private:
     __declspec(align(16)) struct ScreenToViewParams
     {
         XMMATRIX InverseProjection;
+        XMMATRIX ViewMatrix;
         XMUINT2 ScreenDimensions;
         XMUINT2 Padding;
     };
