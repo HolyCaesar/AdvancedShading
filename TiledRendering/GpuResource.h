@@ -6,6 +6,9 @@
 
 class GpuResource
 {
+    friend class CommandContext;
+    friend class GraphicsContext;
+    friend class ComputeContext;
 public:
     GpuResource()
         : m_GpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL),
