@@ -152,10 +152,12 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="Color.cpp" />
+    <ClCompile Include="CommandContext.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DX12PipelineState.cpp" />
     <ClCompile Include="DX12ResStruct.cpp" />
     <ClCompile Include="DX12RootSignature.cpp" />
+    <ClCompile Include="DynamicDescriptorHeap.cpp" />
     <ClCompile Include="LightCullingPass.cpp" />
     <ClCompile Include="GpuBuffer.cpp" />
     <ClCompile Include="GpuResource.cpp" />
@@ -201,12 +203,14 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraController.h" />
     <ClInclude Include="Color.h" />
+    <ClInclude Include="CommandContext.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DX12PipelineState.h" />
     <ClInclude Include="DX12ResStruct.h" />
     <ClInclude Include="DX12RootSignature.h" />
     <ClInclude Include="DXSampleHelper.h" />
+    <ClInclude Include="DynamicDescriptorHeap.h" />
     <ClInclude Include="LightCullingPass.h" />
     <ClInclude Include="GpuBuffer.h" />
     <ClInclude Include="GpuResource.h" />

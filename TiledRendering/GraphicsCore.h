@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include "DescriptorHeap.h"
+#include "CommandContext.h"
 
 #define SWAP_CHAIN_BUFFER_COUNT 3
 
