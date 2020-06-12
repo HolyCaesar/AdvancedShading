@@ -6,9 +6,13 @@
 #include "DX12PipelineState.h"
 #include "DX12RootSignature.h"
 #include "DynamicDescriptorHeap.h"
+#include "DX12LinearAllocator.h"
 #include "GpuBuffer.h"
 #include "GpuResource.h"
 #include "GraphicsCore.h"
+#include "CommandSignature.h"
+//#include "../MiniEngineMath/Common.h"
+#include "VectorMath.h"
 
 class ColorBuffer;
 class DepthBuffer;
@@ -200,8 +204,8 @@ protected:
 
     ID3D12DescriptorHeap* m_CurrentDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-    LinearAllocator m_CpuLinearAllocator;
-    LinearAllocator m_GpuLinearAllocator;
+    DX12LinearAllocator m_CpuLinearAllocator;
+    DX12LinearAllocator m_GpuLinearAllocator;
 
     std::wstring m_ID;
     void SetID(const std::wstring& ID) { m_ID = ID; }
@@ -276,9 +280,9 @@ public:
         UINT StartVertexLocation = 0, UINT StartInstanceLocation = 0);
     void DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation,
         INT BaseVertexLocation, UINT StartInstanceLocation);
-    //void DrawIndirect(GpuBuffer& ArgumentBuffer, uint64_t ArgumentBufferOffset = 0);
-    //void ExecuteIndirect(CommandSignature& CommandSig, GpuBuffer& ArgumentBuffer, uint64_t ArgumentStartOffset = 0,
-    //    uint32_t MaxCommands = 1, GpuBuffer* CommandCounterBuffer = nullptr, uint64_t CounterOffset = 0);
+    void DrawIndirect(GpuBuffer& ArgumentBuffer, uint64_t ArgumentBufferOffset = 0);
+    void ExecuteIndirect(CommandSignature& CommandSig, GpuBuffer& ArgumentBuffer, uint64_t ArgumentStartOffset = 0,
+        uint32_t MaxCommands = 1, GpuBuffer* CommandCounterBuffer = nullptr, uint64_t CounterOffset = 0);
 
 private:
 };
@@ -525,17 +529,17 @@ inline void GraphicsContext::SetDynamicIB(size_t IndexCount, const uint16_t* Ind
 
 inline void GraphicsContext::SetDynamicSRV(UINT RootIndex, size_t BufferSize, const void* BufferData)
 {
-    ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
+    ASSERT(BufferData != nullptr && IMath::IsAligned(BufferData, 16));
     DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
-    SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
+    SIMDMemCopy(cb.DataPtr, BufferData, IMath::AlignUp(BufferSize, 16) >> 4);
     m_CommandList->SetGraphicsRootShaderResourceView(RootIndex, cb.GpuAddress);
 }
 
 inline void ComputeContext::SetDynamicSRV(UINT RootIndex, size_t BufferSize, const void* BufferData)
 {
-    ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
+    ASSERT(BufferData != nullptr && IMath::IsAligned(BufferData, 16));
     DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
-    SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
+    SIMDMemCopy(cb.DataPtr, BufferData, IMath::AlignUp(BufferSize, 16) >> 4);
     m_CommandList->SetComputeRootShaderResourceView(RootIndex, cb.GpuAddress);
 }
 
@@ -573,22 +577,22 @@ inline void ComputeContext::Dispatch(size_t GroupCountX, size_t GroupCountY, siz
 
 inline void ComputeContext::Dispatch1D(size_t ThreadCountX, size_t GroupSizeX)
 {
-    Dispatch(Math::DivideByMultiple(ThreadCountX, GroupSizeX), 1, 1);
+    Dispatch(IMath::DivideByMultiple(ThreadCountX, GroupSizeX), 1, 1);
 }
 
 inline void ComputeContext::Dispatch2D(size_t ThreadCountX, size_t ThreadCountY, size_t GroupSizeX, size_t GroupSizeY)
 {
     Dispatch(
-        Math::DivideByMultiple(ThreadCountX, GroupSizeX),
-        Math::DivideByMultiple(ThreadCountY, GroupSizeY), 1);
+        IMath::DivideByMultiple(ThreadCountX, GroupSizeX),
+        IMath::DivideByMultiple(ThreadCountY, GroupSizeY), 1);
 }
 
 inline void ComputeContext::Dispatch3D(size_t ThreadCountX, size_t ThreadCountY, size_t ThreadCountZ, size_t GroupSizeX, size_t GroupSizeY, size_t GroupSizeZ)
 {
     Dispatch(
-        Math::DivideByMultiple(ThreadCountX, GroupSizeX),
-        Math::DivideByMultiple(ThreadCountY, GroupSizeY),
-        Math::DivideByMultiple(ThreadCountZ, GroupSizeZ));
+        IMath::DivideByMultiple(ThreadCountX, GroupSizeX),
+        IMath::DivideByMultiple(ThreadCountY, GroupSizeY),
+        IMath::DivideByMultiple(ThreadCountZ, GroupSizeZ));
 }
 
 inline void CommandContext::SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr)
@@ -729,7 +733,7 @@ inline void GraphicsContext::ExecuteIndirect(CommandSignature& CommandSig,
 
 inline void GraphicsContext::DrawIndirect(GpuBuffer& ArgumentBuffer, uint64_t ArgumentBufferOffset)
 {
-    ExecuteIndirect(Graphics::DrawIndirectCommandSignature, ArgumentBuffer, ArgumentBufferOffset);
+    ExecuteIndirect(IGraphics::DrawIndirectCommandSignature, ArgumentBuffer, ArgumentBufferOffset);
 }
 
 inline void ComputeContext::ExecuteIndirect(CommandSignature& CommandSig,
@@ -746,7 +750,7 @@ inline void ComputeContext::ExecuteIndirect(CommandSignature& CommandSig,
 
 inline void ComputeContext::DispatchIndirect(GpuBuffer& ArgumentBuffer, uint64_t ArgumentBufferOffset)
 {
-    ExecuteIndirect(Graphics::DispatchIndirectCommandSignature, ArgumentBuffer, ArgumentBufferOffset);
+    ExecuteIndirect(IGraphics::DispatchIndirectCommandSignature, ArgumentBuffer, ArgumentBufferOffset);
 }
 
 inline void CommandContext::CopyBuffer(GpuResource& Dest, GpuResource& Src)

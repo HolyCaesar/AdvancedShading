@@ -152,8 +152,12 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="Color.cpp" />
+    <ClCompile Include="CommandAllocatorPool.cpp" />
     <ClCompile Include="CommandContext.cpp" />
+    <ClCompile Include="CommandListManager.cpp" />
+    <ClCompile Include="CommandSignature.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
+    <ClCompile Include="DX12LinearAllocator.cpp" />
     <ClCompile Include="DX12PipelineState.cpp" />
     <ClCompile Include="DX12ResStruct.cpp" />
     <ClCompile Include="DX12RootSignature.cpp" />
@@ -203,9 +207,13 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraController.h" />
     <ClInclude Include="Color.h" />
+    <ClInclude Include="CommandAllocatorPool.h" />
     <ClInclude Include="CommandContext.h" />
+    <ClInclude Include="CommandListManager.h" />
+    <ClInclude Include="CommandSignature.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
+    <ClInclude Include="DX12LinearAllocator.h" />
     <ClInclude Include="DX12PipelineState.h" />
     <ClInclude Include="DX12ResStruct.h" />
     <ClInclude Include="DX12RootSignature.h" />
