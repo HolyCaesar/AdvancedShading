@@ -2,6 +2,7 @@
 #include <memory>
 #include "DescriptorHeap.h"
 #include "CommandContext.h"
+#include "DX12GraphicsCommon.h"
 
 #define SWAP_CHAIN_BUFFER_COUNT 3
 
