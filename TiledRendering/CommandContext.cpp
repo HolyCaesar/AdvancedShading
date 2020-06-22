@@ -45,12 +45,12 @@ void CommandContext::DestroyAllContexts(void)
 {
     DX12LinearAllocator::DestroyAll();
     DynamicDescriptorHeap::DestroyAll();
-    g_ContextManager.DestroyAllContexts();
+    IGraphics::g_GraphicsCore->m_ContextManager.DestroyAllContexts();
 }
 
 CommandContext& CommandContext::Begin(const std::wstring ID)
 {
-    CommandContext* NewContext = g_ContextManager.AllocateContext(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    CommandContext* NewContext = IGraphics::g_GraphicsCore->m_ContextManager.AllocateContext(D3D12_COMMAND_LIST_TYPE_DIRECT);
     NewContext->SetID(ID);
     //if (ID.length() > 0)
     //    EngineProfiling::BeginBlock(ID, NewContext);
@@ -59,7 +59,7 @@ CommandContext& CommandContext::Begin(const std::wstring ID)
 
 ComputeContext& ComputeContext::Begin(const std::wstring& ID, bool Async)
 {
-    ComputeContext& NewContext = g_ContextManager.AllocateContext(
+    ComputeContext& NewContext = IGraphics::g_GraphicsCore->m_ContextManager.AllocateContext(
         Async ? D3D12_COMMAND_LIST_TYPE_COMPUTE : D3D12_COMMAND_LIST_TYPE_DIRECT)->GetComputeContext();
     NewContext.SetID(ID);
     //if (ID.length() > 0)
@@ -115,7 +115,7 @@ uint64_t CommandContext::Finish(bool WaitForCompletion)
     if (WaitForCompletion)
         IGraphics::g_GraphicsCore->m_CommandManager.WaitForFence(FenceValue);
 
-    g_ContextManager.FreeContext(this);
+    IGraphics::g_GraphicsCore->m_ContextManager.FreeContext(this);
 
     return FenceValue;
 }
