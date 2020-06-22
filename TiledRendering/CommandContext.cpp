@@ -43,7 +43,7 @@ void ContextManager::FreeContext(CommandContext* UsedContext)
 
 void CommandContext::DestroyAllContexts(void)
 {
-    LinearAllocator::DestroyAll();
+    DX12LinearAllocator::DestroyAll();
     DynamicDescriptorHeap::DestroyAll();
     g_ContextManager.DestroyAllContexts();
 }
@@ -73,9 +73,9 @@ uint64_t CommandContext::Flush(bool WaitForCompletion)
 
     ASSERT(m_CurrentAllocator != nullptr);
 
-    uint64_t FenceValue = g_CommandManager.GetQueue(m_Type).ExecuteCommandList(m_CommandList);
+    uint64_t FenceValue = IGraphics::g_GraphicsCore->m_CommandManager.GetQueue(m_Type).ExecuteCommandList(m_CommandList);
 
-    if (WaitForCompletion) g_CommandManager.WaitForFence(FenceValue);
+    if (WaitForCompletion) IGraphics::g_GraphicsCore->m_CommandManager.WaitForFence(FenceValue);
 
     // Reset the command list and restore previous state
     m_CommandList->Reset(m_CurrentAllocator, nullptr);
@@ -95,12 +95,13 @@ uint64_t CommandContext::Finish(bool WaitForCompletion)
 
     FlushResourceBarriers();
 
-    if (m_ID.length() > 0)
-        EngineProfiling::EndBlock(this);
+    // TODO: need to implemented
+    //if (m_ID.length() > 0)
+    //    EngineProfiling::EndBlock(this);
 
     ASSERT(m_CurrentAllocator != nullptr);
 
-    CommandQueue& Queue = g_CommandManager.GetQueue(m_Type);
+    CommandQueue& Queue = IGraphics::g_GraphicsCore->m_CommandManager.GetQueue(m_Type);
 
     uint64_t FenceValue = Queue.ExecuteCommandList(m_CommandList);
     Queue.DiscardAllocator(FenceValue, m_CurrentAllocator);
@@ -112,7 +113,7 @@ uint64_t CommandContext::Finish(bool WaitForCompletion)
     m_DynamicSamplerDescriptorHeap.CleanupUsedHeaps(FenceValue);
 
     if (WaitForCompletion)
-        g_CommandManager.WaitForFence(FenceValue);
+        IGraphics::g_GraphicsCore->m_CommandManager.WaitForFence(FenceValue);
 
     g_ContextManager.FreeContext(this);
 
@@ -146,7 +147,7 @@ CommandContext::~CommandContext(void)
 
 void CommandContext::Initialize(void)
 {
-    g_CommandManager.CreateNewCommandList(m_Type, &m_CommandList, &m_CurrentAllocator);
+    IGraphics::g_GraphicsCore->m_CommandManager.CreateNewCommandList(m_Type, &m_CommandList, &m_CurrentAllocator);
 }
 
 void CommandContext::Reset(void)
@@ -154,7 +155,7 @@ void CommandContext::Reset(void)
     // We only call Reset() on previously freed contexts.  The command list persists, but we must
     // request a new allocator.
     ASSERT(m_CommandList != nullptr && m_CurrentAllocator == nullptr);
-    m_CurrentAllocator = g_CommandManager.GetQueue(m_Type).RequestAllocator();
+    m_CurrentAllocator = IGraphics::g_GraphicsCore->m_CommandManager.GetQueue(m_Type).RequestAllocator();
     m_CommandList->Reset(m_CurrentAllocator, nullptr);
 
     m_CurGraphicsRootSignature = nullptr;
@@ -309,7 +310,7 @@ void CommandContext::TransitionResource(GpuResource& Resource, D3D12_RESOURCE_ST
 
     if (OldState != NewState)
     {
-        ASSERT(m_NumBarriersToFlush < 16 "Exceeded arbitrary limit on buffered barriers");
+        ASSERT(m_NumBarriersToFlush < 16, "Exceeded arbitrary limit on buffered barriers");
         D3D12_RESOURCE_BARRIER& BarrierDesc = m_ResourceBarrierBuffer[m_NumBarriersToFlush++];
 
         BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -394,9 +395,9 @@ void CommandContext::InsertAliasBarrier(GpuResource& Before, GpuResource& After,
 
 void CommandContext::WriteBuffer(GpuResource& Dest, size_t DestOffset, const void* BufferData, size_t NumBytes)
 {
-    ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
+    ASSERT(BufferData != nullptr && IMath::IsAligned(BufferData, 16));
     DynAlloc TempSpace = m_CpuLinearAllocator.Allocate(NumBytes, 512);
-    SIMDMemCopy(TempSpace.DataPtr, BufferData, Math::DivideByMultiple(NumBytes, 16));
+    SIMDMemCopy(TempSpace.DataPtr, BufferData, IMath::DivideByMultiple(NumBytes, 16)); // TODO: Check divide by multiple
     CopyBufferRegion(Dest, DestOffset, TempSpace.Buffer, TempSpace.Offset, NumBytes);
 }
 
@@ -404,7 +405,7 @@ void CommandContext::FillBuffer(GpuResource& Dest, size_t DestOffset, DWParam Va
 {
     DynAlloc TempSpace = m_CpuLinearAllocator.Allocate(NumBytes, 512);
     __m128 VectorValue = _mm_set1_ps(Value.Float);
-    SIMDMemFill(TempSpace.DataPtr, VectorValue, Math::DivideByMultiple(NumBytes, 16));
+    SIMDMemFill(TempSpace.DataPtr, VectorValue, IMath::DivideByMultiple(NumBytes, 16));
     CopyBufferRegion(Dest, DestOffset, TempSpace.Buffer, TempSpace.Offset, NumBytes);
 }
 
@@ -490,7 +491,7 @@ void CommandContext::ReadbackTexture2D(GpuResource& ReadbackBuffer, PixelBuffer&
 {
     // The footprint may depend on the device of the resource, but we assume there is only one device.
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT PlacedFootprint;
-    g_Device->GetCopyableFootprints(&SrcBuffer.GetResource()->GetDesc(), 0, 1, 0, &PlacedFootprint, nullptr, nullptr, nullptr);
+    IGraphics::g_GraphicsCore->g_pD3D12Device->GetCopyableFootprints(&SrcBuffer.GetResource()->GetDesc(), 0, 1, 0, &PlacedFootprint, nullptr, nullptr, nullptr);
 
     // This very short command list only issues one API call and will be synchronized so we can immediately read
     // the buffer contents.
@@ -510,7 +511,7 @@ void CommandContext::InitializeBuffer(GpuResource& Dest, const void* BufferData,
     CommandContext& InitContext = CommandContext::Begin();
 
     DynAlloc mem = InitContext.ReserveUploadMemory(NumBytes);
-    SIMDMemCopy(mem.DataPtr, BufferData, Math::DivideByMultiple(NumBytes, 16));
+    SIMDMemCopy(mem.DataPtr, BufferData, IMath::DivideByMultiple(NumBytes, 16));
 
     // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
     InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
@@ -526,14 +527,16 @@ void CommandContext::PIXBeginEvent(const wchar_t* label)
 #ifdef RELEASE
     (label);
 #else
-    ::PIXBeginEvent(m_CommandList, 0, label);
+    // TODO: need to implement
+    //::PIXBeginEvent(m_CommandList, 0, label);
 #endif
 }
 
 void CommandContext::PIXEndEvent(void)
 {
 #ifndef RELEASE
-    ::PIXEndEvent(m_CommandList);
+    // TODO: need to implement
+    //::PIXEndEvent(m_CommandList);
 #endif
 }
 
@@ -542,6 +545,7 @@ void CommandContext::PIXSetMarker(const wchar_t* label)
 #ifdef RELEASE
     (label);
 #else
-    ::PIXSetMarker(m_CommandList, 0, label);
+    // TODO: need to implement
+    //::PIXSetMarker(m_CommandList, 0, label);
 #endif
 }
