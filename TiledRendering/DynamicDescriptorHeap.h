@@ -57,7 +57,7 @@ public:
 	// Upload and new descriptors in the cache to the shader-visible heap.
 	inline void CommitGraphicsRootDescriptorTables(ID3D12GraphicsCommandList* CmdList)
 	{
-	    if (m_GraphicsHandleCache.m_StaleRootParamBitMap != 0)
+	    if (m_GraphicsHandleCache.m_StaleRootParamsBitMap != 0)
 	    {
 	        CopyAndBindStagedTables(m_GraphicsHandleCache, CmdList, &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable);
 	    }
@@ -65,7 +65,7 @@ public:
 
 	inline void CommitComputeRootDescriptorTables(ID3D12GraphicsCommandList* CmdList)
 	{
-	    if (m_ComputeHandleCache.m_StaleRootParamBitMap != 0)
+	    if (m_ComputeHandleCache.m_StaleRootParamsBitMap != 0)
 	    {
 	        CopyAndBindStagedTables(m_ComputeHandleCache, CmdList, &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable);
 	    }
@@ -132,7 +132,7 @@ private:
 
         void UnbindAllValid();
         void StageDescriptorHandles(UINT RootIndex, UINT Offset, UINT NumHandle, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[]);
-        void ParseRootSignature(D3D12_DESCRIPTOR_HEAP_DESC Type, const DX12RootSignature& RootSig);
+        void ParseRootSignature(D3D12_DESCRIPTOR_HEAP_TYPE Type, const DX12RootSignature& RootSig);
     };
 
     DescriptorHandleCache m_GraphicsHandleCache;

@@ -9,7 +9,7 @@ using namespace IGraphics;
 
 std::mutex DynamicDescriptorHeap::sm_Mutex;
 std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> DynamicDescriptorHeap::sm_DescriptorHeapPool[2];
-std::queue<std::pair<uint64_t, ID3D12DescriptorHeap*>> DynamicDescriptorHeap::sm_RetiredDescriptorHeap[2];
+std::queue<std::pair<uint64_t, ID3D12DescriptorHeap*>> DynamicDescriptorHeap::sm_RetiredDescriptorHeaps[2];
 std::queue<ID3D12DescriptorHeap*> DynamicDescriptorHeap::sm_AvailableDescriptorHeaps[2];
 
 ID3D12DescriptorHeap* DynamicDescriptorHeap::RequestDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE HeapType)
@@ -38,7 +38,7 @@ ID3D12DescriptorHeap* DynamicDescriptorHeap::RequestDescriptorHeap(D3D12_DESCRIP
 		HeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		HeapDesc.NodeMask = 1;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> HeapPtr;
-		ASSERT_SUCCEEDED(g_Device->CreateDescriptorHeap(&HeapDesc, MY_IID_PPV_ARGS(&HeapPtr)));
+		ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&HeapPtr)));
 		sm_DescriptorHeapPool[idx].emplace_back(HeapPtr);
 		return HeapPtr.Get();
 	}
@@ -78,7 +78,7 @@ DynamicDescriptorHeap::DynamicDescriptorHeap(CommandContext& OwningContext, D3D1
 {
 	m_CurrentHeapPtr = nullptr;
 	m_CurrentOffset = 0;
-	m_DescriptorSize = Graphics::g_Device->GetDescriptorHandleIncrementSize(HeapType);
+	m_DescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(HeapType);
 }
 
 DynamicDescriptorHeap::~DynamicDescriptorHeap()
@@ -195,7 +195,7 @@ void DynamicDescriptorHeap::DescriptorHandleCache::CopyAndBindStaleTables(
 			// If we run out of temp room, copy what we've got so far
 			if (NumSrcDescriptorRanges + DescriptorCount > kMaxDescriptorsPerCopy)
 			{
-				g_Device->CopyDescriptors(
+				IGraphics::g_GraphicsCore->g_pD3D12Device->CopyDescriptors(
 					NumDestDescriptorRanges, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes,
 					NumSrcDescriptorRanges, pSrcDescriptorRangeStarts, pSrcDescriptorRangeSizes,
 					Type);
@@ -223,7 +223,7 @@ void DynamicDescriptorHeap::DescriptorHandleCache::CopyAndBindStaleTables(
 		}
 	}
 
-	g_Device->CopyDescriptors(
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CopyDescriptors(
 		NumDestDescriptorRanges, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes,
 		NumSrcDescriptorRanges, pSrcDescriptorRangeStarts, pSrcDescriptorRangeSizes,
 		Type);
@@ -264,7 +264,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DynamicDescriptorHeap::UploadDirect(D3D12_CPU_DESCRI
 	DescriptorHandle DestHandle = m_FirstDescriptor + m_CurrentOffset * m_DescriptorSize;
 	m_CurrentOffset += 1;
 
-	g_Device->CopyDescriptorsSimple(1, DestHandle.GetCpuHandle(), Handle, m_DescriptorType);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CopyDescriptorsSimple(1, DestHandle.GetCpuHandle(), Handle, m_DescriptorType);
 
 	return DestHandle.GetGpuHandle();
 }
@@ -296,7 +296,7 @@ void DynamicDescriptorHeap::DescriptorHandleCache::StageDescriptorHandles(UINT R
 	m_StaleRootParamsBitMap |= (1 << RootIndex);
 }
 
-void DynamicDescriptorHeap::DescriptorHandleCache::ParseRootSignature(D3D12_DESCRIPTOR_HEAP_TYPE Type, const RootSignature& RootSig)
+void DynamicDescriptorHeap::DescriptorHandleCache::ParseRootSignature(D3D12_DESCRIPTOR_HEAP_TYPE Type, const DX12RootSignature& RootSig)
 {
 	UINT CurrentOffset = 0;
 

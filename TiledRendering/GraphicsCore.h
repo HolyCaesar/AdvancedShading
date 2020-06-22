@@ -6,6 +6,8 @@
 
 #define SWAP_CHAIN_BUFFER_COUNT 3
 
+class CommandListManager;
+
 namespace IGraphics
 {
 	using namespace Microsoft::WRL;
@@ -46,8 +48,7 @@ namespace IGraphics
 		UINT m_rtvDescriptorSize;
 		HWND g_hwnd;
 
-
-		//CommandListManager m_CommandManager;
+		CommandListManager m_CommandManager;
 
 		DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
 		{

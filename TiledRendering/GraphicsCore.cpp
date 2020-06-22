@@ -173,11 +173,38 @@ namespace IGraphics
 				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
 			}
 		}
+
+		m_CommandManager.Create(g_pD3D12Device.Get());
+
+		swapChainDesc.Width = m_DisplayWidth;
+		swapChainDesc.Height = m_DisplayHeight;
+		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.Scaling = DXGI_SCALING_NONE;
+		swapChainDesc.SampleDesc.Quality = 0;
+		swapChainDesc.SampleDesc.Count = 1;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
+		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		//swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+		ComPtr<IDXGISwapChain1> s_swapChain1;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) // Win32
+		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
+			m_CommandManager.GetCommandQueue(), 
+			g_hwnd, 
+			&swapChainDesc, 
+			nullptr, 
+			nullptr, 
+			&s_swapChain1));
+#else // UWP
+		ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
+#endif
 	}
 
 	void GraphicsCore::Terminate(void)
 	{
-		//		g_CommandManager.IdleGPU();
+		m_CommandManager.IdleGPU();
 		//#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 		//		s_SwapChain1->SetFullscreenState(FALSE, nullptr);
 		//#endif
@@ -188,6 +215,8 @@ namespace IGraphics
 		WaitForGpu();
 
 		CloseHandle(m_fenceEvent);
+
+		m_CommandManager.Shutdown();
 
 #if defined(_DEBUG)
 		ID3D12DebugDevice* debugInterface;
