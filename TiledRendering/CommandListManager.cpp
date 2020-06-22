@@ -2,6 +2,8 @@
 #include "CommandListManager.h"
 #include "Utility.h"
 
+using namespace std;
+
 CommandQueue::CommandQueue(D3D12_COMMAND_LIST_TYPE Type) :
     m_Type(Type),
     m_CommandQueue(nullptr),
@@ -132,7 +134,7 @@ bool CommandQueue::IsFenceComplete(uint64_t FenceValue)
     // The max() is to protect against an unlikely race condition that could cause the last
     // completed fence value to regress.
     if (FenceValue > m_LastCompletedFenceValue)
-        m_LastCompletedFenceValue = std::max(m_LastCompletedFenceValue, m_pFence->GetCompletedValue());
+        m_LastCompletedFenceValue = max(m_LastCompletedFenceValue, m_pFence->GetCompletedValue());
 
     return FenceValue <= m_LastCompletedFenceValue;
 }
