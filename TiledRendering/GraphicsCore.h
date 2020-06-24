@@ -49,8 +49,8 @@ namespace IGraphics
 		UINT m_rtvDescriptorSize;
 		HWND g_hwnd;
 
-		CommandListManager	m_CommandManager;
-		ContextManager		m_ContextManager;
+		std::unique_ptr<CommandListManager> g_CommandManager;
+		std::unique_ptr<ContextManager>		g_ContextManager;
 
 		DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
 		{

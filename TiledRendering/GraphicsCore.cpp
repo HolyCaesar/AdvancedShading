@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "VectorMath.h"
 #include "GraphicsCore.h"
+#include "CommandContext.h"
+#include "CommandListManager.h"
 #include "Utility.h"
 
 #if defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
@@ -38,6 +40,11 @@ namespace IGraphics
 	void GraphicsCore::Initialize(void)
 	{
 		UINT dxgiFactoryFlags = 0;
+
+		// Initialize global variables
+		g_ContextManager = std::make_unique<ContextManager>();
+		g_CommandManager = std::make_unique<CommandListManager>();
+
 
 #if defined(_DEBUG)
 		// Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -174,7 +181,7 @@ namespace IGraphics
 			}
 		}
 
-		m_CommandManager.Create(g_pD3D12Device.Get());
+		g_CommandManager->Create(g_pD3D12Device.Get());
 
 		swapChainDesc.Width = m_DisplayWidth;
 		swapChainDesc.Height = m_DisplayHeight;
@@ -191,7 +198,7 @@ namespace IGraphics
 		ComPtr<IDXGISwapChain1> s_swapChain1;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) // Win32
 		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
-			m_CommandManager.GetCommandQueue(), 
+			g_CommandManager->GetCommandQueue(), 
 			g_hwnd, 
 			&swapChainDesc, 
 			nullptr, 
@@ -204,7 +211,7 @@ namespace IGraphics
 
 	void GraphicsCore::Terminate(void)
 	{
-		m_CommandManager.IdleGPU();
+		g_CommandManager->IdleGPU();
 		//#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 		//		s_SwapChain1->SetFullscreenState(FALSE, nullptr);
 		//#endif
@@ -216,7 +223,7 @@ namespace IGraphics
 
 		CloseHandle(m_fenceEvent);
 
-		m_CommandManager.Shutdown();
+		g_CommandManager->Shutdown();
 
 #if defined(_DEBUG)
 		ID3D12DebugDevice* debugInterface;

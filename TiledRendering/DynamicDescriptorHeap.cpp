@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "DynamicDescriptorHeap.h"
+#include "CommandContext.h"
 #include "GraphicsCore.h"
 #include "CommandListManager.h"
 
@@ -18,7 +19,7 @@ ID3D12DescriptorHeap* DynamicDescriptorHeap::RequestDescriptorHeap(D3D12_DESCRIP
 
 	uint32_t idx = HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER ? 1 : 0;
 
-	while (!sm_RetiredDescriptorHeaps[idx].empty() && IGraphics::g_GraphicsCore->m_CommandManager.IsFenceComplete(sm_RetiredDescriptorHeaps[idx].front().first))
+	while (!sm_RetiredDescriptorHeaps[idx].empty() && IGraphics::g_GraphicsCore->g_CommandManager->IsFenceComplete(sm_RetiredDescriptorHeaps[idx].front().first))
 	{
 		sm_AvailableDescriptorHeaps[idx].push(sm_RetiredDescriptorHeaps[idx].front().second);
 		sm_RetiredDescriptorHeaps[idx].pop();

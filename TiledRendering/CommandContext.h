@@ -11,6 +11,7 @@
 #include "GpuResource.h"
 #include "GraphicsCore.h"
 #include "CommandSignature.h"
+#include "DX12GraphicsCommon.h"
 //#include "../MiniEngineMath/Common.h"
 #include "VectorMath.h"
 
@@ -18,7 +19,6 @@ class ColorBuffer;
 class DepthBuffer;
 class GraphicsContext;
 class ComputeContext;
-
 
 // TODO temporary class declaration
 class CommandListManager;
