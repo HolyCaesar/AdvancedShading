@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CommandListManager.h"
+#include "GraphicsCore.h"
 #include "Utility.h"
 
 using namespace std;
@@ -139,14 +140,9 @@ bool CommandQueue::IsFenceComplete(uint64_t FenceValue)
     return FenceValue <= m_LastCompletedFenceValue;
 }
 
-namespace Graphics
-{
-    extern CommandListManager g_CommandManager;
-}
-
 void CommandQueue::StallForFence(uint64_t FenceValue)
 {
-    CommandQueue& Producer = Graphics::g_CommandManager.GetQueue((D3D12_COMMAND_LIST_TYPE)(FenceValue >> 56));
+    CommandQueue& Producer = IGraphics::g_GraphicsCore->g_CommandManager->GetQueue((D3D12_COMMAND_LIST_TYPE)(FenceValue >> 56));
     m_CommandQueue->Wait(Producer.m_pFence, FenceValue);
 }
 
@@ -176,7 +172,7 @@ void CommandQueue::WaitForFence(uint64_t FenceValue)
 
 void CommandListManager::WaitForFence(uint64_t FenceValue)
 {
-    CommandQueue& Producer = Graphics::g_CommandManager.GetQueue((D3D12_COMMAND_LIST_TYPE)(FenceValue >> 56));
+    CommandQueue& Producer = IGraphics::g_GraphicsCore->g_CommandManager->GetQueue((D3D12_COMMAND_LIST_TYPE)(FenceValue >> 56));
     Producer.WaitForFence(FenceValue);
 }
 

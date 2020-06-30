@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "VectorMath.h"
 #include "GraphicsCore.h"
-#include "CommandContext.h"
-#include "CommandListManager.h"
 #include "Utility.h"
 
 #if defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
