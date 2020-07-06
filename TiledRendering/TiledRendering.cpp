@@ -581,9 +581,9 @@ void TiledRendering::OnRender()
 	ShowImGUI();
 
 	// Get depth in the screen space
-	PreDepthPass();
+	//PreDepthPass();
 
-	m_LightCullingPass.ExecuteCS(m_cbvSrvUavHeap, m_preDepthPassBuffer.uSrvDescriptorOffset);
+	//m_LightCullingPass.ExecuteCS(m_cbvSrvUavHeap, m_preDepthPassBuffer.uSrvDescriptorOffset);
 
 	////m_simpleCS.OnExecuteCS();
 
@@ -702,15 +702,15 @@ void TiledRendering::PopulateCommandList()
 	m_commandList->SetGraphicsRootDescriptorTable(
 		e_rootParameterCB,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
-	m_commandList->SetGraphicsRootDescriptorTable(
-		e_LightGridRootParameterSRV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_LightCullingPass.GetOpaqueLightGridSRVHeapOffset(), m_cbvSrvUavDescriptorSize));
-	m_commandList->SetGraphicsRootShaderResourceView(
-		e_LightIndexRootParameterSRV,
-		m_LightCullingPass.GetOpaqueLightLightIndexList());
-	m_commandList->SetGraphicsRootShaderResourceView(
-		e_LightBufferRootParameterSRV,
-		m_LightCullingPass.GetLightsBuffer());
+	//m_commandList->SetGraphicsRootDescriptorTable(
+	//	e_LightGridRootParameterSRV,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_LightCullingPass.GetOpaqueLightGridSRVHeapOffset(), m_cbvSrvUavDescriptorSize));
+	//m_commandList->SetGraphicsRootShaderResourceView(
+	//	e_LightIndexRootParameterSRV,
+	//	m_LightCullingPass.GetOpaqueLightLightIndexList());
+	//m_commandList->SetGraphicsRootShaderResourceView(
+	//	e_LightBufferRootParameterSRV,
+	//	m_LightCullingPass.GetLightsBuffer());
 
 	// Indicate that the back buffer will be used as a render target.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -720,13 +720,11 @@ void TiledRendering::PopulateCommandList()
 	auto dsvHandle = m_sceneDepthBuffer.GetDSV();
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
-	//m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	//m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_sceneDepthBuffer.GetClearDepth(), m_sceneDepthBuffer.GetClearStencil(), 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 

@@ -63,6 +63,10 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     float lightIntensity = saturate(dot(normalize(input.normal), lightD));
 
+    // TODO: temp variable
+    float4 tmp_color = float4(0.0f, 1.0f, 0.0f, 1.0f);
+    return tmp_color * lightIntensity;
+
     float4 color = float4(0.0f, 0.0f, 0.0f, 1.0f);
     float4 diffuseColor = float4(0.5f, 0.3f, 0.6f, 1.0f);
     if (lightIntensity > 0.0f)
