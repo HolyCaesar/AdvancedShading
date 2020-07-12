@@ -1,10 +1,29 @@
 
 #include "stdafx.h"
 #include "DX12GraphicsCommon.h"
+#include "SamplerManager.h"
 #include "CommandSignature.h"
 
 namespace IGraphics
 {
+    //SamplerDesc SamplerLinearWrapDesc;
+    //SamplerDesc SamplerAnisoWrapDesc;
+    //SamplerDesc SamplerShadowDesc;
+    SamplerDesc SamplerLinearClampDesc;
+    //SamplerDesc SamplerVolumeWrapDesc;
+    SamplerDesc SamplerPointClampDesc;
+    //SamplerDesc SamplerPointBorderDesc;
+    //SamplerDesc SamplerLinearBorderDesc;
+
+    //D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearWrap;
+    //D3D12_CPU_DESCRIPTOR_HANDLE SamplerAnisoWrap;
+    //D3D12_CPU_DESCRIPTOR_HANDLE SamplerShadow;
+    D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearClamp;
+    //D3D12_CPU_DESCRIPTOR_HANDLE SamplerVolumeWrap;
+    D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointClamp;
+    //D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointBorder;
+    //D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearBorder;
+
     D3D12_RASTERIZER_DESC RasterizerDefault;    // Counter-clockwise
     D3D12_RASTERIZER_DESC RasterizerDefaultMsaa;
     D3D12_RASTERIZER_DESC RasterizerDefaultCw;    // Clockwise winding
@@ -45,16 +64,16 @@ void IGraphics::InitializeCommonState(void)
     //SamplerShadowDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
     //SamplerShadow = SamplerShadowDesc.CreateDescriptor();
 
-    //SamplerLinearClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-    //SamplerLinearClampDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-    //SamplerLinearClamp = SamplerLinearClampDesc.CreateDescriptor();
+    SamplerLinearClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    SamplerLinearClampDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    SamplerLinearClamp = SamplerLinearClampDesc.CreateDescriptor();
 
     //SamplerVolumeWrapDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
     //SamplerVolumeWrap = SamplerVolumeWrapDesc.CreateDescriptor();
 
-    //SamplerPointClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-    //SamplerPointClampDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-    //SamplerPointClamp = SamplerPointClampDesc.CreateDescriptor();
+    SamplerPointClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+    SamplerPointClampDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    SamplerPointClamp = SamplerPointClampDesc.CreateDescriptor();
 
     //SamplerLinearBorderDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     //SamplerLinearBorderDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_BORDER);

@@ -52,6 +52,9 @@ namespace IGraphics
 		std::unique_ptr<CommandListManager> g_CommandManager;
 		std::unique_ptr<ContextManager>		g_ContextManager;
 
+		ColorBuffer g_DisplayPlane[SWAP_CHAIN_BUFFER_COUNT];
+		DX12RootSignature s_PresentRS;
+
 		DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
 		{
 			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,

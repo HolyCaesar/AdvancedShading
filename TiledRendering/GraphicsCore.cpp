@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "VectorMath.h"
 #include "GraphicsCore.h"
+#include "DX12GraphicsCommon.h"
+#include "SamplerManager.h"
 #include "Utility.h"
 
 #if defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
@@ -179,6 +181,7 @@ namespace IGraphics
 			}
 		}
 
+		return;
 		g_CommandManager->Create(g_pD3D12Device.Get());
 
 		swapChainDesc.Width = m_DisplayWidth;
@@ -205,6 +208,25 @@ namespace IGraphics
 #else // UWP
 		ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
 #endif
+
+		for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+		{
+			ComPtr<ID3D12Resource> DisplayPlane;
+			ASSERT_SUCCEEDED(s_swapChain1->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
+			g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+		}
+
+		// Common state was moved to GraphicsCommon.*
+		InitializeCommonState();
+
+		s_PresentRS.Reset(4, 2);
+		s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
+		s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
+		s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
+		s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+		s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
+		s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
+		s_PresentRS.Finalize(L"Present");
 	}
 
 	void GraphicsCore::Terminate(void)
