@@ -53,6 +53,7 @@ namespace IGraphics
 		std::unique_ptr<ContextManager>		g_ContextManager;
 
 		ColorBuffer g_DisplayPlane[SWAP_CHAIN_BUFFER_COUNT];
+		UINT g_CurrentBuffer;
 		DX12RootSignature s_PresentRS;
 
 		DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =

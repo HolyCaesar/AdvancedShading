@@ -41,6 +41,8 @@ namespace IGraphics
 	{
 		UINT dxgiFactoryFlags = 0;
 
+		g_CurrentBuffer = 0;
+
 		// Initialize global variables
 		g_ContextManager = std::make_unique<ContextManager>();
 		g_CommandManager = std::make_unique<CommandListManager>();
@@ -58,6 +60,8 @@ namespace IGraphics
 				// Enable additional debug layers.
 				dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 			}
+			else
+				Utility::Print("WARNING:  Unable to enable D3D12 debug validation layer\n");
 		}
 #endif
 
@@ -106,86 +110,67 @@ namespace IGraphics
 			));
 			g_pD3D12Device = pDevice.Detach();
 		}
-
-
-		/*
-		* Describe and create the command queue.
-		*/
-		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&g_commandQueue)));
-
-
-		/*
-		* D3D12 SwapChain Creation
-		*/
-		// Describe and create the swap chain.
-		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
-		swapChainDesc.Width = m_DisplayWidth;
-		swapChainDesc.Height = m_DisplayHeight;
-		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		swapChainDesc.SampleDesc.Count = 1;
-
-		ComPtr<IDXGISwapChain1> swapChain;
-		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
-			g_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-			g_hwnd,
-			&swapChainDesc,
-			nullptr,
-			nullptr,
-			&swapChain
-		));
-
-		// This sample does not support fullscreen transitions.
-		ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
-
-		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
-		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
-
-		// Create sync objects
+#ifndef RELEASE
+		else
 		{
-			ASSERT_SUCCEEDED(g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-			++m_fenceValue[s_FrameIndex];
+			bool DeveloperModeEnabled = false;
 
-			// Create an event handle to use for frame synchronization.
-			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-			if (m_fenceEvent == nullptr)
+			// Look in the Windows Registry to determine if Developer Mode is enabled
+			HKEY hKey;
+			LSTATUS result = RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock", 0, KEY_READ, &hKey);
+			if (result == ERROR_SUCCESS)
 			{
-				ASSERT_SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
+				DWORD keyValue, keySize = sizeof(DWORD);
+				result = RegQueryValueEx(hKey, L"AllowDevelopmentWithoutDevLicense", 0, NULL, (byte*)&keyValue, &keySize);
+				if (result == ERROR_SUCCESS && keyValue == 1)
+					DeveloperModeEnabled = true;
+				RegCloseKey(hKey);
 			}
+
+			WARN_ONCE_IF_NOT(DeveloperModeEnabled, "Enable Developer Mode on Windows 10 to get consistent profiling results");
+
+			// Prevent the GPU from overclocking or underclocking to get consistent timings
+			if (DeveloperModeEnabled)
+				g_pD3D12Device->SetStablePowerState(TRUE);
 		}
+#endif 
 
-		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.NumDescriptors = SWAP_CHAIN_BUFFER_COUNT;
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ASSERT_SUCCEEDED(g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
-		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//// We like to do read-modify-write operations on UAVs during post processing.  To support that, we
+		//// need to either have the hardware do typed UAV loads of R11G11B10_FLOAT or we need to manually
+		//// decode an R32_UINT representation of the same buffer.  This code determines if we get the hardware
+		//// load support.
+		//D3D12_FEATURE_DATA_D3D12_OPTIONS FeatureData = {};
+		//if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &FeatureData, sizeof(FeatureData))))
+		//{
+		//	if (FeatureData.TypedUAVLoadAdditionalFormats)
+		//	{
+		//		D3D12_FEATURE_DATA_FORMAT_SUPPORT Support =
+		//		{
+		//			DXGI_FORMAT_R11G11B10_FLOAT, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE
+		//		};
 
-		// Create frame resources.
-		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+		//		if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &Support, sizeof(Support))) &&
+		//			(Support.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+		//		{
+		//			g_bTypedUAVLoadSupport_R11G11B10_FLOAT = true;
+		//		}
 
-			// Create a RTV for each frame.
-			for (UINT n = 0; n < SWAP_CHAIN_BUFFER_COUNT; n++)
-			{
-				ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-				g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-				rtvHandle.Offset(1, m_rtvDescriptorSize);
+		//		Support.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
-			}
-		}
+		//		if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &Support, sizeof(Support))) &&
+		//			(Support.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+		//		{
+		//			g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT = true;
+		//		}
+		//	}
+		//}
 
-		return;
 		g_CommandManager->Create(g_pD3D12Device.Get());
 
+		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 		swapChainDesc.Width = m_DisplayWidth;
 		swapChainDesc.Height = m_DisplayHeight;
+		//swapChainDesc.Format = SwapChainFormat;
 		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swapChainDesc.Scaling = DXGI_SCALING_NONE;
 		swapChainDesc.SampleDesc.Quality = 0;
@@ -193,40 +178,205 @@ namespace IGraphics
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
 		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-		//swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		//swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-		ComPtr<IDXGISwapChain1> s_swapChain1;
+
+		ComPtr<IDXGISwapChain1> swapChain = nullptr;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) // Win32
-		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
-			g_CommandManager->GetCommandQueue(), 
-			g_hwnd, 
-			&swapChainDesc, 
-			nullptr, 
-			nullptr, 
-			&s_swapChain1));
+	ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
+		g_CommandManager->GetCommandQueue(), 
+		g_hwnd, 
+		&swapChainDesc, 
+		nullptr, 
+		nullptr, 
+		swapChain.GetAddressOf()));
 #else // UWP
-		ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
+	ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
 #endif
 
-		for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
-		{
-			ComPtr<ID3D12Resource> DisplayPlane;
-			ASSERT_SUCCEEDED(s_swapChain1->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
-			g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
-		}
 
-		// Common state was moved to GraphicsCommon.*
-		InitializeCommonState();
+//#if CONDITIONALLY_ENABLE_HDR_OUTPUT && defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
+//	{
+//		IDXGISwapChain4* swapChain = (IDXGISwapChain4*)s_SwapChain1;
+//		ComPtr<IDXGIOutput> output;
+//		ComPtr<IDXGIOutput6> output6;
+//		DXGI_OUTPUT_DESC1 outputDesc;
+//		UINT colorSpaceSupport;
+//
+//		// Query support for ST.2084 on the display and set the color space accordingly
+//		if (SUCCEEDED(swapChain->GetContainingOutput(&output)) &&
+//			SUCCEEDED(output.As(&output6)) &&
+//			SUCCEEDED(output6->GetDesc1(&outputDesc)) &&
+//			outputDesc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 &&
+//			SUCCEEDED(swapChain->CheckColorSpaceSupport(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020, &colorSpaceSupport)) &&
+//			(colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT) &&
+//			SUCCEEDED(swapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)))
+//		{
+//			g_bEnableHDROutput = true;
+//		}
+//	}
+//#endif
 
-		s_PresentRS.Reset(4, 2);
-		s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
-		s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
-		s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
-		s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
-		s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
-		s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
-		s_PresentRS.Finalize(L"Present");
+	if (swapChain == nullptr) return;
+
+	ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
+	s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
+
+	// This sample does not support fullscreen transitions.
+	ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
+
+	for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+	{
+		ComPtr<ID3D12Resource> DisplayPlane;
+		ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
+		g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+	}
+
+	// Common state was moved to GraphicsCommon.*
+	InitializeCommonState();
+	
+	s_PresentRS.Reset(4, 2);
+	s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
+	s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
+	s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
+	s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+	s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
+	s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
+	s_PresentRS.Finalize(L"Present");
+
+
+
+
+
+
+
+
+
+
+
+
+//		/*
+//		* Describe and create the command queue.
+//		*/
+//		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+//		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+//		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+//		ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&g_commandQueue)));
+//
+//
+//		/*
+//		* D3D12 SwapChain Creation
+//		*/
+//		// Describe and create the swap chain.
+//		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+//		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
+//		swapChainDesc.Width = m_DisplayWidth;
+//		swapChainDesc.Height = m_DisplayHeight;
+//		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+//		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+//		swapChainDesc.SampleDesc.Count = 1;
+//
+//		ComPtr<IDXGISwapChain1> swapChain;
+//		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
+//			g_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+//			g_hwnd,
+//			&swapChainDesc,
+//			nullptr,
+//			nullptr,
+//			&swapChain
+//		));
+//
+//		// This sample does not support fullscreen transitions.
+//		ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
+//
+//		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
+//		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
+//
+//		// Create sync objects
+//		{
+//			ASSERT_SUCCEEDED(g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+//			++m_fenceValue[s_FrameIndex];
+//
+//			// Create an event handle to use for frame synchronization.
+//			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+//			if (m_fenceEvent == nullptr)
+//			{
+//				ASSERT_SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
+//			}
+//		}
+//
+//		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+//		desc.NumDescriptors = SWAP_CHAIN_BUFFER_COUNT;
+//		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+//		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+//		ASSERT_SUCCEEDED(g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
+//		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+//
+//		// Create frame resources.
+//		{
+//			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+//
+//			// Create a RTV for each frame.
+//			for (UINT n = 0; n < SWAP_CHAIN_BUFFER_COUNT; n++)
+//			{
+//				ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+//				g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+//				rtvHandle.Offset(1, m_rtvDescriptorSize);
+//
+//				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
+//			}
+//		}
+//
+//
+//		return;
+//		g_CommandManager->Create(g_pD3D12Device.Get());
+//
+//		swapChainDesc.Width = m_DisplayWidth;
+//		swapChainDesc.Height = m_DisplayHeight;
+//		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//		swapChainDesc.Scaling = DXGI_SCALING_NONE;
+//		swapChainDesc.SampleDesc.Quality = 0;
+//		swapChainDesc.SampleDesc.Count = 1;
+//		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+//		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
+//		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+//		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+//		//swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+//
+//		ComPtr<IDXGISwapChain1> s_swapChain1;
+//#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) // Win32
+//		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
+//			//g_CommandManager->GetCommandQueue(), 
+//			g_commandQueue.Get(),
+//			g_hwnd, 
+//			&swapChainDesc, 
+//			nullptr, 
+//			nullptr, 
+//			&s_swapChain1));
+//#else // UWP
+//		ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
+//#endif
+//
+//		for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+//		{
+//			ComPtr<ID3D12Resource> DisplayPlane;
+//			ASSERT_SUCCEEDED(s_swapChain1->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
+//			g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+//		}
+//
+//		// Common state was moved to GraphicsCommon.*
+//		InitializeCommonState();
+//
+//		s_PresentRS.Reset(4, 2);
+//		s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
+//		s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
+//		s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
+//		s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+//		s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
+//		s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
+//		s_PresentRS.Finalize(L"Present");
 	}
 
 	void GraphicsCore::Terminate(void)
@@ -239,10 +389,16 @@ namespace IGraphics
 
 	void GraphicsCore::Shutdown()
 	{
-		WaitForGpu();
+		//WaitForGpu();
+		CommandContext::DestroyAllContexts();
+		DX12PSO::DestroyAll();
+		DX12RootSignature::DestroyAll();
+		DescriptorAllocator::DestroyAll();
 
-		CloseHandle(m_fenceEvent);
+		for (UINT i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+			g_DisplayPlane[i].Destroy();
 
+		//CloseHandle(m_fenceEvent);
 		g_CommandManager->Shutdown();
 
 #if defined(_DEBUG)
@@ -259,7 +415,53 @@ namespace IGraphics
 
 	void GraphicsCore::Present(void)
 	{
-		// TODO
+		//if (g_bEnableHDROutput)
+		//	PreparePresentHDR();
+		//else
+		//	PreparePresentLDR();
+
+		g_CurrentBuffer = (g_CurrentBuffer + 1) % SWAP_CHAIN_BUFFER_COUNT;
+
+		//UINT PresentInterval = s_EnableVSync ? std::min(4, (int)Round(s_FrameTime * 60.0f)) : 0;
+
+		//s_SwapChain1->Present(PresentInterval, 0);
+		g_pSwapChain->Present(0, 0);
+
+		// Test robustness to handle spikes in CPU time
+		//if (s_DropRandomFrames)
+		//{
+		//    if (std::rand() % 25 == 0)
+		//        BusyLoopSleep(0.010);
+		//}
+
+		//int64_t CurrentTick = SystemTime::GetCurrentTick();
+
+		//if (s_EnableVSync)
+		//{
+		//	// With VSync enabled, the time step between frames becomes a multiple of 16.666 ms.  We need
+		//	// to add logic to vary between 1 and 2 (or 3 fields).  This delta time also determines how
+		//	// long the previous frame should be displayed (i.e. the present interval.)
+		//	s_FrameTime = (s_LimitTo30Hz ? 2.0f : 1.0f) / 60.0f;
+		//	if (s_DropRandomFrames)
+		//	{
+		//		if (std::rand() % 50 == 0)
+		//			s_FrameTime += (1.0f / 60.0f);
+		//	}
+		//}
+		//else
+		//{
+		//	// When running free, keep the most recent total frame time as the time step for
+		//	// the next frame simulation.  This is not super-accurate, but assuming a frame
+		//	// time varies smoothly, it should be close enough.
+		//	s_FrameTime = (float)SystemTime::TimeBetweenTicks(s_FrameStartTick, CurrentTick);
+		//}
+
+		//s_FrameStartTick = CurrentTick;
+
+		++s_FrameIndex;
+		//TemporalEffects::Update((uint32_t)s_FrameIndex);
+
+		//SetNativeResolution();
 	}
 
 	void GraphicsCore::Resize(uint32_t width, uint32_t height)

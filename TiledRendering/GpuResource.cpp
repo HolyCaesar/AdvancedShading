@@ -472,8 +472,8 @@ void ColorBuffer::CreateFromSwapChain(const std::wstring& Name, ID3D12Resource* 
 {
     AssociateWithResource(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), Name, BaseResource, D3D12_RESOURCE_STATE_PRESENT);
 
-    m_UAVHandle[0] = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_pResource.Get(), nullptr, nullptr, m_UAVHandle[0]);
+    //m_UAVHandle[0] = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    //IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(m_pResource.Get(), nullptr, nullptr, m_UAVHandle[0]);
 
     m_RTVHandle = IGraphics::g_GraphicsCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(m_pResource.Get(), nullptr, m_RTVHandle);

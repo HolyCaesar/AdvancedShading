@@ -11,6 +11,7 @@
 
 #include "stdafx.h"
 #include "Win32Application.h"
+#include "GraphicsCore.h"
 
 HWND Win32Application::m_hwnd = nullptr;
 
@@ -66,7 +67,9 @@ int Win32Application::Run(Win32FrameWork* pWinApp, HINSTANCE hInstance, int nCmd
         }
     }
 
+    IGraphics::g_GraphicsCore->Terminate();
     pWinApp->OnDestroy();
+    IGraphics::g_GraphicsCore->Shutdown();
 
     // Return this part of the WM_QUIT message to Windows.
     return static_cast<char>(msg.wParam);

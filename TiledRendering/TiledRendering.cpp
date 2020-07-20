@@ -75,8 +75,8 @@ void TiledRendering::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
-	LoadPreDepthPassAssets();
-	m_simpleCS.OnInit();
+	//LoadPreDepthPassAssets();
+	//m_simpleCS.OnInit();
 }
 
 // Load the rendering pipeline dependencies.
@@ -86,7 +86,7 @@ void TiledRendering::LoadPipeline()
 
 	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
 	IGraphics::g_GraphicsCore->Initialize();
-	IGraphics::g_GraphicsCore->InitializeCS();
+	//IGraphics::g_GraphicsCore->InitializeCS();
 
 	// Create descriptor heaps.
 	{
@@ -218,9 +218,9 @@ void TiledRendering::LoadAssets()
 
 	}
 
-	// Create the command list.
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
-	m_commandList = IGraphics::g_GraphicsCore->g_commandList;
+	//// Create the command list.
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO(), IID_PPV_ARGS(&IGraphics::g_GraphicsCore->g_commandList)));
+	//m_commandList = IGraphics::g_GraphicsCore->g_commandList;
 
 	// Create the vertex buffer.
 	m_pModel = make_shared<Model>();
@@ -232,47 +232,47 @@ void TiledRendering::LoadAssets()
 
 	// Create Depth Buffer
 	m_sceneDepthBuffer.Create(L"RenderPassDepthBuffer", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_sceneDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-	{
-		D3D12_CLEAR_VALUE optimizedClearValue = {};
-		optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-		optimizedClearValue.DepthStencil = { 1.0f, 0 };
+	//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_sceneDepthBuffer.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	//{
+	//	D3D12_CLEAR_VALUE optimizedClearValue = {};
+	//	optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	//	optimizedClearValue.DepthStencil = { 1.0f, 0 };
 
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_TYPELESS, m_width, m_height,
-				1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-			//D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			D3D12_RESOURCE_STATE_COMMON,
-			&optimizedClearValue,
-			IID_PPV_ARGS(&m_preDepthPassBuffer.pResource)
-		));
+	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+	//		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+	//		D3D12_HEAP_FLAG_NONE,
+	//		&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_TYPELESS, m_width, m_height,
+	//			1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+	//		//D3D12_RESOURCE_STATE_DEPTH_WRITE,
+	//		D3D12_RESOURCE_STATE_COMMON,
+	//		&optimizedClearValue,
+	//		IID_PPV_ARGS(&m_preDepthPassBuffer.pResource)
+	//	));
 
-		// Update the depth-stencil view.
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
-		dsv.Format = DXGI_FORMAT_D32_FLOAT;
-		dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		dsv.Texture2D.MipSlice = 0;
-		dsv.Flags = D3D12_DSV_FLAG_NONE;
+	//	// Update the depth-stencil view.
+	//	D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+	//	dsv.Format = DXGI_FORMAT_D32_FLOAT;
+	//	dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	//	dsv.Texture2D.MipSlice = 0;
+	//	dsv.Flags = D3D12_DSV_FLAG_NONE;
 
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDepthStencilView(m_preDepthPassBuffer.pResource.Get(), &dsv,
-			m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	//	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDepthStencilView(m_preDepthPassBuffer.pResource.Get(), &dsv,
+	//		m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		// Create SRV for the depth buffer
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-		SRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		SRVDesc.Texture2D.MipLevels = 1;
-		SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavOffset, m_cbvSrvUavDescriptorSize);
-		m_preDepthPassBuffer.mUsageState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		m_preDepthPassBuffer.uSrvDescriptorOffset = m_cbvSrvUavOffset;
-		++m_cbvSrvUavOffset;
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_preDepthPassBuffer.pResource.Get(), &SRVDesc, srvHandle);
+	//	// Create SRV for the depth buffer
+	//	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	//	SRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	//	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//	SRVDesc.Texture2D.MipLevels = 1;
+	//	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavOffset, m_cbvSrvUavDescriptorSize);
+	//	m_preDepthPassBuffer.mUsageState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+	//	m_preDepthPassBuffer.uSrvDescriptorOffset = m_cbvSrvUavOffset;
+	//	++m_cbvSrvUavOffset;
+	//	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_preDepthPassBuffer.pResource.Get(), &SRVDesc, srvHandle);
 
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassBuffer.pResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
-	}
+	//	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassBuffer.pResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	//}
 
 	// Create the constant buffer
 	{
@@ -303,63 +303,63 @@ void TiledRendering::LoadAssets()
 	// the command list that references it has finished executing on the GPU.
 	// We will flush the GPU at the end of this method to ensure the resource is not
 	// prematurely destroyed.
-	ComPtr<ID3D12Resource> textureUploadHeap;
-	{
-		// Describe and create a Texture2D.
-		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.MipLevels = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDesc.Width = TextureWidth;
-		textureDesc.Height = TextureHeight;
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		textureDesc.DepthOrArraySize = 1;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	//ComPtr<ID3D12Resource> textureUploadHeap;
+	//{
+	//	// Describe and create a Texture2D.
+	//	D3D12_RESOURCE_DESC textureDesc = {};
+	//	textureDesc.MipLevels = 1;
+	//	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//	textureDesc.Width = TextureWidth;
+	//	textureDesc.Height = TextureHeight;
+	//	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	//	textureDesc.DepthOrArraySize = 1;
+	//	textureDesc.SampleDesc.Count = 1;
+	//	textureDesc.SampleDesc.Quality = 0;
+	//	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_modelTexture.pResource)));
+	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+	//		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+	//	D3D12_HEAP_FLAG_NONE,
+	//		&textureDesc,
+	//		D3D12_RESOURCE_STATE_COPY_DEST,
+	//		nullptr,
+	//		IID_PPV_ARGS(&m_modelTexture.pResource)));
 
-		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_modelTexture.pResource.Get(), 0, 1);
+	//	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_modelTexture.pResource.Get(), 0, 1);
 
-		// Create the GPU upload buffer.
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&textureUploadHeap)));
+	//	// Create the GPU upload buffer.
+	//	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+	//		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+	//		D3D12_HEAP_FLAG_NONE,
+	//		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+	//		D3D12_RESOURCE_STATE_GENERIC_READ,
+	//		nullptr,
+	//		IID_PPV_ARGS(&textureUploadHeap)));
 
-		// Copy data to the intermediate upload heap and then schedule a copy 
-		// from the upload heap to the Texture2D.
-		std::vector<UINT8> texture = GenerateTextureData();
+	//	// Copy data to the intermediate upload heap and then schedule a copy 
+	//	// from the upload heap to the Texture2D.
+	//	std::vector<UINT8> texture = GenerateTextureData();
 
-		D3D12_SUBRESOURCE_DATA textureData = {};
-		textureData.pData = &texture[0];
-		textureData.RowPitch = TextureWidth * TexturePixelSize;
-		textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+	//	D3D12_SUBRESOURCE_DATA textureData = {};
+	//	textureData.pData = &texture[0];
+	//	textureData.RowPitch = TextureWidth * TexturePixelSize;
+	//	textureData.SlicePitch = textureData.RowPitch * TextureHeight;
 
-		UpdateSubresources(m_commandList.Get(), m_modelTexture.pResource.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_modelTexture.pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	//	UpdateSubresources(m_commandList.Get(), m_modelTexture.pResource.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+	//	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_modelTexture.pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
-		// Describe and create a SRV for the texture.
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavOffset, m_cbvSrvUavDescriptorSize);
-		m_modelTexture.mUsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		m_modelTexture.uSrvDescriptorOffset = m_cbvSrvUavOffset;
-		++m_cbvSrvUavOffset;
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_modelTexture.pResource.Get(), &srvDesc, srvHandle);
-	}
+	//	// Describe and create a SRV for the texture.
+	//	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	//	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//	srvDesc.Format = textureDesc.Format;
+	//	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//	srvDesc.Texture2D.MipLevels = 1;
+	//	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavOffset, m_cbvSrvUavDescriptorSize);
+	//	m_modelTexture.mUsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	//	m_modelTexture.uSrvDescriptorOffset = m_cbvSrvUavOffset;
+	//	++m_cbvSrvUavOffset;
+	//	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(m_modelTexture.pResource.Get(), &srvDesc, srvHandle);
+	//}
 
 	// Camera Setup
 	{
@@ -378,24 +378,22 @@ void TiledRendering::LoadAssets()
 	//m_GridFrustumsPass.SetTiledDimension(16);
 	//m_GridFrustumsPass.Init(L"GridFrustumPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
-	//m_LightCullingPass.Init(L"LightCullingPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
+	//m_LightCullingPass.SetTiledSize(16);
+	//m_LightCullingPass.Init(
+	//	m_width, m_height, 
+	//	XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()),
+	//	m_cbvSrvUavHeap, m_cbvSrvUavOffset);
 
-	m_LightCullingPass.SetTiledSize(16);
-	m_LightCullingPass.Init(
-		m_width, m_height, 
-		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()),
-		m_cbvSrvUavHeap, m_cbvSrvUavOffset);
-
-	// Generate lights
-	GenerateLights(1);
-	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
+	//// Generate lights
+	//GenerateLights(1);
+	//m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
 	// Close the command list and execute it to begin the initial GPU setup.
-	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	//ThrowIfFailed(m_commandList->Close());
+	//ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	//IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	IGraphics::g_GraphicsCore->WaitForGpu();
+	//IGraphics::g_GraphicsCore->WaitForGpu();
 
 	LoadImGUI();
 }
@@ -572,7 +570,7 @@ void TiledRendering::OnUpdate()
 	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
 	memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 
-	m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
+	//m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
 }
 
 // Render the scene.
@@ -588,18 +586,65 @@ void TiledRendering::OnRender()
 	////m_simpleCS.OnExecuteCS();
 
 	// Record all the commands we need to render the scene into the command list.
-	PopulateCommandList();
+	//PopulateCommandList();
 
 
-	// Execute the command list.
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	//// Execute the command list.
+	//ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	//IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	// Present the frame.
-	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->Present(1, 0));
+	//// Present the frame.
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pSwapChain->Present(1, 0));
 
-	//WaitForPreviousFrame();
-	IGraphics::g_GraphicsCore->MoveToNextFrame();
+	////WaitForPreviousFrame();
+	//IGraphics::g_GraphicsCore->MoveToNextFrame();
+
+
+	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Render Rabbit");
+	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
+	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());
+	gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
+
+	gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_cbvSrvUavHeap.Get());
+
+	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
+	gfxContext.SetDescriptorTable(
+		e_rootParameterCB,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+
+	//gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(CBuffer), &m_constantBufferData);
+
+	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+	{
+		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
+	};
+
+	gfxContext.SetPipelineState(m_scenePSO);
+
+	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+	gfxContext.ClearDepth(m_sceneDepthBuffer);
+	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
+	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
+	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
+
+
+	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
+
+	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
+
+	ImGui::Render();
+	gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, imGuiHeap.Get());
+	//m_commandList->SetDescriptorHeaps(1, imGuiHeap.GetAddressOf());
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gfxContext.GetCommandList());
+
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
+
+	gfxContext.Finish();
+
+	IGraphics::g_GraphicsCore->Present();
 }
 
 void TiledRendering::OnDestroy()
@@ -607,7 +652,7 @@ void TiledRendering::OnDestroy()
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
 	//WaitForPreviousFrame();
-	IGraphics::g_GraphicsCore->WaitForGpu();
+	//IGraphics::g_GraphicsCore->WaitForGpu();
 
 
 	ImGui_ImplDX12_Shutdown();
@@ -618,7 +663,8 @@ void TiledRendering::OnDestroy()
 	m_pModel.reset();
 
 	//CloseHandle(m_fenceEvent);
-	IGraphics::g_GraphicsCore->Shutdown();
+	//IGraphics::g_GraphicsCore->Terminate();
+	//IGraphics::g_GraphicsCore->Shutdown();
 }
 
 void TiledRendering::PreDepthPass()
