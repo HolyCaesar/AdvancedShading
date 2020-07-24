@@ -151,7 +151,7 @@ private:
     ForwardPlusLightCulling m_LightCullingPass;
 
     // Compute Shader Demo
-    SimpleComputeShader m_simpleCS;
+    //SimpleComputeShader m_simpleCS;
 
 
 private:

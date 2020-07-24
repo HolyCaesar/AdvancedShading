@@ -40,20 +40,13 @@ namespace IGraphics
 
 		ComPtr<ID3D12Device> g_pD3D12Device;
 		ComPtr<IDXGISwapChain3> g_pSwapChain;
-		ComPtr<ID3D12CommandQueue> g_commandQueue;
-		ComPtr<ID3D12GraphicsCommandList> g_commandList;
-		ComPtr<ID3D12Resource> m_renderTargets[SWAP_CHAIN_BUFFER_COUNT];
-		ComPtr<ID3D12CommandAllocator> m_commandAllocator[SWAP_CHAIN_BUFFER_COUNT];
-
-		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		UINT m_rtvDescriptorSize;
 		HWND g_hwnd;
 
 		std::unique_ptr<CommandListManager> g_CommandManager;
 		std::unique_ptr<ContextManager>		g_ContextManager;
 
 		ColorBuffer g_DisplayPlane[SWAP_CHAIN_BUFFER_COUNT];
-		UINT g_CurrentBuffer;
+		UINT g_CurrentBuffer = 0;
 		DX12RootSignature s_PresentRS;
 
 		DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
@@ -69,11 +62,9 @@ namespace IGraphics
 		}
 
 
-		void WaitForGpu();
-		void MoveToNextFrame();
+		//void WaitForGpu();
+		//void MoveToNextFrame();
 		UINT64 GetRenderFenceValue() { return m_fenceValue[s_FrameIndex]; }
-
-
 
 		float s_FrameTime = 0.0f;
 		uint64_t s_FrameIndex = 0;

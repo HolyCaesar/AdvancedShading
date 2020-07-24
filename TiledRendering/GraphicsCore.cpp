@@ -245,138 +245,10 @@ namespace IGraphics
 	s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
 	s_PresentRS.Finalize(L"Present");
 
-
-
-
-
-
-
-
-
-
-
-
-//		/*
-//		* Describe and create the command queue.
-//		*/
-//		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-//		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-//		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-//		ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&g_commandQueue)));
-//
-//
-//		/*
-//		* D3D12 SwapChain Creation
-//		*/
-//		// Describe and create the swap chain.
-//		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-//		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
-//		swapChainDesc.Width = m_DisplayWidth;
-//		swapChainDesc.Height = m_DisplayHeight;
-//		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-//		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-//		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-//		swapChainDesc.SampleDesc.Count = 1;
-//
-//		ComPtr<IDXGISwapChain1> swapChain;
-//		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
-//			g_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-//			g_hwnd,
-//			&swapChainDesc,
-//			nullptr,
-//			nullptr,
-//			&swapChain
-//		));
-//
 //		// This sample does not support fullscreen transitions.
 //		ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
-//
+
 //		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
-//		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
-//
-//		// Create sync objects
-//		{
-//			ASSERT_SUCCEEDED(g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-//			++m_fenceValue[s_FrameIndex];
-//
-//			// Create an event handle to use for frame synchronization.
-//			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-//			if (m_fenceEvent == nullptr)
-//			{
-//				ASSERT_SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
-//			}
-//		}
-//
-//		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-//		desc.NumDescriptors = SWAP_CHAIN_BUFFER_COUNT;
-//		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-//		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-//		ASSERT_SUCCEEDED(g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvHeap)));
-//		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-//
-//		// Create frame resources.
-//		{
-//			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-//
-//			// Create a RTV for each frame.
-//			for (UINT n = 0; n < SWAP_CHAIN_BUFFER_COUNT; n++)
-//			{
-//				ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-//				g_pD3D12Device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-//				rtvHandle.Offset(1, m_rtvDescriptorSize);
-//
-//				ASSERT_SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
-//			}
-//		}
-//
-//
-//		return;
-//		g_CommandManager->Create(g_pD3D12Device.Get());
-//
-//		swapChainDesc.Width = m_DisplayWidth;
-//		swapChainDesc.Height = m_DisplayHeight;
-//		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-//		swapChainDesc.Scaling = DXGI_SCALING_NONE;
-//		swapChainDesc.SampleDesc.Quality = 0;
-//		swapChainDesc.SampleDesc.Count = 1;
-//		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-//		swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
-//		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-//		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-//		//swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-//
-//		ComPtr<IDXGISwapChain1> s_swapChain1;
-//#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) // Win32
-//		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
-//			//g_CommandManager->GetCommandQueue(), 
-//			g_commandQueue.Get(),
-//			g_hwnd, 
-//			&swapChainDesc, 
-//			nullptr, 
-//			nullptr, 
-//			&s_swapChain1));
-//#else // UWP
-//		ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
-//#endif
-//
-//		for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
-//		{
-//			ComPtr<ID3D12Resource> DisplayPlane;
-//			ASSERT_SUCCEEDED(s_swapChain1->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
-//			g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
-//		}
-//
-//		// Common state was moved to GraphicsCommon.*
-//		InitializeCommonState();
-//
-//		s_PresentRS.Reset(4, 2);
-//		s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
-//		s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
-//		s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
-//		s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
-//		s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
-//		s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
-//		s_PresentRS.Finalize(L"Present");
 	}
 
 	void GraphicsCore::Terminate(void)
@@ -480,40 +352,40 @@ namespace IGraphics
 	}
 
 
-	// Sync functions
-	void GraphicsCore::WaitForGpu()
-	{
-		// Schedule a Signal command in the queue
-		ASSERT_SUCCEEDED(g_commandQueue->Signal(m_fence.Get(), m_fenceValue[s_FrameIndex]));
+	//// Sync functions
+	//void GraphicsCore::WaitForGpu()
+	//{
+	//	// Schedule a Signal command in the queue
+	//	ASSERT_SUCCEEDED(g_commandQueue->Signal(m_fence.Get(), m_fenceValue[s_FrameIndex]));
 
-		// Wait Until the fence has been processed
-		ASSERT_SUCCEEDED(m_fence->SetEventOnCompletion(m_fenceValue[s_FrameIndex], m_fenceEvent));
-		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+	//	// Wait Until the fence has been processed
+	//	ASSERT_SUCCEEDED(m_fence->SetEventOnCompletion(m_fenceValue[s_FrameIndex], m_fenceEvent));
+	//	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 
-		// Increment the fence value for the current frame.
-		++m_fenceValue[s_FrameIndex];
-	}
+	//	// Increment the fence value for the current frame.
+	//	++m_fenceValue[s_FrameIndex];
+	//}
 
-	// PRepare to render the next frame.
-	void GraphicsCore::MoveToNextFrame()
-	{
-		// Schedule a Singal command in the queue.
-		const UINT64 currentFenceValue = m_fenceValue[s_FrameIndex];
-		ASSERT_SUCCEEDED(g_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+	//// PRepare to render the next frame.
+	//void GraphicsCore::MoveToNextFrame()
+	//{
+	//	// Schedule a Singal command in the queue.
+	//	const UINT64 currentFenceValue = m_fenceValue[s_FrameIndex];
+	//	ASSERT_SUCCEEDED(g_commandQueue->Signal(m_fence.Get(), currentFenceValue));
 
-		// Update the frame index;
-		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
+	//	// Update the frame index;
+	//	s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
 
-		// If the next frame is not ready to be rendered yet, wait until it is ready.
-		if (m_fence->GetCompletedValue() < m_fenceValue[s_FrameIndex])
-		{
-			ASSERT_SUCCEEDED(m_fence->SetEventOnCompletion(m_fenceValue[s_FrameIndex], m_fenceEvent));
-			WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-		}
+	//	// If the next frame is not ready to be rendered yet, wait until it is ready.
+	//	if (m_fence->GetCompletedValue() < m_fenceValue[s_FrameIndex])
+	//	{
+	//		ASSERT_SUCCEEDED(m_fence->SetEventOnCompletion(m_fenceValue[s_FrameIndex], m_fenceEvent));
+	//		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+	//	}
 
-		// Set the fence value for the next frame.
-		m_fenceValue[s_FrameIndex] = currentFenceValue + 1;
-	}
+	//	// Set the fence value for the next frame.
+	//	m_fenceValue[s_FrameIndex] = currentFenceValue + 1;
+	//}
 
 	// Temp Compute shader definitions
 	void GraphicsCore::InitializeCS(void)
@@ -556,28 +428,3 @@ namespace IGraphics
 		}
 	}
 }
-
-// Old Implementation
-//void TiledRendering::WaitForPreviousFrame()
-//{
-//    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-//    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-//    // sample illustrates how to use fences for efficient resource usage and to
-//    // maximize GPU utilization.
-//
-//    // Signal and increment the fence value.
-//    const UINT64 fence = m_fenceValue;
-//    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-//    m_fenceValue++;
-//
-//    // Wait until the previous frame is finished.
-//    if (m_fence->GetCompletedValue() < fence)
-//    {
-//        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-//        WaitForSingleObject(m_fenceEvent, INFINITE);
-//    }
-//
-//    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-//}
-
-

@@ -401,100 +401,100 @@ void TiledRendering::LoadAssets()
 
 void TiledRendering::LoadPreDepthPassAssets()
 {
-	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
-	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO()));
-
-	// Create a root signature consisting of a descriptor table with a single CBV
-	{
-		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-		//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-
-		m_preDepthPassRootSignature.Reset(1, 0);
-		m_preDepthPassRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_preDepthPassRootSignature.Finalize(L"PreDepthPassRootSignature", rootSignatureFlags);
-	}
-
-	// Create the pipeline state, which includes compiling and loading shaders.
-	{
-		ComPtr<ID3DBlob> vertexShader;
-		ComPtr<ID3DBlob> pixelShader;
-
-#if defined(_DEBUG)
-		// Enable better shader debugging with the graphics debugging tools.
-		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-		UINT compileFlags = 0;
-#endif
-
-#if defined(_DEBUG)
-		ComPtr<ID3DBlob> errorMessages;
-		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, &errorMessages);
-		if (FAILED(hr) && errorMessages)
-		{
-			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
-			wstring str;
-			for (int i = 0; i < 3000; i++) str += errorMsg[i];
-			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
-			exit(0);
-		}
-		errorMessages.Reset();
-		errorMessages = nullptr;
-
-		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_SceneDepth", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
-		if (FAILED(hr) && errorMessages)
-		{
-			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
-			wstring str;
-			for (int i = 0; i < 3000; i++) str += errorMsg[i];
-			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
-			exit(0);
-		}
-#else
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
-#endif
-
-		// Define the vertex input layout.
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
-
-		m_preDepthPassPSO.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		m_preDepthPassPSO.SetRootSignature(m_preDepthPassRootSignature);
-		m_preDepthPassPSO.SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
-		m_preDepthPassPSO.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
-		m_preDepthPassPSO.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-		m_preDepthPassPSO.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		m_preDepthPassPSO.SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
-			D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
-			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
-			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
-		m_preDepthPassPSO.SetSampleMask(UINT_MAX);
-		m_preDepthPassPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-		m_preDepthPassPSO.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
-		m_preDepthPassPSO.Finalize();
-	}
-
-	// Create Depth Buffer
-	m_preDepthPass.Create(L"PreDepthPassDepthBuffer", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPass.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-
-	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassRTV.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	// Close the command list and execute it to begin the initial GPU setup.
-	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	IGraphics::g_GraphicsCore->WaitForGpu();
+//	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+//	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO()));
+//
+//	// Create a root signature consisting of a descriptor table with a single CBV
+//	{
+//		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+//			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+//			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+//			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+//			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+//		//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+//
+//		m_preDepthPassRootSignature.Reset(1, 0);
+//		m_preDepthPassRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
+//		m_preDepthPassRootSignature.Finalize(L"PreDepthPassRootSignature", rootSignatureFlags);
+//	}
+//
+//	// Create the pipeline state, which includes compiling and loading shaders.
+//	{
+//		ComPtr<ID3DBlob> vertexShader;
+//		ComPtr<ID3DBlob> pixelShader;
+//
+//#if defined(_DEBUG)
+//		// Enable better shader debugging with the graphics debugging tools.
+//		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+//#else
+//		UINT compileFlags = 0;
+//#endif
+//
+//#if defined(_DEBUG)
+//		ComPtr<ID3DBlob> errorMessages;
+//		HRESULT hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, &errorMessages);
+//		if (FAILED(hr) && errorMessages)
+//		{
+//			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+//			wstring str;
+//			for (int i = 0; i < 3000; i++) str += errorMsg[i];
+//			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+//			exit(0);
+//		}
+//		errorMessages.Reset();
+//		errorMessages = nullptr;
+//
+//		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_SceneDepth", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
+//		if (FAILED(hr) && errorMessages)
+//		{
+//			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+//			wstring str;
+//			for (int i = 0; i < 3000; i++) str += errorMsg[i];
+//			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+//			exit(0);
+//		}
+//#else
+//		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+//		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+//#endif
+//
+//		// Define the vertex input layout.
+//		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+//		{
+//			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+//			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+//			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+//		};
+//
+//		m_preDepthPassPSO.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+//		m_preDepthPassPSO.SetRootSignature(m_preDepthPassRootSignature);
+//		m_preDepthPassPSO.SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+//		m_preDepthPassPSO.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
+//		m_preDepthPassPSO.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+//		m_preDepthPassPSO.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+//		m_preDepthPassPSO.SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
+//			D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+//			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+//			D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+//		m_preDepthPassPSO.SetSampleMask(UINT_MAX);
+//		m_preDepthPassPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+//		m_preDepthPassPSO.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+//		m_preDepthPassPSO.Finalize();
+//	}
+//
+//	// Create Depth Buffer
+//	m_preDepthPass.Create(L"PreDepthPassDepthBuffer", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+//	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPass.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+//
+//	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+//	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassRTV.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
+//
+//	// Close the command list and execute it to begin the initial GPU setup.
+//	ThrowIfFailed(m_commandList->Close());
+//	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+//	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+//
+//	IGraphics::g_GraphicsCore->WaitForGpu();
 }
 
 std::vector<UINT8> TiledRendering::GenerateTextureData()
@@ -630,7 +630,6 @@ void TiledRendering::OnRender()
 	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
 	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 
-
 	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
 	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
@@ -649,146 +648,135 @@ void TiledRendering::OnRender()
 
 void TiledRendering::OnDestroy()
 {
-	// Ensure that the GPU is no longer referencing resources that are about to be
-	// cleaned up by the destructor.
-	//WaitForPreviousFrame();
-	//IGraphics::g_GraphicsCore->WaitForGpu();
-
-
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-
 	m_pModel.reset();
-
-	//CloseHandle(m_fenceEvent);
-	//IGraphics::g_GraphicsCore->Terminate();
-	//IGraphics::g_GraphicsCore->Shutdown();
 }
 
 void TiledRendering::PreDepthPass()
 {
-	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
-	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_preDepthPassPSO.GetPSO()));
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+	//ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_preDepthPassPSO.GetPSO()));
 
-	// Transmit the state of the depth buffer from SRV to DSV
-	m_commandList->ResourceBarrier(
-		1, 
-		&CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassBuffer.pResource.Get(), m_preDepthPassBuffer.mUsageState, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-	m_preDepthPassBuffer.mUsageState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+	//// Transmit the state of the depth buffer from SRV to DSV
+	//m_commandList->ResourceBarrier(
+	//	1, 
+	//	&CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassBuffer.pResource.Get(), m_preDepthPassBuffer.mUsageState, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	//m_preDepthPassBuffer.mUsageState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
-	// Set necessary state.
-	m_commandList->SetGraphicsRootSignature(m_preDepthPassRootSignature.GetSignature());
+	//// Set necessary state.
+	//m_commandList->SetGraphicsRootSignature(m_preDepthPassRootSignature.GetSignature());
 
-	ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvUavHeap.Get() };
-	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
+	//ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvUavHeap.Get() };
+	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
 
-	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
-	m_commandList->SetGraphicsRootDescriptorTable(
-		e_rootParameterCB,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+	//D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
+	//m_commandList->SetGraphicsRootDescriptorTable(
+	//	e_rootParameterCB,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_preDepthPassRTV.GetRTV();
-	auto dsvHandle = m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
-	//auto dsvHandle = m_preDepthPass.GetDSV();
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	//D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_preDepthPassRTV.GetRTV();
+	//auto dsvHandle = m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
+	////auto dsvHandle = m_preDepthPass.GetDSV();
+	//m_commandList->RSSetViewports(1, &m_viewport);
+	//m_commandList->RSSetScissorRects(1, &m_scissorRect);
+	//m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-	// Record commands.
-	const float clearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-	//m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_preDepthPass.GetClearDepth(), m_preDepthPass.GetClearStencil(), 0, nullptr);
-	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//// Record commands.
+	//const float clearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	//m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	//m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	////m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_preDepthPass.GetClearDepth(), m_preDepthPass.GetClearStencil(), 0, nullptr);
+	//m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
-	m_commandList->IASetIndexBuffer(&m_indexBuffer.IndexBufferView());
+	//m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
+	//m_commandList->IASetIndexBuffer(&m_indexBuffer.IndexBufferView());
 
-	m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
+	//m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
 
-	// Transmit the state of the depth buffer from SRV to DSV
-	m_commandList->ResourceBarrier(
-		1, 
-		&CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassBuffer.pResource.Get(), m_preDepthPassBuffer.mUsageState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
-	m_preDepthPassBuffer.mUsageState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-	ThrowIfFailed(m_commandList->Close());
+	//// Transmit the state of the depth buffer from SRV to DSV
+	//m_commandList->ResourceBarrier(
+	//	1, 
+	//	&CD3DX12_RESOURCE_BARRIER::Transition(m_preDepthPassBuffer.pResource.Get(), m_preDepthPassBuffer.mUsageState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	//m_preDepthPassBuffer.mUsageState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+	//ThrowIfFailed(m_commandList->Close());
 
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	//ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	//IGraphics::g_GraphicsCore->g_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	IGraphics::g_GraphicsCore->WaitForGpu();
+	//IGraphics::g_GraphicsCore->WaitForGpu();
 }
 
 void TiledRendering::PopulateCommandList()
 {
-	// Command list allocators can only be reset when the associated 
-	// command lists have finished execution on the GPU; apps should use 
-	// fences to determine GPU execution progress.
-	ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
+	//// Command list allocators can only be reset when the associated 
+	//// command lists have finished execution on the GPU; apps should use 
+	//// fences to determine GPU execution progress.
+	//ThrowIfFailed(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex]->Reset());
 
-	// However, when ExecuteCommandList() is called on a particular command 
-	// list, that command list can then be reset at any time and must be before 
-	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO()));
+	//// However, when ExecuteCommandList() is called on a particular command 
+	//// list, that command list can then be reset at any time and must be before 
+	//// re-recording.
+	//ThrowIfFailed(m_commandList->Reset(IGraphics::g_GraphicsCore->m_commandAllocator[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), m_scenePSO.GetPSO()));
 
-	m_LightCullingPass.ResourceTransitionForRender(m_commandList);
+	//m_LightCullingPass.ResourceTransitionForRender(m_commandList);
 
-	// Set necessary state.
-	m_commandList->SetGraphicsRootSignature(m_sceneOpaqueRootSignature.GetSignature());
+	//// Set necessary state.
+	//m_commandList->SetGraphicsRootSignature(m_sceneOpaqueRootSignature.GetSignature());
 
-	ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvUavHeap.Get() };
-	m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
+	//ID3D12DescriptorHeap* ppHeaps1[] = { m_cbvSrvUavHeap.Get() };
+	//m_commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
 
-	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
-	m_commandList->SetGraphicsRootDescriptorTable(
-		e_ModelTexRootParameterSRV,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelTexture.uSrvDescriptorOffset, m_cbvSrvUavDescriptorSize));
-	m_commandList->SetGraphicsRootDescriptorTable(
-		e_rootParameterCB,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+	//D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
 	//m_commandList->SetGraphicsRootDescriptorTable(
-	//	e_LightGridRootParameterSRV,
-	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_LightCullingPass.GetOpaqueLightGridSRVHeapOffset(), m_cbvSrvUavDescriptorSize));
-	//m_commandList->SetGraphicsRootShaderResourceView(
-	//	e_LightIndexRootParameterSRV,
-	//	m_LightCullingPass.GetOpaqueLightLightIndexList());
-	//m_commandList->SetGraphicsRootShaderResourceView(
-	//	e_LightBufferRootParameterSRV,
-	//	m_LightCullingPass.GetLightsBuffer());
+	//	e_ModelTexRootParameterSRV,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelTexture.uSrvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+	//m_commandList->SetGraphicsRootDescriptorTable(
+	//	e_rootParameterCB,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+	////m_commandList->SetGraphicsRootDescriptorTable(
+	////	e_LightGridRootParameterSRV,
+	////	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_LightCullingPass.GetOpaqueLightGridSRVHeapOffset(), m_cbvSrvUavDescriptorSize));
+	////m_commandList->SetGraphicsRootShaderResourceView(
+	////	e_LightIndexRootParameterSRV,
+	////	m_LightCullingPass.GetOpaqueLightLightIndexList());
+	////m_commandList->SetGraphicsRootShaderResourceView(
+	////	e_LightBufferRootParameterSRV,
+	////	m_LightCullingPass.GetLightsBuffer());
 
-	// Indicate that the back buffer will be used as a render target.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	//// Indicate that the back buffer will be used as a render target.
+	//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(IGraphics::g_GraphicsCore->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), IGraphics::g_GraphicsCore->s_FrameIndex, IGraphics::g_GraphicsCore->m_rtvDescriptorSize);
-	//auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto dsvHandle = m_sceneDepthBuffer.GetDSV();
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(IGraphics::g_GraphicsCore->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), IGraphics::g_GraphicsCore->s_FrameIndex, IGraphics::g_GraphicsCore->m_rtvDescriptorSize);
+	////auto dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+	//auto dsvHandle = m_sceneDepthBuffer.GetDSV();
+	//m_commandList->RSSetViewports(1, &m_viewport);
+	//m_commandList->RSSetScissorRects(1, &m_scissorRect);
+	//m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-	// Record commands.
-	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_sceneDepthBuffer.GetClearDepth(), m_sceneDepthBuffer.GetClearStencil(), 0, nullptr);
-	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//// Record commands.
+	//const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+	//m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	//m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, m_sceneDepthBuffer.GetClearDepth(), m_sceneDepthBuffer.GetClearStencil(), 0, nullptr);
+	//m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
-	m_commandList->IASetIndexBuffer(&m_indexBuffer.IndexBufferView());
+	//m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
+	//m_commandList->IASetIndexBuffer(&m_indexBuffer.IndexBufferView());
 
-	m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
-	//m_commandList->DrawInstanced((UINT)(m_pModel->m_vecVertexData.size()), 1, 0, 0);
+	//m_commandList->DrawIndexedInstanced((UINT)(m_pModel->m_vecIndexData.size()), 1, 0, 0, 0);
+	////m_commandList->DrawInstanced((UINT)(m_pModel->m_vecVertexData.size()), 1, 0, 0);
 
-	ImGui::Render();
-	m_commandList->SetDescriptorHeaps(1, imGuiHeap.GetAddressOf());
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
+	//ImGui::Render();
+	//m_commandList->SetDescriptorHeaps(1, imGuiHeap.GetAddressOf());
+	//ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
-	// Indicate that the back buffer will now be used to present.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	m_LightCullingPass.ResourceTransitionForCS(m_commandList);
+	//// Indicate that the back buffer will now be used to present.
+	//m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(IGraphics::g_GraphicsCore->m_renderTargets[IGraphics::g_GraphicsCore->s_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	//m_LightCullingPass.ResourceTransitionForCS(m_commandList);
 
-	ThrowIfFailed(m_commandList->Close());
+	//ThrowIfFailed(m_commandList->Close());
 }
 
 // Lights generation
