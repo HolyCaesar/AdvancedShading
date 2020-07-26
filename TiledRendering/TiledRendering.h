@@ -74,7 +74,6 @@ private:
     ComPtr<ID3D12GraphicsCommandList>       m_commandList;
 
     DepthBuffer m_sceneDepthBuffer;
-    DX12Resource m_preDepthPassBuffer;
 
     // DXUT Model-View Camera
     CModelViewerCamera m_modelViewCamera;
@@ -161,8 +160,8 @@ private:
     void PopulateCommandList();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
 
-    void LoadPreDepthPassAssets();
-    void PreDepthPass();
+    void LoadDepthPassAssets();
+    void PreDepthPass(GraphicsContext& gfxContext);
 
     // GenerateLights
     void GenerateLights(uint32_t numLights);
