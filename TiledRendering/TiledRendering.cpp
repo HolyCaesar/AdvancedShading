@@ -142,12 +142,18 @@ void TiledRendering::LoadAssets()
 		m_sceneOpaqueRootSignature.Reset(e_numRootParameters, 1);
 		m_sceneOpaqueRootSignature.InitStaticSampler(0, non_static_sampler);
 		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_ALL);
+		//m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_ALL);
+		m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsConstantBuffer(0);
 		m_sceneOpaqueRootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneOpaqueRootSignature[e_LightGridRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneOpaqueRootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
 		m_sceneOpaqueRootSignature[e_LightBufferRootParameterSRV].InitAsBufferSRV(3);
 		m_sceneOpaqueRootSignature.Finalize(L"SceneRootSignature", rootSignatureFlags);
+
+		/*Root Signature for the depth pass*/
+		m_preDepthPassRootSignature.Reset(1, 0);
+		m_preDepthPassRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
+		m_preDepthPassRootSignature.Finalize(L"PreDepthPassRootSignature", rootSignatureFlags);
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -215,6 +221,11 @@ void TiledRendering::LoadAssets()
 		m_scenePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		m_scenePSO.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
 		m_scenePSO.Finalize();
+
+		/*PSO for depth pass*/
+		m_preDepthPassPSO = m_scenePSO;
+		m_preDepthPassPSO.SetRootSignature(m_preDepthPassRootSignature);
+		m_preDepthPassPSO.Finalize();
 	}
 
 	// Create the vertex buffer.
@@ -328,8 +339,9 @@ void TiledRendering::LoadAssets()
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
 	}
 
-	// Load pre-depth pass assets
-	LoadDepthPassAssets();
+	// Load pre-depth pass resources
+	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
 
 
@@ -356,33 +368,6 @@ void TiledRendering::LoadAssets()
 
 	// Load GUI assets
 	LoadImGUI();
-}
-
-
-void TiledRendering::LoadDepthPassAssets()
-{
-	// Create a root signature consisting of a descriptor table with a single CBV
-	{
-		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-		//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-
-		m_preDepthPassRootSignature.Reset(1, 0);
-		m_preDepthPassRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_preDepthPassRootSignature.Finalize(L"PreDepthPassRootSignature", rootSignatureFlags);
-	}
-
-	// Create a pipeline state, which includes compiling and loading shaders
-	{
-		m_preDepthPassPSO = m_scenePSO;
-		m_preDepthPassPSO.SetRootSignature(m_preDepthPassRootSignature);
-	}
-
-	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 }
 
 std::vector<UINT8> TiledRendering::GenerateTextureData()
@@ -491,6 +476,7 @@ void TiledRendering::OnRender()
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
 
 
+	// Get scene depth in the screen space
 	PreDepthPass(gfxContext);
 
 
@@ -499,13 +485,14 @@ void TiledRendering::OnRender()
 	gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());
 	gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
 
-	gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_cbvSrvUavHeap.Get());
+	//gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_cbvSrvUavHeap.Get());
 
-	D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
-	gfxContext.SetDescriptorTable(
-		e_rootParameterCB,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
+	//D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
+	//gfxContext.SetDescriptorTable(
+	//	e_rootParameterCB,
+	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
 
+	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
 	//gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(CBuffer), &m_constantBufferData);
 
 	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
@@ -562,7 +549,8 @@ void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
 		e_rootParameterCB,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(cbvSrvUavHandle, m_modelConstantBuffer.uCbvDescriptorOffset, m_cbvSrvUavDescriptorSize));
 
-	gfxContext.TransitionResource(m_preDepthPass, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	gfxContext.TransitionResource(m_preDepthPassRTV, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfxContext.TransitionResource(m_preDepthPass, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{

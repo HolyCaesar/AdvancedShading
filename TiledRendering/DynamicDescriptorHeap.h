@@ -29,7 +29,7 @@ public:
 		UINT NumHandles,
 		const D3D12_CPU_DESCRIPTOR_HANDLE Handles[])
 	{
-		//m_GraphicsHandleCache.StageDescriptorHandles(RootIndex, Offset, NumHandles, Handles);
+		m_GraphicsHandleCache.StageDescriptorHandles(RootIndex, Offset, NumHandles, Handles);
 	}
 
 	void SetComputeDescriptorHandles(
@@ -38,7 +38,7 @@ public:
 		UINT NumHandles,
 		const D3D12_CPU_DESCRIPTOR_HANDLE Handles[])
 	{
-		//m_ComputeHandleCache.StageDescriptorHandles(RootIndex, Offset, NumHandles, Handles);
+		m_ComputeHandleCache.StageDescriptorHandles(RootIndex, Offset, NumHandles, Handles);
 	}
 
 	// Bypass the cache and upload directly to the shader-visible heap

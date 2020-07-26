@@ -160,7 +160,6 @@ private:
     void PopulateCommandList();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
 
-    void LoadDepthPassAssets();
     void PreDepthPass(GraphicsContext& gfxContext);
 
     // GenerateLights

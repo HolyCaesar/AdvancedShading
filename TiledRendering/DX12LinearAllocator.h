@@ -91,7 +91,7 @@ enum LinearAllocatorType
 	kNumAllocatorTypes
 };
 
-enum 
+enum
 {
 	kGpuAllocatorPageSize = 0x10000, // 64K
 	kCpuAllocatorPageSize = 0x200000, //2MB
@@ -134,7 +134,7 @@ public:
 		m_CurPage(nullptr)
 	{
 		ASSERT(Type > kInvalidAllocator&& Type < kNumAllocatorTypes);
-		m_PageSize = (Type);
+		m_PageSize = (Type == kGpuExclusive ? kGpuAllocatorPageSize : kCpuAllocatorPageSize);
 	}
 
 	DynAlloc Allocate(size_t SizeInBytes, size_t Alignment = DEFAULT_ALIGN);
