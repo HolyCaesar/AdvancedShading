@@ -19,50 +19,24 @@ public:
     ~ForwardPlusLightCulling()
     {}
 
-    void Init(
-        uint32_t ScreenWidth, uint32_t ScreenHeight,
-        XMMATRIX inverseProjection,
-        ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap,
-        UINT& gCbvSrvUavOffset);
+    void Init(uint32_t ScreenWidth, uint32_t ScreenHeight, XMMATRIX inverseProjection);
     void Resize();
     void Destroy();
-    void ExecuteCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap, UINT preDepthPassHeapOffset);
+    void ExecuteCS(GraphicsContext& gfxContext, DepthBuffer& preDepthPass);
 
     void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
     void UpdateLightBuffer(vector<Light>& lightList);
     void UpdateConstantBuffer(XMMATRIX viewMatrix);
 
     // Get result
-    UINT GetOpaqueLightGridSRVHeapOffset() { return m_oLightGrid.uSrvDescriptorOffset; }
-    D3D12_GPU_VIRTUAL_ADDRESS GetOpaqueLightLightIndexList() { return m_oLightIndexList.GetGpuVirtualAddress(); }
+    //UINT GetOpaqueLightGridSRVHeapOffset() { return m_oLightGrid.uSrvDescriptorOffset; }
+    //D3D12_GPU_VIRTUAL_ADDRESS GetOpaqueLightLightIndexList() { return m_oLightIndexList.GetGpuVirtualAddress(); }
 
-    UINT GetTransparentLightGridSRVHeapOffset() { return m_tLightGrid.uSrvDescriptorOffset; }
-    D3D12_GPU_VIRTUAL_ADDRESS GetTransparentLightIndexList() { return m_tLightIndexList.GetGpuVirtualAddress(); }
+    //UINT GetTransparentLightGridSRVHeapOffset() { return m_tLightGrid.uSrvDescriptorOffset; }
+    //D3D12_GPU_VIRTUAL_ADDRESS GetTransparentLightIndexList() { return m_tLightIndexList.GetGpuVirtualAddress(); }
 
-    D3D12_GPU_VIRTUAL_ADDRESS GetLightsBuffer() { return m_Lights.GetGpuVirtualAddress(); }
+    //D3D12_GPU_VIRTUAL_ADDRESS GetLightsBuffer() { return m_Lights.GetGpuVirtualAddress(); }
 
-    // TODO temporary functions for resource transition
-    void ResourceTransitionForCS(ComPtr<ID3D12GraphicsCommandList> commandList)
-    {
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), m_oLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-        m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightIndexList.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
-
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightGrid.pResource.Get(), m_tLightGrid.mUsageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-        m_tLightGrid.mUsageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightIndexList.GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
-    }
-    void ResourceTransitionForRender(ComPtr<ID3D12GraphicsCommandList> commandList)
-    {
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightGrid.pResource.Get(), m_oLightGrid.mUsageState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-        m_oLightGrid.mUsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_oLightIndexList.GetResource(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightGrid.pResource.Get(), m_tLightGrid.mUsageState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-        m_tLightGrid.mUsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_tLightIndexList.GetResource(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-    }
-    
     // Common Resources
 private:
     uint32_t m_TiledSize;
@@ -78,9 +52,7 @@ private:
         XMUINT2 blockSize;        // threads in x and y dimension of a thread group
         XMUINT2 padding3;
     };
-    DX12Resource m_dispatchParamsCB;
     DispatchParams m_dispatchParamsData;
-    UINT8* m_pCbvDispatchParams;
 
     __declspec(align(16)) struct ScreenToViewParams
     {
@@ -89,9 +61,7 @@ private:
         XMUINT2 ScreenDimensions;
         XMUINT2 Padding;
     };
-    DX12Resource m_screenToViewParamsCB;
     ScreenToViewParams m_screenToViewParamsData;
-    UINT8* m_pCbvScreenToViewParams;
 
     __declspec(align(16)) struct Frustum
     {
@@ -128,14 +98,10 @@ private:
         e_cGridFrustumUAV = 2,
     };
 
-    void LoadGridFrustumAsset(
-        uint32_t ScreenWidth, uint32_t ScreenHeight, 
-        XMMATRIX inverseProjection,
-        ComPtr<ID3D12DescriptorHeap> gDescriptorHeap,
-        UINT& gCbvSrvUavOffset);
+    void LoadGridFrustumAsset(uint32_t ScreenWidth, uint32_t ScreenHeight, XMMATRIX inverseProjection);
 
     void UpdateGridFrustumCB();
-    void ExecuteGridFrustumCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvuavDescriptorHeap);
+    void ExecuteGridFrustumCS(GraphicsContext& gfxContext);
 
     // Light Culling
 private:
@@ -150,10 +116,13 @@ private:
     StructuredBuffer m_oLightIndexList;
     StructuredBuffer m_tLightIndexList;
     StructuredBuffer m_testUAVBuffer;
-    DX12Resource     m_testUAVTex2D;
 
-    DX12Resource m_oLightGrid;
-    DX12Resource m_tLightGrid;
+    //DX12Resource m_testUAVTex2D;
+    //DX12Resource m_oLightGrid;
+    //DX12Resource m_tLightGrid;
+    ByteAddressBuffer m_oLightGrid;
+    ByteAddressBuffer m_tLightGrid;
+    ByteAddressBuffer m_testUAVTex2D;
 
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
@@ -176,11 +145,7 @@ private:
         e_LightCullingNumRootParameters
     };
 
-    void LoadLightCullingAsset(
-        uint32_t ScreenWidth, uint32_t ScreenHeight,
-        XMMATRIX inverseProjection,
-        ComPtr<ID3D12DescriptorHeap> gDescriptorHeap,
-        UINT& gCbvSrvUavOffset);
+    void LoadLightCullingAsset(uint32_t ScreenWidth, uint32_t ScreenHeight, XMMATRIX inverseProjection);
 
     void UpdateLightCullingCB();
     void ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap, UINT preDepthBufHeapOffset);

@@ -75,7 +75,6 @@ void TiledRendering::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
-	//LoadPreDepthPassAssets();
 	//m_simpleCS.OnInit();
 }
 
@@ -344,16 +343,11 @@ void TiledRendering::LoadAssets()
 	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
 
-
-	// Grid Frustum Pass Creation
-	//m_GridFrustumsPass.SetTiledDimension(16);
-	//m_GridFrustumsPass.Init(L"GridFrustumPass.hlsl", m_width, m_height, XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
-
-	//m_LightCullingPass.SetTiledSize(16);
-	//m_LightCullingPass.Init(
-	//	m_width, m_height, 
-	//	XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()),
-	//	m_cbvSrvUavHeap, m_cbvSrvUavOffset);
+	m_LightCullingPass.SetTiledSize(16);
+	m_LightCullingPass.Init(
+		m_width, 
+		m_height,
+		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
 	//// Generate lights
 	//GenerateLights(1);
@@ -478,6 +472,8 @@ void TiledRendering::OnRender()
 
 	// Get scene depth in the screen space
 	PreDepthPass(gfxContext);
+
+	m_LightCullingPass.ExecuteCS(gfxContext, m_preDepthPass);
 
 
 	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
