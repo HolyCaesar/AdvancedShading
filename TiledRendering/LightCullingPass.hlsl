@@ -155,7 +155,8 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     Plane minPlane = { float3(0, 0, -1), -minDepthVS };
 
     //debugTex2D[Input.dispatchThreadID.xy] = float2(nearClipVS, 1.0f - maxDepthVS / 10083.0f);
-    debugTex2D[Input.dispatchThreadID.xy] = float2(minDepthVS, (1.0f - fDepth) * 100);
+    //debugTex2D[Input.dispatchThreadID.xy] = float2(minDepthVS, (1.0f - fDepth) * 100);
+    debugTex2D[Input.dispatchThreadID.xy] = float2(fDepth, (1.0f - fDepth) * 100);
 
     // Cull Lights
     // Each thread in a group will cull 1 light until all lights have been culled
@@ -241,6 +242,4 @@ void CS_LightCullingPass(ComputeShaderInput Input)
     {
         t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
     }
-
-    // TODO may add some debug buffer here
 }

@@ -49,40 +49,28 @@ public:
     void ShowImGUI();
 
 private:
-    ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
-    UINT m_dsvHeapOffset;
-    ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-    ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
-    UINT m_cbvSrvUavOffset;
-
-    UINT m_cbvSrvUavDescriptorSize;
-    UINT m_dsvDescriptorSize;
-
     // Descriptor Heap for ImGUI
     ComPtr<ID3D12DescriptorHeap> imGuiHeap;
 
 private:
-    static const UINT FrameCount = 3;
-
-    static const UINT TextureWidth = 256;
-    static const UINT TextureHeight = 256;
-    static const UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
+    static const UINT   TextureWidth = 256;
+    static const UINT   TextureHeight = 256;
+    static const UINT   TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
 
     // Pipeline objects.
-    CD3DX12_VIEWPORT                        m_viewport;
-    CD3DX12_RECT                            m_scissorRect;
-    ComPtr<ID3D12GraphicsCommandList>       m_commandList;
+    CD3DX12_VIEWPORT    m_viewport;
+    CD3DX12_RECT        m_scissorRect;
 
-    DepthBuffer m_sceneDepthBuffer;
+    DepthBuffer         m_sceneDepthBuffer;
 
     // DXUT Model-View Camera
-    CModelViewerCamera m_modelViewCamera;
-    IMath::Camera m_perspectiveCamera;
+    CModelViewerCamera  m_modelViewCamera;
+    IMath::Camera       m_perspectiveCamera;
 
 private:
-    DX12RootSignature m_sceneOpaqueRootSignature;
-    DX12RootSignature m_sceneTransparentRootSignature;
-    GraphicsPSO m_scenePSO;
+    DX12RootSignature   m_sceneOpaqueRootSignature;
+    DX12RootSignature   m_sceneTransparentRootSignature;
+    GraphicsPSO         m_scenePSO;
 
     // Scene 
     enum SceneRootParameters : uint32_t
@@ -126,38 +114,33 @@ private:
     };
 
     // App resources.
-    StructuredBuffer m_vertexBuffer;
-    StructuredBuffer m_indexBuffer;
-    DX12Resource     m_modelTexture;
+    StructuredBuffer    m_vertexBuffer;
+    StructuredBuffer    m_indexBuffer;
+    //DX12Resource        m_modelTexture;
 
-    DX12Resource m_modelConstantBuffer;
-    //ComPtr<ID3D12Resource> m_constantBuffer;
-    CBuffer m_constantBufferData;
-    UINT8* m_pCbvDataBegin;
+    CBuffer             m_constantBufferData;
+    UINT8*              m_pCbvDataBegin;
 
     // Model
-    shared_ptr<Model> m_pModel;
+    shared_ptr<Model>   m_pModel;
 
 private:
     // Pre-Depth pass resources
-    DepthBuffer m_preDepthPass;
-    ColorBuffer m_preDepthPassRTV;
-    DX12RootSignature m_preDepthPassRootSignature;
-    GraphicsPSO m_preDepthPassPSO;
+    DepthBuffer         m_preDepthPass;
+    ColorBuffer         m_preDepthPassRTV;
+    DX12RootSignature   m_preDepthPassRootSignature;
+    GraphicsPSO         m_preDepthPassPSO;
     
     // Light Culling Pass
-    vector<Light> m_lightsList;
+    vector<Light>       m_lightsList;
     ForwardPlusLightCulling m_LightCullingPass;
 
     // Compute Shader Demo
     //SimpleComputeShader m_simpleCS;
-
-
 private:
     void LoadPipeline();
     void LoadAssets();
     void LoadImGUI();
-    void PopulateCommandList();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
 
     void PreDepthPass(GraphicsContext& gfxContext);

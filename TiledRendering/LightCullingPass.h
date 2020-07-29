@@ -68,12 +68,6 @@ private:
         XMFLOAT4 planes[4];   // left, right, top, bottom frustum planes.
     };
 
-    void CreateGPUTex2DUAVResource(
-        wstring name, uint32_t width, uint32_t height,
-        uint32_t elementSize, DXGI_FORMAT format,
-        ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap,
-        UINT& heapOffset, DX12Resource& pResource, void* initData);
-
     // Frustum calculation
 private:
     DX12RootSignature m_GridFrustumRootSignature;
@@ -117,12 +111,12 @@ private:
     StructuredBuffer m_tLightIndexList;
     StructuredBuffer m_testUAVBuffer;
 
-    //DX12Resource m_testUAVTex2D;
-    //DX12Resource m_oLightGrid;
-    //DX12Resource m_tLightGrid;
-    ByteAddressBuffer m_oLightGrid;
-    ByteAddressBuffer m_tLightGrid;
-    ByteAddressBuffer m_testUAVTex2D;
+    ColorBuffer m_oLightGrid;
+    ColorBuffer m_tLightGrid;
+    ColorBuffer m_testUAVTex2D;
+    //ByteAddressBuffer m_oLightGrid;
+    //ByteAddressBuffer m_tLightGrid;
+    //ByteAddressBuffer m_testUAVTex2D;
 
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
@@ -148,5 +142,5 @@ private:
     void LoadLightCullingAsset(uint32_t ScreenWidth, uint32_t ScreenHeight, XMMATRIX inverseProjection);
 
     void UpdateLightCullingCB();
-    void ExecuteLightCullingCS(ComPtr<ID3D12DescriptorHeap> gCbvSrvUavDescriptorHeap, UINT preDepthBufHeapOffset);
+    void ExecuteLightCullingCS(GraphicsContext& gfxContext, DepthBuffer& preDepthPass);
 };
