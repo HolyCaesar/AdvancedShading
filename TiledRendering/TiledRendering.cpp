@@ -127,7 +127,7 @@ void TiledRendering::LoadAssets()
 		//m_testRootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
 		//m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, e_cCB, D3D12_SHADER_VISIBILITY_ALL);
 		m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsConstantBuffer(0);
-		m_sceneOpaqueRootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, e_cSRV, D3D12_SHADER_VISIBILITY_PIXEL);
+		m_sceneOpaqueRootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneOpaqueRootSignature[e_LightGridRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
 		m_sceneOpaqueRootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
 		m_sceneOpaqueRootSignature[e_LightBufferRootParameterSRV].InitAsBufferSRV(3);
@@ -144,6 +144,7 @@ void TiledRendering::LoadAssets()
 	{
 		ComPtr<ID3DBlob> vertexShader;
 		ComPtr<ID3DBlob> pixelShader;
+		ComPtr<ID3DBlob> pixelShaderDepthPass;
 
 #if defined(_DEBUG)
 		// Enable better shader debugging with the graphics debugging tools.
@@ -177,9 +178,24 @@ void TiledRendering::LoadAssets()
 			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
 			exit(0);
 		}
+		errorMessages.Reset();
+		errorMessages = nullptr;
+
+		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_SceneDepth", "ps_5_1", compileFlags, 0, &pixelShaderDepthPass, &errorMessages);
+		if (FAILED(hr) && errorMessages)
+		{
+			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 150; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
+		}
+
 #else
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, nullptr));
+		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_SceneDepth", "ps_5_1", compileFlags, 0, &pixelShaderDepthPass, nullptr));
 #endif
 
 		// Define the vertex input layout.
@@ -209,6 +225,7 @@ void TiledRendering::LoadAssets()
 		/*PSO for depth pass*/
 		m_preDepthPassPSO = m_scenePSO;
 		m_preDepthPassPSO.SetRootSignature(m_preDepthPassRootSignature);
+		m_preDepthPassPSO.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShaderDepthPass.Get()));
 		m_preDepthPassPSO.Finalize();
 	}
 
@@ -218,6 +235,7 @@ void TiledRendering::LoadAssets()
 		m_pModel->Load("bunny.obj");
 		m_vertexBuffer.Create(L"BunnyVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
 		m_indexBuffer.Create(L"BunnyIndexBuffer", m_pModel->m_vecIndexData.size(), sizeof(uint32_t), m_pModel->m_vecIndexData.data());
+		m_modelTexture.Create(L"RabbitTexture", TextureWidth, TextureHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 	}
 
 	// Create Depth Buffer
@@ -345,23 +363,29 @@ void TiledRendering::OnRender()
 	m_LightCullingPass.ExecuteCS(gfxContext, m_preDepthPass);
 
 
+	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+
+
 	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
 	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());
 	gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
+	gfxContext.SetPipelineState(m_scenePSO);
 
 	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
+	gfxContext.SetDynamicDescriptor(e_ModelTexRootParameterSRV, 0, m_modelTexture.GetSRV());
+	gfxContext.SetDynamicDescriptor(e_LightGridRootParameterSRV, 0, m_LightCullingPass.GetOpaqueLightGrid().GetSRV());
+	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
+	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, m_LightCullingPass.GetLightBuffer());
 
-	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{
 		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
 	};
 
-	gfxContext.SetPipelineState(m_scenePSO);
-
-	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 	gfxContext.ClearDepth(m_sceneDepthBuffer);
 	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
 	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());

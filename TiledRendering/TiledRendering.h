@@ -116,7 +116,7 @@ private:
     // App resources.
     StructuredBuffer    m_vertexBuffer;
     StructuredBuffer    m_indexBuffer;
-    //DX12Resource        m_modelTexture;
+    ColorBuffer         m_modelTexture;
 
     CBuffer             m_constantBufferData;
     UINT8*              m_pCbvDataBegin;

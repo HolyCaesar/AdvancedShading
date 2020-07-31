@@ -29,14 +29,12 @@ public:
     void UpdateConstantBuffer(XMMATRIX viewMatrix);
 
     // Get result
-    //UINT GetOpaqueLightGridSRVHeapOffset() { return m_oLightGrid.uSrvDescriptorOffset; }
-    //D3D12_GPU_VIRTUAL_ADDRESS GetOpaqueLightLightIndexList() { return m_oLightIndexList.GetGpuVirtualAddress(); }
-
-    //UINT GetTransparentLightGridSRVHeapOffset() { return m_tLightGrid.uSrvDescriptorOffset; }
-    //D3D12_GPU_VIRTUAL_ADDRESS GetTransparentLightIndexList() { return m_tLightIndexList.GetGpuVirtualAddress(); }
-
-    //D3D12_GPU_VIRTUAL_ADDRESS GetLightsBuffer() { return m_Lights.GetGpuVirtualAddress(); }
-
+    ColorBuffer& GetOpaqueLightGrid() { return m_oLightGrid; }
+    ColorBuffer& GetTransparentLightGrid() { return m_tLightGrid; }
+    StructuredBuffer& GetOpaqueLightIndex() { return m_oLightIndexList; }
+    StructuredBuffer& GetTransparentLightIndex() { return m_tLightIndexList; }
+    StructuredBuffer& GetLightBuffer() { return m_Lights; }
+    
     // Common Resources
 private:
     uint32_t m_TiledSize;
