@@ -115,8 +115,8 @@ float4 PSMain(PSInput input) : SV_TARGET
         }
         break;
         }
-        //lit.lightDiffuse += res.lightDiffuse;
-        //lit.lightSpecular += res.lightSpecular;
+        lit.lightDiffuse += res.lightDiffuse;
+        lit.lightSpecular += res.lightSpecular;
     }
 
     color = saturate(lit.lightDiffuse);
