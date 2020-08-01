@@ -61,9 +61,6 @@ namespace IGraphics
 			return g_DescriptorAllocator[Type].Allocate(Count);
 		}
 
-
-		//void WaitForGpu();
-		//void MoveToNextFrame();
 		UINT64 GetRenderFenceValue() { return m_fenceValue[s_FrameIndex]; }
 
 		float s_FrameTime = 0.0f;
@@ -84,19 +81,6 @@ namespace IGraphics
 		~GraphicsCore() = default;
 		GraphicsCore(const GraphicsCore&) = delete;
 		GraphicsCore& operator=(const GraphicsCore&) = delete;
-
-		// Temp resources for compute shader
-	public:
-		ComPtr<ID3D12CommandAllocator> m_computeCommandAllocator;
-		ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
-		ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
-
-		ComPtr<ID3D12Fence> m_computeFence;
-		uint64_t m_computeFenceValue;
-		HANDLE m_computeFenceEvent;
-
-		void InitializeCS(void);
-		void WaitForComputeShaderGpu(void);
 	};
 
 	extern GraphicsCore* g_GraphicsCore;

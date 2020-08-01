@@ -184,71 +184,66 @@ namespace IGraphics
 
 		ComPtr<IDXGISwapChain1> swapChain = nullptr;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) // Win32
-	ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
-		g_CommandManager->GetCommandQueue(), 
-		g_hwnd, 
-		&swapChainDesc, 
-		nullptr, 
-		nullptr, 
-		swapChain.GetAddressOf()));
+		ASSERT_SUCCEEDED(factory->CreateSwapChainForHwnd(
+			g_CommandManager->GetCommandQueue(),
+			g_hwnd,
+			&swapChainDesc,
+			nullptr,
+			nullptr,
+			swapChain.GetAddressOf()));
 #else // UWP
-	ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
+		ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChainForCoreWindow(g_CommandManager.GetCommandQueue(), (IUnknown*)GameCore::g_window.Get(), &swapChainDesc, nullptr, &s_SwapChain1));
 #endif
 
 
-//#if CONDITIONALLY_ENABLE_HDR_OUTPUT && defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
-//	{
-//		IDXGISwapChain4* swapChain = (IDXGISwapChain4*)s_SwapChain1;
-//		ComPtr<IDXGIOutput> output;
-//		ComPtr<IDXGIOutput6> output6;
-//		DXGI_OUTPUT_DESC1 outputDesc;
-//		UINT colorSpaceSupport;
-//
-//		// Query support for ST.2084 on the display and set the color space accordingly
-//		if (SUCCEEDED(swapChain->GetContainingOutput(&output)) &&
-//			SUCCEEDED(output.As(&output6)) &&
-//			SUCCEEDED(output6->GetDesc1(&outputDesc)) &&
-//			outputDesc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 &&
-//			SUCCEEDED(swapChain->CheckColorSpaceSupport(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020, &colorSpaceSupport)) &&
-//			(colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT) &&
-//			SUCCEEDED(swapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)))
-//		{
-//			g_bEnableHDROutput = true;
-//		}
-//	}
-//#endif
+		//#if CONDITIONALLY_ENABLE_HDR_OUTPUT && defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
+		//	{
+		//		IDXGISwapChain4* swapChain = (IDXGISwapChain4*)s_SwapChain1;
+		//		ComPtr<IDXGIOutput> output;
+		//		ComPtr<IDXGIOutput6> output6;
+		//		DXGI_OUTPUT_DESC1 outputDesc;
+		//		UINT colorSpaceSupport;
+		//
+		//		// Query support for ST.2084 on the display and set the color space accordingly
+		//		if (SUCCEEDED(swapChain->GetContainingOutput(&output)) &&
+		//			SUCCEEDED(output.As(&output6)) &&
+		//			SUCCEEDED(output6->GetDesc1(&outputDesc)) &&
+		//			outputDesc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 &&
+		//			SUCCEEDED(swapChain->CheckColorSpaceSupport(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020, &colorSpaceSupport)) &&
+		//			(colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT) &&
+		//			SUCCEEDED(swapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)))
+		//		{
+		//			g_bEnableHDROutput = true;
+		//		}
+		//	}
+		//#endif
 
-	if (swapChain == nullptr) return;
+		if (swapChain == nullptr) return;
 
-	ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
-	s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
+		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
+		s_FrameIndex = g_pSwapChain->GetCurrentBackBufferIndex();
 
-	// This sample does not support fullscreen transitions.
-	ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
+		// This sample does not support fullscreen transitions.
+		ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
 
-	for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
-	{
-		ComPtr<ID3D12Resource> DisplayPlane;
-		ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
-		g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
-	}
+		for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+		{
+			ComPtr<ID3D12Resource> DisplayPlane;
+			ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
+			g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+		}
 
-	// Common state was moved to GraphicsCommon.*
-	InitializeCommonState();
-	
-	s_PresentRS.Reset(4, 2);
-	s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
-	s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
-	s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
-	s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
-	s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
-	s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
-	s_PresentRS.Finalize(L"Present");
+		// Common state was moved to GraphicsCommon.*
+		InitializeCommonState();
 
-//		// This sample does not support fullscreen transitions.
-//		ASSERT_SUCCEEDED(factory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER));
-
-//		ASSERT_SUCCEEDED(swapChain.As(&g_pSwapChain));
+		s_PresentRS.Reset(4, 2);
+		s_PresentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 2);
+		s_PresentRS[1].InitAsConstants(0, 6, D3D12_SHADER_VISIBILITY_ALL);
+		s_PresentRS[2].InitAsBufferSRV(2, D3D12_SHADER_VISIBILITY_PIXEL);
+		s_PresentRS[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+		s_PresentRS.InitStaticSampler(0, SamplerLinearClampDesc);
+		s_PresentRS.InitStaticSampler(1, SamplerPointClampDesc);
+		s_PresentRS.Finalize(L"Present");
 	}
 
 	void GraphicsCore::Terminate(void)
@@ -386,45 +381,4 @@ namespace IGraphics
 	//	// Set the fence value for the next frame.
 	//	m_fenceValue[s_FrameIndex] = currentFenceValue + 1;
 	//}
-
-	// Temp Compute shader definitions
-	void GraphicsCore::InitializeCS(void)
-	{
-		// Create compute shader resource
-		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		SUCCEEDED(g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_computeCommandQueue)));
-
-		SUCCEEDED(g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator)));
-
-		SUCCEEDED(g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_computeFence)));
-		m_computeFenceValue = 1;
-
-		// Create an event handle to use for frame synchronization.
-		m_computeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_computeFenceEvent == nullptr)
-		{
-			SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
-		}
-
-		// CommandList
-		SUCCEEDED(g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_computeCommandList)));
-		m_computeCommandList->Close();
-	}
-
-	void GraphicsCore::WaitForComputeShaderGpu()
-	{
-		// Signal and increment the fence value.
-		const UINT64 fence = m_computeFenceValue;
-		SUCCEEDED(m_computeCommandQueue->Signal(m_computeFence.Get(), fence));
-		m_computeFenceValue++;
-
-		// Wait until the previous frame is finished.
-		if (m_computeFence->GetCompletedValue() < fence)
-		{
-			SUCCEEDED(m_computeFence->SetEventOnCompletion(fence, m_computeFenceEvent));
-			WaitForSingleObject(m_computeFenceEvent, INFINITE);
-		}
-	}
 }
