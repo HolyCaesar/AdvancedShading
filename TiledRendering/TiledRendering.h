@@ -19,6 +19,7 @@
 #include "DX12PipelineState.h"
 #include "LightCullingPass.h"
 #include "DX12ResStruct.h"
+#include "GUICore.h"
 
 // Experimental classes 
 #include "SimpleComputeShader.h"
