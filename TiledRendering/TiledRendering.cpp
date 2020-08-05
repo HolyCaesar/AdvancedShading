@@ -385,6 +385,9 @@ void TiledRendering::OnRender()
 	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
 	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, m_LightCullingPass.GetLightBuffer());
 
+
+	testHandle = gfxContext.GetResourceGpuHandle(1);
+
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{
 		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
@@ -398,6 +401,7 @@ void TiledRendering::OnRender()
 	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
 	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
+
 
 	ImGui::Render();
 	gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, imGuiHeap.Get());

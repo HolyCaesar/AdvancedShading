@@ -284,6 +284,7 @@ public:
     void ExecuteIndirect(CommandSignature& CommandSig, GpuBuffer& ArgumentBuffer, uint64_t ArgumentStartOffset = 0,
         uint32_t MaxCommands = 1, GpuBuffer* CommandCounterBuffer = nullptr, uint64_t CounterOffset = 0);
 
+    D3D12_GPU_DESCRIPTOR_HANDLE GetResourceGpuHandle(UINT OffsetInDynamicHeap);
 private:
 };
 
@@ -791,4 +792,10 @@ inline void CommandContext::InsertTimeStamp(ID3D12QueryHeap* pQueryHeap, uint32_
 inline void CommandContext::ResolveTimeStamps(ID3D12Resource* pReadbackHeap, ID3D12QueryHeap* pQueryHeap, uint32_t NumQueries)
 {
     m_CommandList->ResolveQueryData(pQueryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, pReadbackHeap, 0);
+}
+
+
+inline D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetResourceGpuHandle(UINT OffsetInDynamicHeap)
+{
+    return m_DynamicViewDescriptorHeap.GetResourceGraphicsHandle(OffsetInDynamicHeap);
 }

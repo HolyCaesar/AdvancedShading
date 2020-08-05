@@ -72,6 +72,12 @@ public:
 	    }
 	}
 
+	D3D12_GPU_DESCRIPTOR_HANDLE GetResourceGraphicsHandle(UINT Offset)
+	{
+		DescriptorHandle ret = m_FirstDescriptor + (m_CurrentOffset + Offset) * m_DescriptorSize;
+		return ret.GetGpuHandle();
+	}
+
 private:
 	// Static members
 	static const uint32_t kNumDescriptorsPerHeap = 1024;
@@ -160,4 +166,6 @@ private:
 
     // Mark all descriptors in the cache as stale and in need of re-uploading.
     void UnbindAllValid(void);
+
+
 };
