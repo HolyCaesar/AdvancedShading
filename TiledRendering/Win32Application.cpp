@@ -53,7 +53,6 @@ int Win32Application::Run(Win32FrameWork* pWinApp, HINSTANCE hInstance, int nCmd
 
     // Initialize the sample. OnInit is defined in each child-implementation of DXSample.
     pWinApp->OnInit();
-    IGuiCore::Init(pWinApp);
 
     ShowWindow(m_hwnd, nCmdShow);
 

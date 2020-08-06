@@ -6,10 +6,6 @@
 #include "DXUTSettingsDlg.h"
 #include "Win32FrameWork.h"
 
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
-
 #include "GraphicsCore.h"
 #include "Lights.h"
 #include "Camera.h"
@@ -46,14 +42,6 @@ public:
     virtual void OnDestroy();
 
     virtual void WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-
-    void ShowImGUI();
-
-    D3D12_GPU_DESCRIPTOR_HANDLE testHandle;
-
-private:
-    // Descriptor Heap for ImGUI
-    ComPtr<ID3D12DescriptorHeap> imGuiHeap;
 
 private:
     static const UINT   TextureWidth = 256;
@@ -143,7 +131,6 @@ private:
 private:
     void LoadPipeline();
     void LoadAssets();
-    void LoadImGUI();
     std::vector<UINT8> GenerateTextureData(); // For test purpose
 
     void PreDepthPass(GraphicsContext& gfxContext);

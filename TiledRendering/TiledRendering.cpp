@@ -18,58 +18,7 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 {
 }
 
-void TiledRendering::ShowImGUI()
-{
-	static bool show_demo_window = true;
-	static bool show_another_window = false;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-	// Start the Dear ImGui frame
-	ImGui_ImplDX12_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
-
-	IGuiCore::ShowMainGui();
-	return;
-
-	// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-	if (show_demo_window)
-		ImGui::ShowDemoWindow(&show_demo_window);
-
-	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-	{
-		static float f = 0.0f;
-		static int counter = 0;
-
-		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-		ImGui::Checkbox("Another Window", &show_another_window);
-
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-			counter++;
-		ImGui::SameLine();
-		ImGui::Text("counter = %d", counter);
-
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::End();
-	}
-
-	// 3. Show another simple window.
-	if (show_another_window)
-	{
-		ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-		ImGui::Text("Hello from another window!");
-		if (ImGui::Button("Close Me"))
-			show_another_window = false;
-		ImGui::End();
-	}
-}
 
 void TiledRendering::OnInit()
 {
@@ -85,17 +34,7 @@ void TiledRendering::LoadPipeline()
 
 	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
 	IGraphics::g_GraphicsCore->Initialize();
-
-	// Create descriptor heaps.
-	{
-		// Describe and create a render target view (RTV) descriptor heap.
-		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = 1;
-		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&imGuiHeap)) != S_OK);
-	}
+	IGuiCore::Init(nullptr);
 }
 
 // Load the sample assets.
@@ -273,8 +212,8 @@ void TiledRendering::LoadAssets()
 	GenerateLights(1);
 	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
-	// Load GUI assets
-	LoadImGUI();
+	// Gui Resource allocation
+	IGuiCore::CreateGuiTexture2DSRV(L"GuiOpaqueLightGrid", 80, 45, sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, IGuiCore::OpaqueLightGridSRV);
 }
 
 std::vector<UINT8> TiledRendering::GenerateTextureData()
@@ -313,27 +252,6 @@ std::vector<UINT8> TiledRendering::GenerateTextureData()
 	return data;
 }
 
-void TiledRendering::LoadImGUI()
-{
-	// Setup Dear ImGui context
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsClassic();
-
-	// Setup Platform/Renderer bindings
-	ImGui_ImplWin32_Init(Win32Application::GetHwnd());
-	ImGui_ImplDX12_Init(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), SWAP_CHAIN_BUFFER_COUNT,
-		DXGI_FORMAT_R8G8B8A8_UNORM, imGuiHeap.Get(),
-		imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
-		imGuiHeap->GetGPUDescriptorHandleForHeapStart());
-}
-
 // Update frame-based values.
 void TiledRendering::OnUpdate()
 {
@@ -355,7 +273,7 @@ void TiledRendering::OnUpdate()
 // Render the scene.
 void TiledRendering::OnRender()
 {
-	ShowImGUI();
+	IGuiCore::ShowImGUI();
 	////m_simpleCS.OnExecuteCS();
 
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
@@ -385,9 +303,6 @@ void TiledRendering::OnRender()
 	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
 	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, m_LightCullingPass.GetLightBuffer());
 
-
-	testHandle = gfxContext.GetResourceGpuHandle(1);
-
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{
 		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
@@ -403,10 +318,7 @@ void TiledRendering::OnRender()
 	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
 
 
-	ImGui::Render();
-	gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, imGuiHeap.Get());
-	//m_commandList->SetDescriptorHeaps(1, imGuiHeap.GetAddressOf());
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gfxContext.GetCommandList());
+	IGuiCore::RenderImGUI(gfxContext);
 
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
 

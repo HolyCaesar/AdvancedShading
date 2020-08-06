@@ -5,9 +5,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "imgui.h"
 #include "Win32FrameWork.h"
 #include "TiledRendering.h"
+#include "GraphicsCore.h"
+#include "CommandContext.h"
+#include "Utility.h"
 
 #include <ctype.h>          // toupper
 #include <limits.h>         // INT_MIN, INT_MAX
@@ -43,7 +45,110 @@ namespace IGuiCore
 	// App pointer
 	Win32FrameWork* g_appPtr = nullptr;
 
-	void Init(Win32FrameWork* appPtr) { g_appPtr = appPtr; }
+	//
+	// \Non Global variable 
+	//
+	// Descriptor Heap for ImGUI
+	ComPtr<ID3D12DescriptorHeap> imGuiHeap;
+	uint32_t g_heapPtr;
+	unordered_map<SRVList, DX12Resource> g_srvDict;
+
+	void Init(Win32FrameWork* appPtr) 
+	{ 
+		g_appPtr = appPtr; 
+		g_heapPtr = 1; // 0 slot is reserved for imGUI
+
+		// Create descriptor heaps.
+		{
+			// Describe and create a render target view (RTV) descriptor heap.
+			D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+
+			desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			desc.NumDescriptors = 255;
+			desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&imGuiHeap)) != S_OK);
+		}
+
+		// Setup Dear ImGui context
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+		// Setup Dear ImGui style
+		ImGui::StyleColorsDark();
+		//ImGui::StyleColorsClassic();
+
+		// Setup Platform/Renderer bindings
+		ImGui_ImplWin32_Init(Win32Application::GetHwnd());
+		ImGui_ImplDX12_Init(IGraphics::g_GraphicsCore->g_pD3D12Device.Get(), SWAP_CHAIN_BUFFER_COUNT,
+			DXGI_FORMAT_R8G8B8A8_UNORM, imGuiHeap.Get(),
+			imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+			imGuiHeap->GetGPUDescriptorHandleForHeapStart());
+	}
+
+	void ShowImGUI()
+	{
+		static bool show_demo_window = true;
+		static bool show_another_window = false;
+		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+		// Start the Dear ImGui frame
+		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+
+		IGuiCore::ShowMainGui();
+		return;
+
+		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+		if (show_demo_window)
+			ImGui::ShowDemoWindow(&show_demo_window);
+
+		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+		{
+			static float f = 0.0f;
+			static int counter = 0;
+
+			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+			ImGui::Checkbox("Another Window", &show_another_window);
+
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+				counter++;
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+			ImGui::End();
+		}
+
+		// 3. Show another simple window.
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+			ImGui::Text("Hello from another window!");
+			if (ImGui::Button("Close Me"))
+				show_another_window = false;
+			ImGui::End();
+		}
+	}
+
+	void RenderImGUI(GraphicsContext& gfxContext)
+	{
+		ImGui::Render();
+		gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, imGuiHeap.Get());
+		//m_commandList->SetDescriptorHeaps(1, imGuiHeap.GetAddressOf());
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gfxContext.GetCommandList());
+	}
+
 	void Terminate() { g_appPtr = nullptr; }
 
 	// Control Variables
@@ -245,7 +350,11 @@ namespace IGuiCore
 			ImGui::Text("This is something");
 			auto appPtr = reinterpret_cast<TiledRendering*>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-			ImGui::Image((ImTextureID)appPtr->testHandle.ptr, ImVec2(80, 45));
+			CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(
+				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+				OpaqueLightGridSRV,
+				32);
+			ImGui::Image((ImTextureID)srvHandle.ptr, ImVec2(80, 45));
 			ImGui::TreePop();
 		}
 	}
@@ -346,6 +455,49 @@ namespace IGuiCore
 		ImGui::End();
 	}
 
+	void CreateGuiTexture2DSRV(wstring name, uint32_t width, uint32_t height,
+		uint32_t elementSize, DXGI_FORMAT format, SRVList srvOffset)
+	{
+		D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&resourceDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			IID_PPV_ARGS(&g_srvDict[srvOffset].pResource)));
 
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
+			imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+			srvOffset,
+			32);
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(g_srvDict[srvOffset].pResource.Get(), &srvDesc, srvHandle);
+		g_srvDict[srvOffset].uSrvDescriptorOffset = g_heapPtr;
+		++g_heapPtr;
+
+		//D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		//uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+		//uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		//uavDesc.Buffer.FirstElement = 0;
+		//uavDesc.Buffer.NumElements = width * height;
+		//uavDesc.Buffer.StructureByteStride = elementSize;
+		//uavDesc.Buffer.CounterOffsetInBytes = width * height * elementSize;
+		//uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		//CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(
+		//	imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+		//	srvOffset,
+		//	32);
+		//IGraphics::g_GraphicsCore->g_pD3D12Device->CreateUnorderedAccessView(pResource.pResource.Get(), nullptr, nullptr, uavHandle);
+		//pResource.mUsageState = D3D12_RESOURCE_STATE_COMMON;
+		//pResource.uUavDescriptorOffset = g_heapPtr;
+		//++g_heapPtr;
+		
+		g_srvDict[srvOffset].pResource->SetName(name.c_str());
+	}
 }
