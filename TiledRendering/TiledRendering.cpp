@@ -315,7 +315,16 @@ void TiledRendering::OnRender()
 
 	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
+	gfxContext.CopyBuffer(IGuiCore::g_srvDict[IGuiCore::OpaqueLightGridSRV], m_LightCullingPass.GetOpaqueLightGrid());
+	gfxContext.TransitionResource(IGuiCore::g_srvDict[IGuiCore::OpaqueLightGridSRV], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
+
+
+
+
+
+
 
 
 	IGuiCore::RenderImGUI(gfxContext);

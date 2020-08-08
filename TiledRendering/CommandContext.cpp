@@ -338,6 +338,47 @@ void CommandContext::TransitionResource(GpuResource& Resource, D3D12_RESOURCE_ST
         FlushResourceBarriers();
 }
 
+void CommandContext::TransitionResource(DX12Resource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
+{
+    D3D12_RESOURCE_STATES OldState = Resource.mUsageState;
+
+    if (m_Type == D3D12_COMMAND_LIST_TYPE_COMPUTE)
+    {
+        ASSERT((OldState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == OldState);
+        ASSERT((NewState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == NewState);
+    }
+
+    if (OldState != NewState)
+    {
+        ASSERT(m_NumBarriersToFlush < 16, "Exceeded arbitrary limit on buffered barriers");
+        D3D12_RESOURCE_BARRIER& BarrierDesc = m_ResourceBarrierBuffer[m_NumBarriersToFlush++];
+
+        BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        BarrierDesc.Transition.pResource = Resource.pResource.Get();
+        BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        BarrierDesc.Transition.StateBefore = OldState;
+        BarrierDesc.Transition.StateAfter = NewState;
+
+        // Check to see if we already started the transition
+        //if (NewState == Resource.m_TransitioningState)
+        //{
+        //    BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
+        //    Resource.m_TransitioningState = (D3D12_RESOURCE_STATES)-1;
+        //}
+        //else BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+        Resource.mUsageState = NewState;
+    }
+    //else if (NewState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+    //{
+    //    InsertUAVBarrier(Resource, FlushImmediate);
+    //}
+
+    if (FlushImmediate || m_NumBarriersToFlush == 16)
+        FlushResourceBarriers();
+}
+
 void CommandContext::BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
     // If it's already transitioning, finish that transition

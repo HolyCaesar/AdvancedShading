@@ -12,6 +12,7 @@
 #include "GraphicsCore.h"
 #include "CommandSignature.h"
 #include "DX12GraphicsCommon.h"
+#include "DX12ResStruct.h"
 //#include "../MiniEngineMath/Common.h"
 #include "VectorMath.h"
 
@@ -110,6 +111,7 @@ public:
     }
 
     void CopyBuffer(GpuResource& Dest, GpuResource& Src);
+    void CopyBuffer(DX12Resource& Dest, GpuResource& Src);
     void CopyBufferRegion(
         GpuResource& Dest,
         size_t DestOffset,
@@ -140,6 +142,11 @@ public:
     
     void TransitionResource(
         GpuResource& Resource, 
+        D3D12_RESOURCE_STATES NewState, 
+        bool FlushImmediate = false);
+
+    void TransitionResource(
+        DX12Resource& Resource,
         D3D12_RESOURCE_STATES NewState, 
         bool FlushImmediate = false);
 
@@ -760,6 +767,14 @@ inline void CommandContext::CopyBuffer(GpuResource& Dest, GpuResource& Src)
     TransitionResource(Src, D3D12_RESOURCE_STATE_COPY_SOURCE);
     FlushResourceBarriers();
     m_CommandList->CopyResource(Dest.GetResource(), Src.GetResource());
+}
+
+inline void CommandContext::CopyBuffer(DX12Resource& Dest, GpuResource& Src)
+{
+    TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST);
+    TransitionResource(Src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    FlushResourceBarriers();
+    m_CommandList->CopyResource(Dest.pResource.Get(), Src.GetResource());
 }
 
 inline void CommandContext::CopyBufferRegion(GpuResource& Dest, size_t DestOffset, GpuResource& Src, size_t SrcOffset, size_t NumBytes)

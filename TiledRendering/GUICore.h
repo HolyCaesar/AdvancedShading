@@ -19,6 +19,7 @@ namespace IGuiCore
 	{
 		OpaqueLightGridSRV = 1
 	};
+	extern unordered_map<SRVList, DX12Resource> g_srvDict;
 
 
 	extern Win32FrameWork* g_appPtr;

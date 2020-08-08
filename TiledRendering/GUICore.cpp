@@ -352,9 +352,13 @@ namespace IGuiCore
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 			CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
-				OpaqueLightGridSRV,
+				1,
 				32);
-			ImGui::Image((ImTextureID)srvHandle.ptr, ImVec2(80, 45));
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImGuiIO& io = ImGui::GetIO();
+			ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
+			ImGui::Image((ImTextureID)srvHandle.ptr, ImVec2(128, 128), uv_min, uv_max);
 			ImGui::TreePop();
 		}
 	}
@@ -458,7 +462,7 @@ namespace IGuiCore
 	void CreateGuiTexture2DSRV(wstring name, uint32_t width, uint32_t height,
 		uint32_t elementSize, DXGI_FORMAT format, SRVList srvOffset)
 	{
-		D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
 		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
