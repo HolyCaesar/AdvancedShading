@@ -53,9 +53,280 @@ namespace IGuiCore
 	uint32_t g_heapPtr;
 	unordered_map<SRVList, DX12Resource> g_srvDict;
 
-	void Init(Win32FrameWork* appPtr) 
-	{ 
-		g_appPtr = appPtr; 
+
+	std::vector<UINT8> GenerateTextureData()
+	{
+		uint32_t TextureWidth = 80;
+		uint32_t TextureHeight = 45;
+		uint32_t TexturePixelSize = 4;
+
+		const UINT rowPitch = TextureWidth * TexturePixelSize;
+		const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
+		const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
+		const UINT textureSize = rowPitch * TextureHeight;
+
+		std::vector<UINT8> data(textureSize);
+		UINT8* pData = &data[0];
+
+		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
+		{
+			UINT x = n % rowPitch;
+			UINT y = n / rowPitch;
+			UINT i = x / cellPitch;
+			UINT j = y / cellHeight;
+
+			if (i % 2 == j % 2)
+			{
+				pData[n] = 0x00;        // R
+				pData[n + 1] = 0x00;    // G
+				pData[n + 2] = 0x00;    // B
+				pData[n + 3] = 0xff;    // A
+			}
+			else
+			{
+				pData[n] = 0xff;        // R
+				pData[n + 1] = 0xff;    // G
+				pData[n + 2] = 0xff;    // B
+				pData[n + 3] = 0xff;    // A
+			}
+		}
+
+		return data;
+	}
+
+	void TestCode()
+	{
+		ComPtr<ID3D12Resource> textureUploadHeap;
+		uint32_t TextureWidth = 80;
+		uint32_t TextureHeight = 45;
+		uint32_t TexturePixelSize = 4;
+
+		// Describe and create a Texture2D.
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.MipLevels = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.Width = TextureWidth;
+		textureDesc.Height = TextureHeight;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&g_srvDict[TestSRV].pResource)));
+
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(g_srvDict[TestSRV].pResource.Get(), 0, 1);
+
+		// Create the GPU upload buffer.
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&textureUploadHeap)));
+
+		// Copy data to the intermediate upload heap and then schedule a copy 
+		// from the upload heap to the Texture2D.
+		std::vector<UINT8> texture = GenerateTextureData();
+
+		D3D12_SUBRESOURCE_DATA textureData = {};
+		textureData.pData = &texture[0];
+		textureData.RowPitch = TextureWidth * TexturePixelSize;
+		textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+
+		// Create a temporary command queue to do the copy with
+		ID3D12Fence* fence = NULL;
+		HRESULT hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		HANDLE event = CreateEvent(0, 0, 0, 0);
+		IM_ASSERT(event != NULL);
+
+		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.NodeMask = 1;
+
+		ID3D12CommandQueue* cmdQueue = NULL;
+		hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&cmdQueue));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		ID3D12CommandAllocator* cmdAlloc = NULL;
+		hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		ID3D12GraphicsCommandList* cmdList = NULL;
+		hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc, NULL, IID_PPV_ARGS(&cmdList));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		//cmdList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, NULL);
+		//cmdList->ResourceBarrier(1, &barrier);
+
+		UpdateSubresources(cmdList, g_srvDict[TestSRV].pResource.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_srvDict[TestSRV].pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+
+		hr = cmdList->Close();
+		IM_ASSERT(SUCCEEDED(hr));
+
+		// Execute the copy
+		cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
+		hr = cmdQueue->Signal(fence, 1);
+		IM_ASSERT(SUCCEEDED(hr));
+
+		// Wait for everything to complete
+		fence->SetEventOnCompletion(1, event);
+		WaitForSingleObject(event, INFINITE);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
+			imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+			TestSRV,
+			32);
+
+		// Describe and create a SRV for the texture.
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = textureDesc.Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(g_srvDict[TestSRV].pResource.Get(), &srvDesc, srvHandle);
+
+		// Tear down our temporary command queue and release the upload resource
+		cmdList->Release();
+		cmdAlloc->Release();
+		cmdQueue->Release();
+		CloseHandle(event);
+		fence->Release();
+	}
+
+	void TestCopy()
+	{
+		uint32_t TextureWidth = 80;
+		uint32_t TextureHeight = 45;
+		uint32_t TexturePixelSize = 4;
+
+		// Describe and create a Texture2D.
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.MipLevels = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.Width = TextureWidth;
+		textureDesc.Height = TextureHeight;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&g_srvDict[TestSRV1].pResource)));
+
+
+		// Create a temporary command queue to do the copy with
+		ID3D12Fence* fence = NULL;
+		HRESULT hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		HANDLE event = CreateEvent(0, 0, 0, 0);
+		IM_ASSERT(event != NULL);
+
+		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.NodeMask = 1;
+
+		ID3D12CommandQueue* cmdQueue = NULL;
+		hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&cmdQueue));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		ID3D12CommandAllocator* cmdAlloc = NULL;
+		hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
+		IM_ASSERT(SUCCEEDED(hr));
+
+		ID3D12GraphicsCommandList* cmdList = NULL;
+		hr = IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc, NULL, IID_PPV_ARGS(&cmdList));
+		IM_ASSERT(SUCCEEDED(hr));
+
+
+
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_srvDict[TestSRV].pResource.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_SOURCE));
+		D3D12_TEXTURE_COPY_LOCATION DestLocation =
+		{
+			g_srvDict[TestSRV1].pResource.Get(),
+			D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+			0	
+		};
+
+		D3D12_TEXTURE_COPY_LOCATION SrcLocation =
+		{
+			g_srvDict[TestSRV].pResource.Get(),
+			D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+			0
+		};
+
+		cmdList->CopyTextureRegion(&DestLocation, 0, 0, 0, &SrcLocation, nullptr);
+
+
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_srvDict[TestSRV].pResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_srvDict[TestSRV1].pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+
+
+		hr = cmdList->Close();
+		IM_ASSERT(SUCCEEDED(hr));
+
+		// Execute the copy
+		cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
+		hr = cmdQueue->Signal(fence, 1);
+		IM_ASSERT(SUCCEEDED(hr));
+
+		// Wait for everything to complete
+		fence->SetEventOnCompletion(1, event);
+		WaitForSingleObject(event, INFINITE);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
+			imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+			TestSRV1,
+			32);
+
+		// Describe and create a SRV for the texture.
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = textureDesc.Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(g_srvDict[TestSRV1].pResource.Get(), &srvDesc, srvHandle);
+
+		// Tear down our temporary command queue and release the upload resource
+		cmdList->Release();
+		cmdAlloc->Release();
+		cmdQueue->Release();
+		CloseHandle(event);
+		fence->Release();
+	}
+
+
+
+
+
+
+
+
+
+	void Init(Win32FrameWork* appPtr)
+	{
+		g_appPtr = appPtr;
 		g_heapPtr = 1; // 0 slot is reserved for imGUI
 
 		// Create descriptor heaps.
@@ -86,6 +357,9 @@ namespace IGuiCore
 			DXGI_FORMAT_R8G8B8A8_UNORM, imGuiHeap.Get(),
 			imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
 			imGuiHeap->GetGPUDescriptorHandleForHeapStart());
+
+		TestCode();
+		TestCopy();
 	}
 
 	void ShowImGUI()
@@ -345,20 +619,25 @@ namespace IGuiCore
 			return;
 		}
 
-		if (ImGui::TreeNode("Grid Frustum Pass" ))
+		if (ImGui::TreeNode("Grid Frustum Pass"))
 		{
 			ImGui::Text("This is something");
 			auto appPtr = reinterpret_cast<TiledRendering*>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 			CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
-				1,
+				2,
+				32);
+			CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle1(
+				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+				3,
 				32);
 			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
 			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
 			ImGuiIO& io = ImGui::GetIO();
 			ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
 			ImGui::Image((ImTextureID)srvHandle.ptr, ImVec2(128, 128), uv_min, uv_max);
+			ImGui::Image((ImTextureID)srvHandle1.ptr, ImVec2(128, 128), uv_min, uv_max);
 			ImGui::TreePop();
 		}
 	}
@@ -501,7 +780,7 @@ namespace IGuiCore
 		//pResource.mUsageState = D3D12_RESOURCE_STATE_COMMON;
 		//pResource.uUavDescriptorOffset = g_heapPtr;
 		//++g_heapPtr;
-		
+
 		g_srvDict[srvOffset].pResource->SetName(name.c_str());
 	}
 }

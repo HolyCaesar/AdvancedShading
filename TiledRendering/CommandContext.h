@@ -119,6 +119,7 @@ public:
         size_t SrcOffset,
         size_t NumBytes);
     void CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex);
+    void CopySubresource(DX12Resource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex);
     void CopyCounter(GpuResource& Dest, size_t DestOffset, StructuredBuffer& Src);
     void ResetCounter(StructuredBuffer& Buf, uint32_t Value = 0);
 

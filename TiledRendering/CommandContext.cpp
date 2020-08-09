@@ -486,6 +486,27 @@ void CommandContext::CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuRe
     m_CommandList->CopyTextureRegion(&DestLocation, 0, 0, 0, &SrcLocation, nullptr);
 }
 
+void CommandContext::CopySubresource(DX12Resource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex)
+{
+    FlushResourceBarriers();
+
+    D3D12_TEXTURE_COPY_LOCATION DestLocation =
+    {
+        Dest.pResource.Get(),
+        D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+        DestSubIndex
+    };
+
+    D3D12_TEXTURE_COPY_LOCATION SrcLocation =
+    {
+        Src.GetResource(),
+        D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+        SrcSubIndex
+    };
+
+    m_CommandList->CopyTextureRegion(&DestLocation, 0, 0, 0, &SrcLocation, nullptr);
+}
+
 void CommandContext::InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src)
 {
     CommandContext& Context = CommandContext::Begin();

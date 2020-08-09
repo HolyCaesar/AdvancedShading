@@ -17,7 +17,9 @@ namespace IGuiCore
 	// Texture Resource
 	enum SRVList
 	{
-		OpaqueLightGridSRV = 1
+		OpaqueLightGridSRV = 1,
+		TestSRV = 2,
+		TestSRV1 = 3
 	};
 	extern unordered_map<SRVList, DX12Resource> g_srvDict;
 
