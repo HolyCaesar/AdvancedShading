@@ -25,6 +25,7 @@ void TiledRendering::OnInit()
 	LoadPipeline();
 	LoadAssets();
 	//m_simpleCS.OnInit();
+
 }
 
 // Load the rendering pipeline dependencies.
@@ -34,7 +35,7 @@ void TiledRendering::LoadPipeline()
 
 	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
 	IGraphics::g_GraphicsCore->Initialize();
-	IGuiCore::Init(nullptr);
+	IGuiCore::Init(this);
 }
 
 // Load the sample assets.
@@ -324,12 +325,6 @@ void TiledRendering::OnRender()
 	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
 
 
-
-
-
-
-
-
 	IGuiCore::RenderImGUI(gfxContext);
 
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
@@ -379,12 +374,15 @@ void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
 }
 
 // Lights generation
-void TiledRendering::GenerateLights(uint32_t numLights)
+void TiledRendering::GenerateLights(uint32_t numLights,
+	XMFLOAT3 minPoint, XMFLOAT3 maxPoint,
+	float minLightRange, float maxLightRange,
+	float minSpotLightAngle, float maxSpotLightAngle)
 {
+	srand(time(0));
+
 	uint32_t lightsPerDimension = static_cast<uint32_t>(ceil(cbrt(numLights)));
 	// TODO hard code the light spawing space here
-	XMFLOAT3 minPoint(-10.0f, -10.0f, -10.0f);
-	XMFLOAT3 maxPoint(10.0f, 10.0f, 10.0f);
 	XMFLOAT3 bounds(maxPoint.x - minPoint.x, maxPoint.y - minPoint.y, maxPoint.z - minPoint.z);
 
 	m_lightsList.clear();
@@ -410,9 +408,9 @@ void TiledRendering::GenerateLights(uint32_t numLights)
 		//light.m_PositionWS = XMFLOAT4(pos.x, pos.y, pos.z, 1.0f);
 
 		// TODO may need a uniform random generator here
-		light.m_Color.x = max(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
-		light.m_Color.y = max(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
-		light.m_Color.z = max(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.x = min(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.y = min(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.z = min(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
 		light.m_Color.w = 1.0f;
 
 		light.m_DirectionWS = XMFLOAT4(
@@ -420,15 +418,15 @@ void TiledRendering::GenerateLights(uint32_t numLights)
 			-light.m_PositionWS.y,
 			-light.m_PositionWS.z,
 			0.0f);
-		float minRange(0.1f), maxRange(1000.0f);
-		light.m_Range = minRange + (1.0f * rand() / INT_MAX) * maxRange;
-		float minSpotAngle(0.1f * XM_PI / 180.0f), maxSpotAngle(30.0f * XM_PI / 180.0f);
-		light.m_SpotlightAngle = minSpotAngle + (1.0f * rand() / INT_MAX) * maxSpotAngle;
+
+		light.m_Range = minLightRange + (1.0f * rand() / INT_MAX) * maxLightRange;
+		light.m_SpotlightAngle = minSpotLightAngle + (1.0f * rand() / INT_MAX) * maxSpotLightAngle;
 
 		// Use probablity to generate three different types lights
 		float fLightPropability = (1.0f * rand() / INT_MAX);
 		// TODO hard coding the light types for debugging purpose
 		light.m_Type = Light::LightType::Point;
+
 
 
 		// Test
@@ -465,4 +463,5 @@ void TiledRendering::UpdateLightsBuffer()
 		XMVECTOR dirVecWS = XMLoadFloat4(&light.m_DirectionWS);
 		XMStoreFloat4(&light.m_DirectionVS, XMVector4Transform(dirVecWS, viewMatrix));
 	}
+	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 }

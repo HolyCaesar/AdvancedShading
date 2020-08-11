@@ -11,6 +11,7 @@
 #include "CommandContext.h"
 #include "Utility.h"
 
+#include <iostream>
 #include <ctype.h>          // toupper
 #include <limits.h>         // INT_MIN, INT_MAX
 #include <math.h>           // sqrtf, powf, cosf, sinf, floorf, ceilf
@@ -42,6 +43,7 @@
 
 namespace IGuiCore
 {
+	using namespace std;
 	// App pointer
 	Win32FrameWork* g_appPtr = nullptr;
 
@@ -54,19 +56,22 @@ namespace IGuiCore
 	unordered_map<SRVList, DX12Resource> g_srvDict;
 
 
-	std::vector<UINT8> GenerateTextureData()
+	//std::vector<UINT8> GenerateTextureData()
+	std::vector<float> GenerateTextureData()
 	{
 		uint32_t TextureWidth = 80;
 		uint32_t TextureHeight = 45;
-		uint32_t TexturePixelSize = 4;
+		uint32_t TexturePixelSize = 2;
 
 		const UINT rowPitch = TextureWidth * TexturePixelSize;
 		const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
 		const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
 		const UINT textureSize = rowPitch * TextureHeight;
 
-		std::vector<UINT8> data(textureSize);
-		UINT8* pData = &data[0];
+		//std::vector<UINT8> data(textureSize);
+		std::vector<float> data(textureSize);
+		//UINT8* pData = &data[0];
+		float* pData = &data[0];
 
 		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
 		{
@@ -104,7 +109,8 @@ namespace IGuiCore
 		// Describe and create a Texture2D.
 		D3D12_RESOURCE_DESC textureDesc = {};
 		textureDesc.MipLevels = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		//textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.Format = DXGI_FORMAT_R32G32_UINT;
 		textureDesc.Width = TextureWidth;
 		textureDesc.Height = TextureHeight;
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -134,7 +140,8 @@ namespace IGuiCore
 
 		// Copy data to the intermediate upload heap and then schedule a copy 
 		// from the upload heap to the Texture2D.
-		std::vector<UINT8> texture = GenerateTextureData();
+		//std::vector<UINT8> texture = GenerateTextureData();
+		std::vector<float> texture = GenerateTextureData();
 
 		D3D12_SUBRESOURCE_DATA textureData = {};
 		textureData.pData = &texture[0];
@@ -192,7 +199,8 @@ namespace IGuiCore
 
 		// Describe and create a SRV for the texture.
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 0, 0, 0);
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
@@ -215,7 +223,8 @@ namespace IGuiCore
 		// Describe and create a Texture2D.
 		D3D12_RESOURCE_DESC textureDesc = {};
 		textureDesc.MipLevels = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		//textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.Format = DXGI_FORMAT_R32G32_UINT;
 		textureDesc.Width = TextureWidth;
 		textureDesc.Height = TextureHeight;
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -224,14 +233,17 @@ namespace IGuiCore
 		textureDesc.SampleDesc.Quality = 0;
 		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&g_srvDict[TestSRV1].pResource)));
+		//ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&textureDesc,
+		//	D3D12_RESOURCE_STATE_COPY_DEST,
+		//	nullptr,
+		//	IID_PPV_ARGS(&g_srvDict[TestSRV1].pResource)));
 
+
+		CreateGuiTexture2DSRV(L"TestSao", TextureWidth, TextureHeight,
+			sizeof(XMFLOAT4), textureDesc.Format, TestSRV1);
 
 		// Create a temporary command queue to do the copy with
 		ID3D12Fence* fence = NULL;
@@ -302,7 +314,8 @@ namespace IGuiCore
 
 		// Describe and create a SRV for the texture.
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 0, 0, 0);
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
@@ -323,9 +336,9 @@ namespace IGuiCore
 
 
 
-
 	void Init(Win32FrameWork* appPtr)
 	{
+		//g_appPtr.reset(appPtr);
 		g_appPtr = appPtr;
 		g_heapPtr = 1; // 0 slot is reserved for imGUI
 
@@ -499,6 +512,8 @@ namespace IGuiCore
 			return;
 		}
 
+		ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
+
 		/**************************/
 		// Menu Bar
 		/**************************/
@@ -621,8 +636,10 @@ namespace IGuiCore
 
 		if (ImGui::TreeNode("Grid Frustum Pass"))
 		{
-			ImGui::Text("This is something");
+			ImGui::Separator();
+			ImGui::Text("Resources Preview");
 			auto appPtr = reinterpret_cast<TiledRendering*>(g_appPtr);
+			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 			CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
@@ -632,12 +649,52 @@ namespace IGuiCore
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
 				3,
 				32);
+			CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle2(
+				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+				1,
+				32);
 			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
 			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
 			ImGuiIO& io = ImGui::GetIO();
 			ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
 			ImGui::Image((ImTextureID)srvHandle.ptr, ImVec2(128, 128), uv_min, uv_max);
+			ImGui::Image((ImTextureID)srvHandle2.ptr, ImVec2(128, 128), uv_min, uv_max);
 			ImGui::Image((ImTextureID)srvHandle1.ptr, ImVec2(128, 128), uv_min, uv_max);
+
+			ImGui::Separator();
+			bool hasChange = false;
+			static int LightCnt = 1;
+			ImGui::Text("Light Number:");
+			hasChange = hasChange || ImGui::SliderInt("", &LightCnt, 1, 10); // LightCnt cannot be lower than 0
+			
+			static float LowerLightSpawnPtec4a[4] = { -10.0f, -10.0f, -10.0f, 0.0f };
+			static float UpperLightSpawnPtec4a[4] = { 10.0f, 10.0f, 10.0f, 0.0f };
+			hasChange = hasChange || ImGui::InputFloat3("Light Spawn Lower Point:", LowerLightSpawnPtec4a);
+			hasChange = hasChange || ImGui::InputFloat3("Light Spawn Upper Point:", UpperLightSpawnPtec4a);
+
+			static float MinLightRange = 0.0f;
+			static float MaxLightRange = 100.0f;
+			hasChange = hasChange || ImGui::InputFloat("Min Light Range", &MinLightRange, 0.01f, 10.0f, "%.3f", 0);
+			if (MaxLightRange < MinLightRange) MaxLightRange = MinLightRange;
+			hasChange = hasChange || ImGui::InputFloat("Max Light Range", &MaxLightRange, 0.01f, 10.0f, "%.3f");
+
+			static float MinSpotLightAngle = 0.0f;
+			static float MaxSpotLightAngle = 30.0f;
+			hasChange = hasChange || ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 0.01f, 90.0f, "%.3f");
+			if (MaxSpotLightAngle < MinSpotLightAngle) MaxSpotLightAngle = MinSpotLightAngle;
+			hasChange = hasChange || ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 0.01f, 90.0f, "%.3f");
+
+			if (hasChange)
+			{
+				// TODO update light forward rendering code
+				appPtr->GenerateLights((uint32_t)LightCnt,
+					XMFLOAT3(LowerLightSpawnPtec4a[0], LowerLightSpawnPtec4a[1], LowerLightSpawnPtec4a[2]),
+					XMFLOAT3(UpperLightSpawnPtec4a[0], UpperLightSpawnPtec4a[1], UpperLightSpawnPtec4a[2]),
+					MinLightRange, MaxLightRange, MinSpotLightAngle, MaxSpotLightAngle);
+
+				hasChange = false;
+			}
+
 			ImGui::TreePop();
 		}
 	}
@@ -751,7 +808,8 @@ namespace IGuiCore
 			IID_PPV_ARGS(&g_srvDict[srvOffset].pResource)));
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 0, 0, 0);
 		srvDesc.Format = format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
