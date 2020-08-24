@@ -8,6 +8,7 @@
 
 class Win32FrameWork;
 class GraphicsContext;
+class DX12TextureConverter;
 
 namespace IGuiCore
 {
@@ -25,6 +26,7 @@ namespace IGuiCore
 
 
 	extern Win32FrameWork* g_appPtr;
+	extern DX12TextureConverter* g_imGuiTexConverter;
 
 	extern bool g_bEnableGui;
 	extern bool g_bShowMainMenuBar;
@@ -47,6 +49,5 @@ namespace IGuiCore
 	void ShowMainMenuFile();
 	void CreateGuiTexture2DSRV(wstring name, uint32_t width, uint32_t height,
 		uint32_t elementSize, DXGI_FORMAT format, SRVList);
-
 }
 
