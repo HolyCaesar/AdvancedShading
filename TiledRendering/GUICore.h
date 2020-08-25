@@ -28,10 +28,9 @@ namespace IGuiCore
 	extern Win32FrameWork* g_appPtr;
 	extern DX12TextureConverter* g_imGuiTexConverter;
 
+
 	extern bool g_bEnableGui;
 	extern bool g_bShowMainMenuBar;
-
-
 
 	void Init(Win32FrameWork* appPtr);
 	void ShowImGUI();

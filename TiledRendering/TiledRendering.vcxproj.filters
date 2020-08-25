@@ -25,14 +25,14 @@
     <Filter Include="MiniEngineMath">
       <UniqueIdentifier>{c898ba78-9cc6-4181-8325-f70357a4c89e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Model">
-      <UniqueIdentifier>{db7a1564-dad2-4ce4-8f5f-22936cb6036a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="MyTemplateCodes">
       <UniqueIdentifier>{cbe89c0b-be4b-4757-85f8-a055ff1d01ab}</UniqueIdentifier>
     </Filter>
     <Filter Include="TiledForwardRendering">
       <UniqueIdentifier>{6e462f9e-168f-4dff-a2a2-a8935c351de0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MyTemplateCodes\Model">
+      <UniqueIdentifier>{db7a1564-dad2-4ce4-8f5f-22936cb6036a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -88,7 +88,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Model\Model.cpp">
-      <Filter>Model</Filter>
+      <Filter>MyTemplateCodes\Model</Filter>
     </ClCompile>
     <ClCompile Include="GpuResource.cpp">
       <Filter>Source Files</Filter>
@@ -237,10 +237,10 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Model\Model.h">
-      <Filter>Model</Filter>
+      <Filter>MyTemplateCodes\Model</Filter>
     </ClInclude>
     <ClInclude Include="..\Model\OBJ_Loader.h">
-      <Filter>Model</Filter>
+      <Filter>MyTemplateCodes\Model</Filter>
     </ClInclude>
     <ClInclude Include="GpuResource.h">
       <Filter>Header Files</Filter>
@@ -323,6 +323,9 @@
   <ItemGroup>
     <None Include="..\MiniEngineMath\Functions.inl">
       <Filter>MiniEngineMath</Filter>
+    </None>
+    <None Include="TextureConverterEnum.hlsli">
+      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
 </Project>
