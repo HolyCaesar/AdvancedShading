@@ -143,6 +143,18 @@ void DX12RootSignature::Finalize(const std::wstring& name, D3D12_ROOT_SIGNATURE_
 		ASSERT_SUCCEEDED(D3D12SerializeRootSignature(&RootDesc, D3D_ROOT_SIGNATURE_VERSION_1,
 			pOutBlob.GetAddressOf(), pErrorBlob.GetAddressOf()));
 
+#ifdef _DEBUG
+		if (pErrorBlob)
+		{
+			const char* errorMsg = (const char*)pErrorBlob->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 150; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
+		}
+#endif
+
 		ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRootSignature(1,
 			pOutBlob->GetBufferPointer(), pOutBlob->GetBufferSize(),
 			IID_PPV_ARGS(&m_Signature)));

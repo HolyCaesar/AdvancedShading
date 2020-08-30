@@ -7,9 +7,6 @@
 
 #include "Win32FrameWork.h"
 #include "TiledRendering.h"
-#include "GraphicsCore.h"
-#include "CommandContext.h"
-#include "Utility.h"
 
 #include <iostream>
 #include <ctype.h>          // toupper
@@ -18,7 +15,6 @@
 #include <stdio.h>          // vsnprintf, sscanf, printf
 #include <stdlib.h>         // NULL, malloc, free, atoi
 
-#include "TextureConverterEnum.hlsli"
 
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>         // intptr_t
@@ -376,6 +372,8 @@ namespace IGuiCore
 
 		TestCode();
 		TestCopy();
+
+		g_imGuiTexConverter = new DX12TextureConverter();
 	}
 
 	void ShowImGUI()
@@ -439,7 +437,11 @@ namespace IGuiCore
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gfxContext.GetCommandList());
 	}
 
-	void Terminate() { g_appPtr = nullptr; }
+	void Terminate() 
+	{ 
+		g_appPtr = nullptr; 
+		delete g_imGuiTexConverter;
+	}
 
 	// Control Variables
 	bool g_bEnableGui = true;
@@ -846,318 +848,294 @@ namespace IGuiCore
 	}
 }
 
-namespace IGuiCore
+
+//
+// \ DX12TextureConverter
+//
+DX12TextureConverter::DX12TextureConverter()
 {
-	class DX12TextureConverter
+	m_constantBufferData.worldMatrix = XMMatrixIdentity();
+	m_constantBufferData.viewMatrix = XMMatrixIdentity();
+	m_constantBufferData.worldViewProjMatrix = XMMatrixIdentity();
+
+	// Create descriptor heaps.
 	{
-	public:
-		DX12TextureConverter();
-		~DX12TextureConverter();
+		// Describe and create a render target view (RTV) descriptor heap.
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = 255;
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
-		void Convert(GraphicsContext& gfxContext);
-
-		void AddInputRes(
-			string name, uint32_t width, uint32_t height, uint32_t elementSize,
-			DXGI_FORMAT format, GpuResource* input);
-		HRESULT Finalize();
-
-	private:
-		CD3DX12_VIEWPORT	m_viewport;
-		CD3DX12_RECT		m_scissorRect;
-
-		DX12RootSignature	m_sceneRootSignature;
-		unordered_map<string, GraphicsPSO> m_psoContainer;
-
-		unordered_map<string, GpuResource*> m_inputRes;
-		unordered_map<string, DX12Resource> m_outputRes;
-
-		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		uint32_t m_rtvHeapPtr;
-		uint32_t m_rtvDescriptorSize;
-
-	private:
-		struct Vertex
-		{
-			XMFLOAT3 position;
-			XMFLOAT3 color;
-			XMFLOAT2 uv;
-		};
-
-		__declspec(align(16)) struct CBuffer
-		{
-			XMMATRIX worldMatrix;
-			XMMATRIX viewMatrix;
-			XMMATRIX worldViewProjMatrix;
-		};
-
-		StructuredBuffer m_vertexBuffer;
-		StructuredBuffer m_indexBuffer;
-
-		CBuffer m_constantBufferData;
-
-	private:
-		void CreateTex2DResources(
-			string name, uint32_t width, uint32_t height,
-			uint32_t elementSize, DXGI_FORMAT format, DX12Resource* pResource);
-
-		void ResetResources();
-	};
-
-	DX12TextureConverter::DX12TextureConverter()
-	{
-		m_constantBufferData.worldMatrix = XMMatrixIdentity();
-		m_constantBufferData.viewMatrix = XMMatrixIdentity();
-		m_constantBufferData.worldViewProjMatrix = XMMatrixIdentity();
-
-		// Create descriptor heaps.
-		{
-			// Describe and create a render target view (RTV) descriptor heap.
-			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-			rtvHeapDesc.NumDescriptors = 255;
-			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
-
-			m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			m_rtvHeapPtr = 0;
-		}
+		m_rtvDescriptorSize = IGraphics::g_GraphicsCore->g_pD3D12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		m_rtvHeapPtr = 0;
 	}
+}
 
-	DX12TextureConverter::~DX12TextureConverter()
+DX12TextureConverter::~DX12TextureConverter()
+{
+	for (auto& pso : m_psoContainer)
+		pso.second.DestroyAll();
+
+	m_outputRes.clear();
+}
+
+void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
+{
+	gfxContext.SetRootSignature(m_sceneRootSignature);
+	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+	gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
+
+	gfxContext.SetDynamicConstantBufferView(0, sizeof(m_constantBufferData), &m_constantBufferData);
+	gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, IGuiCore::imGuiHeap.Get());
+
+
+	for (auto& outRes : m_outputRes)
 	{
-		for (auto& pso : m_psoContainer)
-			pso.second.DestroyAll();
+		string resName = outRes.first;
+		gfxContext.TransitionResource(outRes.second, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 
-		m_outputRes.clear();
-	}
-
-	void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
-	{
-		gfxContext.SetRootSignature(m_sceneRootSignature);
-		gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());
-		gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
-
-		gfxContext.SetDynamicConstantBufferView(0, sizeof(m_constantBufferData), &m_constantBufferData);
-
-
-		for (auto& outRes : m_outputRes)
-		{
-			gfxContext.TransitionResource(outRes.second, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
-				m_rtvHeap->GetCPUDescriptorHandleForHeapStart(),
-				outRes.second.uRtvDescriptorOffset,
-				m_rtvDescriptorSize);
-			D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
-			{
-				rtvHandle
-			};
-			gfxContext.SetPipelineState(m_psoContainer[outRes.first]);
-			//gfxContext.ClearDepth(m_preDepthPass);
-			//gfxContext.SetDepthStencilTarget(m_preDepthPass.GetDSV());
-			gfxContext.SetRenderTargets(_countof(RTVs), RTVs, rtvHandle);
-			// TODO clear color
-
-			gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
-			gfxContext.Draw(4);
-
-			gfxContext.TransitionResource(outRes.second, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
-		}
-	}
-
-	void DX12TextureConverter::AddInputRes(
-		string name, uint32_t width, uint32_t height, uint32_t elementSize,
-		DXGI_FORMAT format, GpuResource* input)
-	{
-		m_inputRes[name] = input;
-		//m_outputRes[name] = new DX12Resource>();
-
-		CreateTex2DResources(name, width, height, elementSize, format, &m_outputRes[name]);
-	}
-
-	HRESULT DX12TextureConverter::Finalize()
-	{
-		HRESULT hr = S_OK;
-		// Create a root signature consisting of a descriptor table with a single CBV
-		{
-			D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-
-			// Load test root signature
-			D3D12_SAMPLER_DESC non_static_sampler;
-			non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
-			non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			non_static_sampler.MipLODBias = 0.0f;
-			non_static_sampler.MaxAnisotropy = 8;
-			non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-			non_static_sampler.BorderColor[0] = 1.0f;
-			non_static_sampler.BorderColor[1] = 1.0f;
-			non_static_sampler.BorderColor[2] = 1.0f;
-			non_static_sampler.BorderColor[3] = 1.0f;
-			non_static_sampler.MinLOD = 0.0f;
-			non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
-
-			m_sceneRootSignature.Reset(m_inputRes.size(), 1);
-			m_sceneRootSignature.InitStaticSampler(0, non_static_sampler);
-			m_sceneRootSignature[0].InitAsConstantBuffer(0);
-			m_sceneRootSignature[1].InitAsDescriptorTable(m_inputRes.size());
-			m_sceneRootSignature.Finalize(L"TextureConverterRS", rootSignatureFlags);
-		}
-
-		// Create PSOs
-		{
-#if defined(_DEBUG)
-			// Enable better shader debugging with the graphics debugging tools.
-			UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-			UINT compileFlags = 0;
-#endif
-
-			ComPtr<ID3DBlob> vertexShader;
-			ComPtr<ID3DBlob> geometryShader;
-			ComPtr<ID3DBlob> errorMessages;
-
-			// Common Vertex shader for background square
-			hr = D3DCompileFromFile(L"BGSquareShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, &errorMessages);
-			if (FAILED(hr) && errorMessages)
-			{
-				const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
-				//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
-				wstring str;
-				for (int i = 0; i < 150; i++) str += errorMsg[i];
-				MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
-				exit(0);
-			}
-			errorMessages.Reset();
-			errorMessages = nullptr;
-
-			// Common Geometry shader for background square
-			hr = D3DCompileFromFile(L"BGSquareShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "GSMain", "vs_5_1", compileFlags, 0, &geometryShader, &errorMessages);
-			if (FAILED(hr) && errorMessages)
-			{
-				const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
-				//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
-				wstring str;
-				for (int i = 0; i < 150; i++) str += errorMsg[i];
-				MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
-				exit(0);
-			}
-			errorMessages.Reset();
-			errorMessages = nullptr;
-
-			// Pixels shaders for 
-			for (auto& res : m_outputRes)
-			{
-				string resName(res.first);
-				ComPtr<ID3DBlob> pixelShader;
-
-				D3D_SHADER_MACRO macro[] = { "None", "0", nullptr, nullptr };
-				switch (res.second.mFormat)
-				{
-				case DXGI_FORMAT_R32G32B32A32_FLOAT:
-				{
-					macro->Name = "FORMAT_R32G32B32A32";
-					macro->Definition = to_string(TEXCONVERT_R32G32B32A32_TO_R32G32B32A32).c_str();
-					break;
-				}
-				default:
-					break;
-				}
-
-#if defined(_DEBUG)
-				hr = D3DCompileFromFile(L"BGSquareShader.hlsl", macro, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
-				if (FAILED(hr) && errorMessages)
-				{
-					const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
-					//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
-					wstring str;
-					for (int i = 0; i < 150; i++) str += errorMsg[i];
-					MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
-					exit(0);
-				}
-				errorMessages.Reset();
-				errorMessages = nullptr;
-#else
-				ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(ws.c_str()).c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, nullptr));
-#endif
-				// Define the vertex input layout.
-				D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-				{
-					{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-					{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-				};
-
-
-				m_psoContainer[resName].SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-				m_psoContainer[resName].SetRootSignature(m_sceneRootSignature);
-				m_psoContainer[resName].SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
-				m_psoContainer[resName].SetVertexShader(CD3DX12_SHADER_BYTECODE(geometryShader.Get()));
-				m_psoContainer[resName].SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
-				m_psoContainer[resName].SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-				m_psoContainer[resName].SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-				m_psoContainer[resName].SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
-					D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
-					D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
-					D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
-				m_psoContainer[resName].SetSampleMask(UINT_MAX);
-				m_psoContainer[resName].SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-				// TODO need to get input format
-				m_psoContainer[resName].SetRenderTargetFormat(m_outputRes[resName].mFormat, DXGI_FORMAT_D32_FLOAT);
-				m_psoContainer[resName].Finalize();
-			}
-		}
-		return hr;
-	}
-
-	// Private Functions
-	void DX12TextureConverter::CreateTex2DResources(
-		string name, uint32_t width, uint32_t height,
-		uint32_t elementSize, DXGI_FORMAT format, DX12Resource* pResource)
-	{
-		D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-		ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&resourceDesc,
-			D3D12_RESOURCE_STATE_COMMON,
-			nullptr,
-			IID_PPV_ARGS(&pResource->pResource)));
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 0, 0, 0);
-		srvDesc.Format = format;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
-			imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
-			g_heapPtr,
-			32);
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(pResource->pResource.Get(), &srvDesc, srvHandle);
-		pResource->uSrvDescriptorOffset = g_heapPtr;
-		++g_heapPtr;
-
-		std::wstring ws(name.size(), L' '); // Overestimate number of code points.
-		ws.resize(std::mbstowcs(&ws[0], name.c_str(), name.size())); // Shrink to fit.
-		pResource->pResource->SetName(ws.c_str());
-
-		pResource->mFormat = format;
-
-		// Create RTV resource
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
 			m_rtvHeap->GetCPUDescriptorHandleForHeapStart(),
-			m_rtvHeapPtr,
+			outRes.second.uRtvDescriptorOffset,
 			m_rtvDescriptorSize);
-		IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(pResource->pResource.Get(), nullptr, rtvHandle);
-		pResource->uRtvDescriptorOffset = m_rtvHeapPtr;
-		++m_rtvHeapPtr;
+		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+		{
+			rtvHandle
+		};
+		gfxContext.SetPipelineState(m_psoContainer[outRes.first]);
+		//gfxContext.ClearDepth(m_preDepthPass);
+		//gfxContext.SetDepthStencilTarget(m_preDepthPass.GetDSV());
+		gfxContext.SetRenderTargets(_countof(RTVs), RTVs, rtvHandle);
+		// TODO clear color
+
+		gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srv(
+			IGuiCore::imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+			outRes.second.uSrvDescriptorOffset,
+			32);
+		auto descriptorPtrColorBuffer = dynamic_cast<ColorBuffer*>(m_inputRes[resName]);
+		auto descriptorPtrDepthBuffer = dynamic_cast<DepthBuffer*>(m_inputRes[resName]);
+		if (descriptorPtrColorBuffer != nullptr) 
+			gfxContext.SetDynamicDescriptor(outRes.second.uSrvDescriptorOffset, 0, descriptorPtrColorBuffer->GetSRV());
+		if (descriptorPtrDepthBuffer != nullptr)
+			gfxContext.SetDynamicDescriptor(outRes.second.uSrvDescriptorOffset, 0, descriptorPtrDepthBuffer->GetDepthSRV());
+
+		gfxContext.DrawInstanced(4, 1);
+
+		gfxContext.TransitionResource(outRes.second, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 	}
+}
+
+void DX12TextureConverter::AddInputRes(
+	string name, uint32_t width, uint32_t height, uint32_t elementSize,
+	DXGI_FORMAT format, GpuResource* input)
+{
+	m_inputRes[name] = input;
+	//m_outputRes[name] = new DX12Resource>();
+	m_outputRes[name].mFormat = format;
+
+	// The texture for ImGUI is always set to R32G32B32A32 format for easier visualization
+	CreateTex2DResources(name, width, height, elementSize, DXGI_FORMAT_R32G32B32A32_FLOAT, &m_outputRes[name]);
+}
+
+HRESULT DX12TextureConverter::Finalize()
+{
+	HRESULT hr = S_OK;
+	// Create a root signature consisting of a descriptor table with a single CBV
+	{
+		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
+		//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+		// Load test root signature
+		D3D12_SAMPLER_DESC non_static_sampler;
+		non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		non_static_sampler.MipLODBias = 0.0f;
+		non_static_sampler.MaxAnisotropy = 8;
+		non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		non_static_sampler.BorderColor[0] = 1.0f;
+		non_static_sampler.BorderColor[1] = 1.0f;
+		non_static_sampler.BorderColor[2] = 1.0f;
+		non_static_sampler.BorderColor[3] = 1.0f;
+		non_static_sampler.MinLOD = 0.0f;
+		non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
+
+		m_sceneRootSignature.Reset(m_inputRes.size() + 1, 1);
+		m_sceneRootSignature.InitStaticSampler(0, non_static_sampler);
+		m_sceneRootSignature[0].InitAsConstantBuffer(0);
+		m_sceneRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, m_inputRes.size());
+		m_sceneRootSignature.Finalize(L"TextureConverterRS", rootSignatureFlags);
+	}
+
+	// Create PSOs
+	{
+#if defined(_DEBUG)
+		// Enable better shader debugging with the graphics debugging tools.
+		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+		UINT compileFlags = 0;
+#endif
+
+		ComPtr<ID3DBlob> vertexShader;
+		ComPtr<ID3DBlob> geometryShader;
+		ComPtr<ID3DBlob> errorMessages;
+
+		// Common Vertex shader for background square
+		hr = D3DCompileFromFile(L"BGSquareShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, &errorMessages);
+		if (FAILED(hr) && errorMessages)
+		{
+			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 250; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
+		}
+		errorMessages.Reset();
+		errorMessages = nullptr;
+
+		// Common Geometry shader for background square
+		hr = D3DCompileFromFile(L"BGSquareShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "GSMain", "gs_5_1", compileFlags, 0, &geometryShader, &errorMessages);
+		if (FAILED(hr) && errorMessages)
+		{
+			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+			//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+			wstring str;
+			for (int i = 0; i < 250; i++) str += errorMsg[i];
+			MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+			exit(0);
+		}
+		errorMessages.Reset();
+		errorMessages = nullptr;
+
+		// Pixels shaders for 
+		for (auto& res : m_outputRes)
+		{
+			string resName(res.first);
+			ComPtr<ID3DBlob> pixelShader;
+
+			D3D_SHADER_MACRO macro[] = { "None", "0", nullptr, nullptr };
+			switch (res.second.mFormat)
+			{
+			case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			{
+				macro->Name = "FORMAT_R32G32B32A32";
+				macro->Definition = to_string(TEXCONVERT_R32G32B32A32_TO_R32G32B32A32).c_str();
+				break;
+			}
+			case DXGI_FORMAT_D32_FLOAT:
+			{
+				macro->Name = "FORMAT_D32_FLOAT";
+				macro->Definition = to_string(TEXCONVERT_D32_TO_R32G32B32A32).c_str();
+				break;
+			}
+			default:
+				break;
+			}
+
+#if defined(_DEBUG)
+			hr = D3DCompileFromFile(L"BGSquareShader.hlsl", macro, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
+			if (FAILED(hr) && errorMessages)
+			{
+				const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
+				//MessageBox(nullptr, errorMsg, L"Shader Compilation Error", MB_RETRYCANCEL);
+				wstring str;
+				for (int i = 0; i < 250; i++) str += errorMsg[i];
+				MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
+				exit(0);
+			}
+			errorMessages.Reset();
+			errorMessages = nullptr;
+#else
+			ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(ws.c_str()).c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, nullptr));
+#endif
+
+			// Define the vertex input layout.
+			D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+			{
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			};
+
+			m_psoContainer[resName].SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+			m_psoContainer[resName].SetRootSignature(m_sceneRootSignature);
+			m_psoContainer[resName].SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+			m_psoContainer[resName].SetGeometryShader(CD3DX12_SHADER_BYTECODE(geometryShader.Get()));
+			m_psoContainer[resName].SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
+			m_psoContainer[resName].SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+			m_psoContainer[resName].SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+			m_psoContainer[resName].SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
+				D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+				D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+				D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+			m_psoContainer[resName].SetSampleMask(UINT_MAX);
+			m_psoContainer[resName].SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
+			// TODO need to get input format
+			m_psoContainer[resName].SetRenderTargetFormat(m_outputRes[resName].mFormat, DXGI_FORMAT_D32_FLOAT);
+			m_psoContainer[resName].Finalize();
+
+
+			vector<XMFLOAT3> vPoints = 
+			{
+				XMFLOAT3(0.0f, 0.0f, 0.0f),
+				XMFLOAT3(0.0f, 0.0f, 0.0f),
+				XMFLOAT3(0.0f, 0.0f, 0.0f)
+			};
+			m_vertexBuffer.Create(L"BunnyVertexBuffer", vPoints.size(), sizeof(XMFLOAT3), vPoints.data());
+		}
+	}
+	return hr;
+}
+
+// Private Functions
+void DX12TextureConverter::CreateTex2DResources(
+	string name, uint32_t width, uint32_t height,
+	uint32_t elementSize, DXGI_FORMAT format, DX12Resource* pResource)
+{
+	D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+	ThrowIfFailed(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(&pResource->pResource)));
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
+		IGuiCore::imGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+		IGuiCore::g_heapPtr,
+		32);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateShaderResourceView(pResource->pResource.Get(), &srvDesc, srvHandle);
+	pResource->uSrvDescriptorOffset = IGuiCore::g_heapPtr;
+	++IGuiCore::g_heapPtr;
+
+	std::wstring ws(name.size(), L' '); // Overestimate number of code points.
+	ws.resize(std::mbstowcs(&ws[0], name.c_str(), name.size())); // Shrink to fit.
+	pResource->pResource->SetName(ws.c_str());
+
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = format;
+	rtvDesc.Texture2D.MipSlice = 0;
+	rtvDesc.Texture2D.PlaneSlice = 0;
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+	// Create RTV resource
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+		m_rtvHeap->GetCPUDescriptorHandleForHeapStart(),
+		m_rtvHeapPtr,
+		m_rtvDescriptorSize);
+	IGraphics::g_GraphicsCore->g_pD3D12Device->CreateRenderTargetView(pResource->pResource.Get(), &rtvDesc, rtvHandle);
+	pResource->uRtvDescriptorOffset = m_rtvHeapPtr;
+	++m_rtvHeapPtr;
 }

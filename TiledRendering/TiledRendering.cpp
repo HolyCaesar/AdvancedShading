@@ -213,8 +213,13 @@ void TiledRendering::LoadAssets()
 	GenerateLights(1);
 	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
+	/*Test Area*/
 	// Gui Resource allocation
 	IGuiCore::CreateGuiTexture2DSRV(L"GuiOpaqueLightGrid", 80, 45, sizeof(XMFLOAT2), DXGI_FORMAT_R32G32_UINT, IGuiCore::OpaqueLightGridSRV);
+
+	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
+	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
+
 }
 
 std::vector<UINT8> TiledRendering::GenerateTextureData()
@@ -326,6 +331,7 @@ void TiledRendering::OnRender()
 
 
 	IGuiCore::RenderImGUI(gfxContext);
+	IGuiCore::g_imGuiTexConverter->Convert(gfxContext);
 
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
 

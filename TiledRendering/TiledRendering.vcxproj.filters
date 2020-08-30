@@ -319,6 +319,9 @@
     <FxCompile Include="CommonIncl.hlsli">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="BGSquareShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\MiniEngineMath\Functions.inl">
