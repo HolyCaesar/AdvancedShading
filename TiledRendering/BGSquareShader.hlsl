@@ -2,10 +2,10 @@
 //#include "TextureConverterEnum.hlsli"
 
 
-#ifdef FORMAT_R32G32B32A32
+#if defined(FORMAT_R32G32B32A32)
 Texture2D<float4> inputTexture : register(t0);
 #endif
-#ifdef FORMAT_D32_FLOAT
+#if defined(FORMAT_D32_FLOAT)
 Texture2D<float> inputTexture : register(t0);
 #endif
 
@@ -44,49 +44,58 @@ GSInput VSMain(VSInput input)
 }
 
 [maxvertexcount(6)]
-void GSMain(point GSInput input[1], inout TriangleStream<PSInput> triStream)
+void GSMain(triangle GSInput input[3], inout TriangleStream<PSInput> triStream)
 {
     PSInput v1 = (PSInput)0;
-    PSInput v2 = (PSInput)0;
-    PSInput v3 = (PSInput)0;
-    PSInput v4 = (PSInput)0;
-
-    v1.position = float4(-0.5f, 0.5f, 0.0f, 1.0f);
+    v1.position = input[0].position;
     v1.tex = float2(0.0f, 0.0f);
 
-    v2.position = float4(0.5f, 0.5f, 0.0f, 1.0f);
-    v2.tex = float2(0.0f, 1.0f);
+    PSInput v2 = (PSInput)0;
+    v2.position = input[1].position;
+    v2.tex = float2(1.0f, 0.0f);
 
-    v3.position = float4(0.5f, -0.5f, 0.0f, 1.0f);
+    PSInput v3 = (PSInput)0;
+    v3.position = input[2].position;
     v3.tex = float2(1.0f, 1.0f);
-
-    v4.position = float4(-0.5f, -0.5f, 0.0f, 1.0f);
-    v4.tex = float2(1.0f, 0.0f);
 
     triStream.Append(v1);
     triStream.Append(v2);
-    triStream.Append(v4);
-
-    triStream.RestartStrip();
-
-    triStream.Append(v2);
     triStream.Append(v3);
-    triStream.Append(v4);
 
     triStream.RestartStrip();
+
+    v2.position.x = -1.0f;
+    v2.position.y = -1.0f;
+    v2.tex = float2(0.0f, 1.0f);
+
+    triStream.Append(v1);
+    triStream.Append(v3);
+    triStream.Append(v2);
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
     float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-#ifdef FORMAT_R32G32B32A32
+#if defined(FORMAT_R32G32B32A32)
     color = inputTexture.Sample(g_sampler, input.tex);
 #endif
-#ifdef FORMAT_D32_FLOAT
+#if defined(FORMAT_D32_FLOAT)
     float d = inputTexture.Sample(g_sampler, input.tex);
-    d = 1.0f - d;
+    d = saturate((1.0f - d) * 1000.0f);
     color.x = d; color.y = d; color.z = d; color.w = 1.0f;
 #endif
 
 	return color;
 }
+
+//
+// \ For testing purpose
+//
+//float4 PSMain(PSInput input) : SV_TARGET
+//{
+//    float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+//    float d = inputTexture.Sample(g_sampler, input.tex);
+//    d = saturate((1.0f - d) * 1000.0f);
+//    color.x = d; color.y = d; color.z = d; color.w = 1.0f;
+//    return color;
+//}
