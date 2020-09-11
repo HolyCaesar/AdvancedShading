@@ -156,6 +156,7 @@
     <ClCompile Include="CommandContext.cpp" />
     <ClCompile Include="CommandListManager.cpp" />
     <ClCompile Include="CommandSignature.cpp" />
+    <ClCompile Include="CPUProfiler.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DX12GraphicsCommon.cpp" />
     <ClCompile Include="DX12LinearAllocator.cpp" />
@@ -220,6 +221,7 @@
     <ClInclude Include="CommandContext.h" />
     <ClInclude Include="CommandListManager.h" />
     <ClInclude Include="CommandSignature.h" />
+    <ClInclude Include="CPUProfiler.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DX12GraphicsCommon.h" />

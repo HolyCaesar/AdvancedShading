@@ -37,8 +37,6 @@
 #define vsnprintf   _vsnprintf
 #endif
 
-
-
 namespace IGuiCore
 {
 	using namespace std;
