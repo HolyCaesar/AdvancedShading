@@ -28,6 +28,7 @@ public:
 	void AddInputRes(
 		string name, uint32_t width, uint32_t height, uint32_t elementSize,
 		DXGI_FORMAT format, GpuResource* input);
+
 	HRESULT Finalize();
 
 	DX12Resource* GetOutputResSRV(string name)
@@ -96,6 +97,7 @@ namespace IGuiCore
 
 	// Customized Functions
 	void ShowForwardPlusWidgets();
+	void ShowCpuProfilerWindow();
 
 	// Helper Functions
 	void ShowAboutWindow(bool* p_open);

@@ -22,10 +22,14 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 
 void TiledRendering::OnInit()
 {
-	LoadPipeline();
-	LoadAssets();
-	//m_simpleCS.OnInit();
 
+	m_cpuProfiler.AddTimeStamp("LoadPipelineCPU");
+	LoadPipeline();
+	m_cpuProfiler.EndTimeStamp("LoadPipelineCPU");
+
+	m_cpuProfiler.AddTimeStamp("LoadAssets");
+	LoadAssets();
+	m_cpuProfiler.EndTimeStamp("LoadAssets");
 }
 
 // Load the rendering pipeline dependencies.

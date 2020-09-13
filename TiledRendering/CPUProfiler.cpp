@@ -1,10 +1,11 @@
 #include "CPUProfiler.h"
+#include <Windows.h>
 #include <winnt.h>
 #include "Utility.h"
 
 CPUProfiler::CPUProfiler()
 {
-
+    SystemTime::Initialize();
 }
 
 CPUProfiler::~CPUProfiler()
@@ -14,12 +15,23 @@ CPUProfiler::~CPUProfiler()
 
 void CPUProfiler::AddTimeStamp(string timeStampName)
 {
+    auto it = m_timeStampMap.find(timeStampName);
+    if (it == m_timeStampMap.end())
+    {
+        auto test = m_timeStampMap.size();
+        test += 1;
+    }
+    ASSERT(it == m_timeStampMap.end(), "The time stamp is existed");
+
     m_timeStampMap[timeStampName].Reset();
     m_timeStampMap[timeStampName].Start();
 }
 
 void CPUProfiler::EndTimeStamp(string timeStampName)
 {
+    auto it = m_timeStampMap.find(timeStampName);
+    ASSERT(it != m_timeStampMap.end());
+
     m_timeStampMap[timeStampName].Stop();
 }
 

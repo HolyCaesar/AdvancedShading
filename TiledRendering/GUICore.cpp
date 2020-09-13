@@ -51,50 +51,6 @@ namespace IGuiCore
 	ComPtr<ID3D12DescriptorHeap> imGuiHeap;
 	uint32_t g_heapPtr;
 
-
-	//std::vector<UINT8> GenerateTextureData()
-	std::vector<float> GenerateTextureData()
-	{
-		uint32_t TextureWidth = 80;
-		uint32_t TextureHeight = 45;
-		uint32_t TexturePixelSize = 2;
-
-		const UINT rowPitch = TextureWidth * TexturePixelSize;
-		const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
-		const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
-		const UINT textureSize = rowPitch * TextureHeight;
-
-		//std::vector<UINT8> data(textureSize);
-		std::vector<float> data(textureSize);
-		//UINT8* pData = &data[0];
-		float* pData = &data[0];
-
-		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
-		{
-			UINT x = n % rowPitch;
-			UINT y = n / rowPitch;
-			UINT i = x / cellPitch;
-			UINT j = y / cellHeight;
-
-			if (i % 2 == j % 2)
-			{
-				pData[n] = 0x00;        // R
-				pData[n + 1] = 0x00;    // G
-				pData[n + 2] = 0x00;    // B
-				pData[n + 3] = 0xff;    // A
-			}
-			else
-			{
-				pData[n] = 0xff;        // R
-				pData[n + 1] = 0xff;    // G
-				pData[n + 2] = 0xff;    // B
-				pData[n + 3] = 0xff;    // A
-			}
-		}
-
-		return data;
-	}
-
 	void Init(Win32FrameWork* appPtr)
 	{
 		//g_appPtr.reset(appPtr);
@@ -383,8 +339,36 @@ namespace IGuiCore
 		/**************************/
 		if (show_tiled_forward_rendering) ShowForwardPlusWidgets();
 
+
+		//// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+		//{
+		//	static float f = 0.0f;
+		//	static int counter = 0;
+		//	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+		//	ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+		//	ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		//	//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		//	//ImGui::Checkbox("Another Window", &show_another_window);
+
+		//	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		//	ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+		//	if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+		//		counter++;
+		//	ImGui::SameLine();
+		//	ImGui::Text("counter = %d", counter);
+
+		//	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		//	ImGui::End();
+		//}
+
 		// End of ShowDemoWindow()
 		ImGui::End();
+
+
+		ShowCpuProfilerWindow();
 	}
 
 	//
@@ -450,6 +434,50 @@ namespace IGuiCore
 
 			ImGui::TreePop();
 		}
+	}
+
+	void ShowCpuProfilerWindow()
+	{
+		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+		static float f = 0.0f;
+		static int counter = 0;
+
+		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		//ImGui::Checkbox("Another Window", &show_another_window);
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+		// Animate a simple progress bar
+		float progress = 0.0f, val = 0.0f;
+		val = 1000.0f / ImGui::GetIO().Framerate;
+		progress = val / 10.0f;
+
+		// Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width,
+		// or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
+		ImGui::Text("Average FPS");
+		ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+		char buf[32];
+		sprintf(buf, "%f ms", val);
+		ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
+
+		auto appPtr = reinterpret_cast<TiledRendering*>(g_appPtr);
+		unordered_map<string, CpuTimer>* cpuTimers = appPtr->m_cpuProfiler.GetCpuTimes();
+
+		for (auto iter = cpuTimers->begin(); iter != cpuTimers->end(); iter++)
+		{
+			ImGui::Text(iter->first.c_str());
+			ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+			val = iter->second.GetTime();
+			char buf[32];
+			sprintf(buf, "%f ms", val);
+			progress = iter->second.GetTime() / 10.0f;
+			ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
+		}
+
+		ImGui::End();
 	}
 
 	//

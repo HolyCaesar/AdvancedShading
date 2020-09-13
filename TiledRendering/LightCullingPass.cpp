@@ -63,6 +63,7 @@ void ForwardPlusLightCulling::ExecuteCS(GraphicsContext& gfxContext, DepthBuffer
 
 void ForwardPlusLightCulling::UpdateLightBuffer(vector<Light>& lightList)
 {
+	IGraphics::g_GraphicsCore->g_CommandManager->IdleGPU();
 	m_Lights.Destroy();
 	m_Lights.Create(L"LightLists", lightList.size(), sizeof(Light), lightList.data());
 	//IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Lights.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));

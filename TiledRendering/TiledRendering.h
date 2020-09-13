@@ -17,6 +17,8 @@
 #include "DX12ResStruct.h"
 #include "GUICore.h"
 
+#include "CPUProfiler.h"
+
 // Experimental classes 
 #include "SimpleComputeShader.h"
 
@@ -51,6 +53,8 @@ public:
 
     virtual void WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+    // Profiling
+    CPUProfiler         m_cpuProfiler;
 private:
     static const UINT   TextureWidth = 256;
     static const UINT   TextureHeight = 256;
@@ -65,6 +69,7 @@ private:
     // DXUT Model-View Camera
     CModelViewerCamera  m_modelViewCamera;
     IMath::Camera       m_perspectiveCamera;
+
 
 private:
     DX12RootSignature   m_sceneOpaqueRootSignature;
