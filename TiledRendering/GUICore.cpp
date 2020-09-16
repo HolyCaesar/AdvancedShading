@@ -442,9 +442,8 @@ namespace IGuiCore
 		static float f = 0.0f;
 		static int counter = 0;
 
-		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+		ImGui::Begin("Profiling");                          // Create a window called "Hello, world!" and append into it.
 
-		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
 		//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 		//ImGui::Checkbox("Another Window", &show_another_window);
 
@@ -471,11 +470,43 @@ namespace IGuiCore
 			ImGui::Text(iter->first.c_str());
 			ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
 			val = iter->second.GetTime();
-			char buf[32];
+			//char buf[32];
 			sprintf(buf, "%f ms", val);
 			progress = iter->second.GetTime() / 10.0f;
 			ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
 		}
+
+		ImGui::Text("Current Memory Usage");
+		ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+		progress = appPtr->m_cpuProfiler.m_memReader.GetCurTotalUsedPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB) /
+				   appPtr->m_cpuProfiler.m_memReader.GetTotalPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB);
+
+		sprintf(buf, "%3.2f/%3.2f GB", 
+			appPtr->m_cpuProfiler.m_memReader.GetCurTotalUsedPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB),
+			appPtr->m_cpuProfiler.m_memReader.GetTotalPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB));
+
+		ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
+
+
+		//ImGui::Text("Current CPU Usage");
+		//ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+		//progress = appPtr->m_cpuProfiler.m_cpuReader.GetCPUTotalUsage() * 0.01;
+		//ImGui::Text("CPU %f", progress);
+		//ImGui::ProgressBar(progress * 0.01, ImVec2(0.0f, 0.0f));
+
+
+
+
+		//float progress_saturated = IM_CLAMP(progress, 0.0f, 1.0f);
+		//char buf[32];
+		//sprintf(buf, "%d/%d", (int)(progress_saturated * 1753), 1753);
+		//ImGui::ProgressBar(progress, ImVec2(0.f, 0.f), buf);
+
+
+
+
+
+
 
 		ImGui::End();
 	}
