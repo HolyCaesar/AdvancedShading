@@ -281,5 +281,3 @@ public:
 private:
 	unordered_map<string, CpuTimer> m_timeStampMap;
 };
-
-

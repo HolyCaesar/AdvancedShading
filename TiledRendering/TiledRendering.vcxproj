@@ -164,6 +164,7 @@
     <ClCompile Include="DX12ResStruct.cpp" />
     <ClCompile Include="DX12RootSignature.cpp" />
     <ClCompile Include="DynamicDescriptorHeap.cpp" />
+    <ClCompile Include="GpuProfiler.cpp" />
     <ClCompile Include="GUICore.cpp" />
     <ClCompile Include="LightCullingPass.cpp" />
     <ClCompile Include="GpuBuffer.cpp" />
@@ -231,6 +232,7 @@
     <ClInclude Include="DX12RootSignature.h" />
     <ClInclude Include="DXSampleHelper.h" />
     <ClInclude Include="DynamicDescriptorHeap.h" />
+    <ClInclude Include="GpuProfiler.h" />
     <ClInclude Include="GUICore.h" />
     <ClInclude Include="LightCullingPass.h" />
     <ClInclude Include="GpuBuffer.h" />

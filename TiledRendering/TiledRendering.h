@@ -18,6 +18,7 @@
 #include "GUICore.h"
 
 #include "CPUProfiler.h"
+#include "GpuProfiler.h"
 
 // Experimental classes 
 #include "SimpleComputeShader.h"
@@ -55,6 +56,7 @@ public:
 
     // Profiling
     CPUProfiler         m_cpuProfiler;
+    GpuProfiler         m_gpuProfiler;
 private:
     static const UINT   TextureWidth = 256;
     static const UINT   TextureHeight = 256;

@@ -60,5 +60,8 @@ void SystemTime::BusyLoopSleep(float SleepTime)
     while (GetCurrentTick() < finalTick);
 }
 
-PDH_HQUERY CPUInfoReader::cpuQuery;
-PDH_HCOUNTER CPUInfoReader::cpuTotal;
+
+/*****************************/
+/*  GPU Profiler definition  */
+/*****************************/
+
