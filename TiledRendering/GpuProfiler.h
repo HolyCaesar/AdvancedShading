@@ -1,6 +1,8 @@
 #pragma once
 
 #include "stdafx.h"
+#include <unordered_map>
+#include "Utility.h"
 
 using namespace std;
 
@@ -62,6 +64,47 @@ private:
 
 class GpuProfiler
 {
+public:
+	GpuProfiler()
+	{
+	}
 
+	~GpuProfiler()
+	{
+		GpuTimeCore::Shutdown();
+	}
+
+	void Initialize()
+	{
+		GpuTimeCore::Initialize();
+	}
+
+	void Start(string name, CommandContext& Context)
+	{
+		m_gpuTimerMap[name].Start(Context);
+	}
+
+	void Stop(string name, CommandContext& Context)
+	{
+		ASSERT(m_gpuTimerMap.find(name) != m_gpuTimerMap.end(), "No such time stamp of this name before.");
+		m_gpuTimerMap[name].Stop(Context);
+	}
+
+	void Update()
+	{
+		GpuTimeCore::BeginReadBack();
+		GpuTimeCore::EndReadBack();
+	}
+
+	float GetTime(string name)
+	{
+		return m_gpuTimerMap[name].GetTime();
+	}
+
+	unordered_map<string, GpuTimer>* GetGpuTimes()
+	{
+		return &m_gpuTimerMap;
+	}
+private:
+	unordered_map<string, GpuTimer> m_gpuTimerMap;
 };
-

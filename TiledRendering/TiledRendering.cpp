@@ -22,7 +22,6 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 
 void TiledRendering::OnInit()
 {
-
 	m_cpuProfiler.AddTimeStamp("LoadPipelineCPU");
 	LoadPipeline();
 	m_cpuProfiler.EndTimeStamp("LoadPipelineCPU");
@@ -40,6 +39,8 @@ void TiledRendering::LoadPipeline()
 	IGraphics::g_GraphicsCore->g_hwnd = Win32Application::GetHwnd();
 	IGraphics::g_GraphicsCore->Initialize();
 	IGuiCore::Init(this);
+
+	m_gpuProfiler.Initialize();
 }
 
 // Load the sample assets.
@@ -281,18 +282,28 @@ void TiledRendering::OnUpdate()
 // Render the scene.
 void TiledRendering::OnRender()
 {
+	GpuTimeCore::BeginReadBack();
+
 	IGuiCore::ShowImGUI();
 	////m_simpleCS.OnExecuteCS();
 
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
 
+	m_gpuProfiler.Start("TotalGpuTime", gfxContext);
+
+	m_gpuProfiler.Start("PreDepthGpuTime", gfxContext);
 	// Get scene depth in the screen space
 	PreDepthPass(gfxContext);
+	m_gpuProfiler.Stop("PreDepthGpuTime", gfxContext);
 
+
+	m_gpuProfiler.Start("ForwardRendering", gfxContext);
 	// Forward Plus Rendering calculation
 	m_LightCullingPass.ExecuteCS(gfxContext, m_preDepthPass);
+	m_gpuProfiler.Stop("ForwardRendering", gfxContext);
 
 
+	m_gpuProfiler.Start("MainPassGpu", gfxContext);
 	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
 	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -328,12 +339,20 @@ void TiledRendering::OnRender()
 	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
 
 
+	m_gpuProfiler.Stop("MainPassGpu", gfxContext);
+
+	m_gpuProfiler.Start("ImGUIPass", gfxContext);
 	IGuiCore::RenderImGUI(gfxContext);
 	//IGuiCore::g_imGuiTexConverter->Convert(gfxContext);
+	m_gpuProfiler.Stop("ImGUIPass", gfxContext);
 
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
+	m_gpuProfiler.Stop("TotalGpuTime", gfxContext);
 
 	gfxContext.Finish();
+
+
+	GpuTimeCore::EndReadBack();
 
 	IGraphics::g_GraphicsCore->Present();
 }

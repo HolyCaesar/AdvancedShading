@@ -19,6 +19,7 @@ namespace
 void GpuTimeCore::Initialize(uint32_t MaxNumTimers)
 {
     uint64_t GpuFrequency;
+    // The unit of GpuFrequency is ticks/second
     IGraphics::g_GraphicsCore->g_CommandManager->GetCommandQueue()->GetTimestampFrequency(&GpuFrequency);
     sm_GpuTickDelta = 1.0 / static_cast<double>(GpuFrequency);
 
@@ -39,6 +40,8 @@ void GpuTimeCore::Initialize(uint32_t MaxNumTimers)
     BufferDesc.Format = DXGI_FORMAT_UNKNOWN;
     BufferDesc.SampleDesc.Count = 1;
     BufferDesc.SampleDesc.Quality = 0;
+    BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    BufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
     ASSERT_SUCCEEDED(IGraphics::g_GraphicsCore->g_pD3D12Device->CreateCommittedResource(
         &HeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc,

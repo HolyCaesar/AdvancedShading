@@ -59,9 +59,3 @@ void SystemTime::BusyLoopSleep(float SleepTime)
     int64_t finalTick = (int64_t)((double)SleepTime / sm_CpuTickDelta) + GetCurrentTick();
     while (GetCurrentTick() < finalTick);
 }
-
-
-/*****************************/
-/*  GPU Profiler definition  */
-/*****************************/
-

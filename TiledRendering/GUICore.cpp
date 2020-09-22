@@ -488,6 +488,21 @@ namespace IGuiCore
 		ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
 
 
+		unordered_map<string, GpuTimer>* gpuTimers = appPtr->m_gpuProfiler.GetGpuTimes();
+		for (auto iter = gpuTimers->begin(); iter != gpuTimers->end(); iter++)
+		{
+			ImGui::Text(iter->first.c_str());
+			ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+			progress = iter->second.GetTime() * 1000.0f;
+			sprintf(buf, "%f ms", progress);
+			ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
+		}
+
+
+
+
+
+
 		//ImGui::Text("Current CPU Usage");
 		//ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
 		//progress = appPtr->m_cpuProfiler.m_cpuReader.GetCPUTotalUsage() * 0.01;
