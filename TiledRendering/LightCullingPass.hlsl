@@ -127,11 +127,7 @@ void CS_LightCullingPass(ComputeShaderInput Input)
         o_LightGrid[Input.groupID.xy] = uint2(0, 0); // Reset
         t_LightGrid[Input.groupID.xy] = uint2(0, 0); // Reset
 
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(o_LightIndexCounter[0], t_LightIndexCounter[0], o_LightIndexStartOffset, t_LightIndexStartOffset);
         debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(BLOCK_SIZE, BLOCK_SIZE, o_LightCount, t_LightCount);
-        //uint idx = Input.groupID.x + (Input.groupID.y * numThreadGroups.x);
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x)] = float4(Input.groupID.x, Input.groupID.y, numThreadGroups.x, idx);
-        //debugBuffer[Input.groupID.x + (Input.groupID.y * numThreadGroups.x) + 20] = float4(Input.groupID.x, Input.groupID.y, uMinDepth, fDepth);
     }
 
     GroupMemoryBarrierWithGroupSync();

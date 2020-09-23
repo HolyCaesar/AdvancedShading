@@ -285,10 +285,8 @@ void TiledRendering::OnRender()
 	GpuTimeCore::BeginReadBack();
 
 	IGuiCore::ShowImGUI();
-	////m_simpleCS.OnExecuteCS();
 
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
-
 	m_gpuProfiler.Start("TotalGpuTime", gfxContext);
 
 	m_gpuProfiler.Start("PreDepthGpuTime", gfxContext);

@@ -395,7 +395,7 @@ namespace IGuiCore
 			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
 			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
 			ImGuiIO& io = ImGui::GetIO();
-			ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
+			//ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
 			ImGui::Image((ImTextureID)SceneDepthViewSRV.ptr, ImVec2(320, 240), uv_min, uv_max);
 
 			ImGui::Separator();

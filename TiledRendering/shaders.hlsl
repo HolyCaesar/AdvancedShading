@@ -40,7 +40,7 @@ PSInput VSMain(VSInput input)
     //result.position = mul(WorldViewProj, result.position);
     result.position = mul(WorldViewProj, float4(input.position, 1.0f));
     result.positionVS = mul(ViewMatrix, float4(input.position, 1.0f));
-    result.normal = input.normal;
+    result.normal = mul(World, float4(input.normal, 1.0f)).xyz;
     result.tex = input.tex;
 
     return result;
@@ -55,7 +55,8 @@ SamplerState g_sampler : register(s0);
 //[earlydepthstencil]
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    float3 lightPos = float3(2.0f, 5.0f, 2.0f);
+    //float3 lightPos = float3(2.0f, 5.0f, 2.0f);
+    float3 lightPos = float3(6.0f, 0.0f, 0.0f);
     //lightPos = vCameraPos.xyz;
     float3 lightDir = float3(0.0f, 0.0f, 0.0f) - lightPos;
     float3 lightD = -lightDir;
@@ -71,6 +72,7 @@ float4 PSMain(PSInput input) : SV_TARGET
         // Determine the final diffuse color based on the diffuse color and the amount of light intensity.
         color += (diffuseColor * lightIntensity);
     }
+    return color;
 
     color = float4(0.0f, 0.0f, 0.0f, 1.0f);
     const float4 eyePos = { 0, 0, 0, 1 };
