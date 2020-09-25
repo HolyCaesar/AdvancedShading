@@ -499,29 +499,39 @@ namespace IGuiCore
 		}
 
 
+		ImGui::Text("Current GPU Memory Usage");
+		ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+		static time_t gpuMemQuerytime = 0;
+		static float gpuMemUsagePercentage = 0;
+		if(time(nullptr) - gpuMemQuerytime > 5)
+		{
+			// Reference: https://asawicki.info/news_1695_there_is_a_way_to_query_gpu_memory_usage_in_vulkan_-_use_dxgi.html
+			ComPtr<IDXGIFactory4> factory;
+			ASSERT_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
 
+			ComPtr<IDXGIAdapter3> dxgiAdapter;
+			ComPtr<IDXGIAdapter1> tmpDxgiAdapter;
+			UINT adapterIndex = 0;
+			while (factory->EnumAdapters1(adapterIndex, &tmpDxgiAdapter) != DXGI_ERROR_NOT_FOUND)
+			{
+				DXGI_ADAPTER_DESC1 desc;
+				tmpDxgiAdapter->GetDesc1(&desc);
+				if (!dxgiAdapter && desc.Flags == 0)
+				{
+					tmpDxgiAdapter->QueryInterface(IID_PPV_ARGS(&dxgiAdapter));
+				}
+				//tmpDxgiAdapter->Release();
+				++adapterIndex;
+			}
 
+			DXGI_QUERY_VIDEO_MEMORY_INFO info = {};
+			dxgiAdapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info);
+			gpuMemUsagePercentage = info.CurrentUsage / 1024.0 / 1024.0 / 1024.0;
 
-
-		//ImGui::Text("Current CPU Usage");
-		//ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-		//progress = appPtr->m_cpuProfiler.m_cpuReader.GetCPUTotalUsage() * 0.01;
-		//ImGui::Text("CPU %f", progress);
-		//ImGui::ProgressBar(progress * 0.01, ImVec2(0.0f, 0.0f));
-
-
-
-
-		//float progress_saturated = IM_CLAMP(progress, 0.0f, 1.0f);
-		//char buf[32];
-		//sprintf(buf, "%d/%d", (int)(progress_saturated * 1753), 1753);
-		//ImGui::ProgressBar(progress, ImVec2(0.f, 0.f), buf);
-
-
-
-
-
-
+			gpuMemQuerytime = time(nullptr);
+		}
+		sprintf(buf, "%f MB", gpuMemUsagePercentage * 1024.0);
+		ImGui::ProgressBar(gpuMemUsagePercentage, ImVec2(0.0f, 0.0f), buf);
 
 		ImGui::End();
 	}

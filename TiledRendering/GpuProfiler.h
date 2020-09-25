@@ -1,3 +1,5 @@
+// A reference to the GPU profiler : https://github.com/TheRealMJP/DeferredTexturing/blob/experimental/SampleFramework12/v1.01/Graphics/Profiler.cpp
+
 #pragma once
 
 #include "stdafx.h"

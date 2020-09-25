@@ -71,6 +71,13 @@ namespace IGraphics
 		ComPtr<IDXGIFactory4> factory;
 		ASSERT_SUCCEEDED(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
+		//ComPtr<IDXGIAdapter3> testAdapter;
+		//ASSERT_SUCCEEDED(factory->EnumWarpAdapter(IID_PPV_ARGS(&testAdapter)));
+		//DXGI_QUERY_VIDEO_MEMORY_INFO info;
+		//testAdapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info);
+		//UINT64 testRes = info.CurrentUsage;
+		//testRes += 1;
+
 		static const bool bUseWarpDriver = false;
 		if (!bUseWarpDriver)
 		{
