@@ -55,26 +55,24 @@ SamplerState g_sampler : register(s0);
 //[earlydepthstencil]
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    //float3 lightPos = float3(2.0f, 5.0f, 2.0f);
-    float3 lightPos = float3(6.0f, 0.0f, 0.0f);
-    //lightPos = vCameraPos.xyz;
-    float3 lightDir = float3(0.0f, 0.0f, 0.0f) - lightPos;
-    float3 lightD = -lightDir;
-    lightD = normalize(lightD);
+    ////float3 lightPos = float3(2.0f, 5.0f, 2.0f);
+    //float3 lightPos = float3(6.0f, 0.0f, 0.0f);
+    ////lightPos = vCameraPos.xyz;
+    //float3 lightDir = float3(0.0f, 0.0f, 0.0f) - lightPos;
+    //float3 lightD = -lightDir;
+    //lightD = normalize(lightD);
+    //float lightIntensity = saturate(dot(normalize(input.normal), lightD));
 
-    float lightIntensity = saturate(dot(normalize(input.normal), lightD));
-
+    //float4 color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    //float4 diffuseColor = float4(0.5f, 0.3f, 0.6f, 1.0f);
+    //if (lightIntensity > 0.0f)
+    //{
+    //    // Determine the final diffuse color based on the diffuse color and the amount of light intensity.
+    //    color += (diffuseColor * lightIntensity);
+    //}
+    //return color;
 
     float4 color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    float4 diffuseColor = float4(0.5f, 0.3f, 0.6f, 1.0f);
-    if (lightIntensity > 0.0f)
-    {
-        // Determine the final diffuse color based on the diffuse color and the amount of light intensity.
-        color += (diffuseColor * lightIntensity);
-    }
-    return color;
-
-    color = float4(0.0f, 0.0f, 0.0f, 1.0f);
     const float4 eyePos = { 0, 0, 0, 1 };
     float4 posVS = float4(input.positionVS, 1.0f);
     float4 viewVS = normalize(eyePos - posVS);
