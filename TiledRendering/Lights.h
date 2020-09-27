@@ -3,7 +3,7 @@
 
 using namespace DirectX;
 
-const float LIGHT_RANGE_MIN = 50.0f;
+const float LIGHT_RANGE_MIN = 20.0f;
 const float LIGHT_RANGE_MAX = 1000.0f;
 const float LIGHT_SPOT_ANGLE_MIN = 5.0f; // Unit in degree, hlsl will convert it to radians
 const float LIGHT_SPOT_ANGLE_MAX = 90.0f; // Unit in degree, hlsl will convert it to radians

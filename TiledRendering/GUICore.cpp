@@ -401,35 +401,39 @@ namespace IGuiCore
 			ImGui::Image((ImTextureID)SceneDepthViewSRV.ptr, ImVec2(320, 240), uv_min, uv_max);
 
 			ImGui::Separator();
-			bool hasChange = false;
+			static bool hasChange = false;
 			static int LightCnt = 1;
 			ImGui::Text("Light Number:");
-			hasChange = hasChange || ImGui::SliderInt("", &LightCnt, 1, 1000000); // LightCnt cannot be lower than 0
+			hasChange = ImGui::SliderInt("", &LightCnt, 1, 1000000) || hasChange; // LightCnt cannot be lower than 0
 
 			static float LowerLightSpawnPtec4a[4] = { -10.0f, -10.0f, -10.0f, 0.0f };
 			static float UpperLightSpawnPtec4a[4] = { 10.0f, 10.0f, 10.0f, 0.0f };
-			hasChange = hasChange || ImGui::InputFloat3("Light Spawn Lower Point:", LowerLightSpawnPtec4a);
-			hasChange = hasChange || ImGui::InputFloat3("Light Spawn Upper Point:", UpperLightSpawnPtec4a);
+			hasChange = ImGui::InputFloat3("Light Spawn Lower Point:", LowerLightSpawnPtec4a) || hasChange;
+			hasChange = ImGui::InputFloat3("Light Spawn Upper Point:", UpperLightSpawnPtec4a) || hasChange;
 
 			static float MinLightRange = LIGHT_RANGE_MIN;
 			static float MaxLightRange = LIGHT_RANGE_MAX;
-			hasChange = hasChange || ImGui::InputFloat("Min Light Range", &MinLightRange, 0.1f, 10.0f, "%.3f", 0);
+			hasChange = ImGui::InputFloat("Min Light Range", &MinLightRange, 0.1f, 10.0f, "%.3f", 0) || hasChange;
 			MinLightRange = min(max(LIGHT_RANGE_MIN, MinLightRange), MaxLightRange);
 			if (MaxLightRange < MinLightRange)
 			{
 				MaxLightRange = MinLightRange;
 			}
-			hasChange = hasChange || ImGui::InputFloat("Max Light Range", &MaxLightRange, 0.1f, 10.0f, "%.3f");
+			hasChange = ImGui::InputFloat("Max Light Range", &MaxLightRange, 0.1f, 10.0f, "%.3f") || hasChange;
 			MaxLightRange = max(min(LIGHT_RANGE_MAX, MaxLightRange), MinLightRange);
 
 			static float MinSpotLightAngle = LIGHT_SPOT_ANGLE_MIN;
 			static float MaxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX;
-			hasChange = hasChange || ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 0.1f, 5.0f, "%.3f");
+			hasChange = ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 0.1f, 5.0f, "%.3f") || hasChange;
 			MinSpotLightAngle = min(max(LIGHT_SPOT_ANGLE_MIN, MinSpotLightAngle), MaxSpotLightAngle);
-			hasChange = hasChange || ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 0.1f, 5.0f, "%.3f");
+			hasChange = ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 0.1f, 5.0f, "%.3f") || hasChange;
 			MaxSpotLightAngle = max(min(LIGHT_SPOT_ANGLE_MAX, MaxSpotLightAngle), MinSpotLightAngle);
 
-			if (hasChange)
+			int updatedLightsConfig = 0;
+			if (ImGui::Button("Update Lights"))
+				updatedLightsConfig += 1;
+
+			if (hasChange and updatedLightsConfig)
 			{
 				// TODO update light forward rendering code
 				appPtr->GenerateLights((uint32_t)LightCnt,
