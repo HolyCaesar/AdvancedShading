@@ -45,12 +45,12 @@ public:
     virtual void OnDestroy();
 
     // GenerateLights
-    void GenerateLights(uint32_t numLights, 
+    void GenerateLights(uint32_t numLights,
         XMFLOAT3 minPoint = XMFLOAT3(-10.0f, -10.0f, -10.0f),
         XMFLOAT3 maxPoint = XMFLOAT3(10.0f, 10.0f, 10.0f),
-        float minLightRange = 0.001f, float maxLightRange = 100.0f,
-        float minSpotLightAngle = 0.001f * XM_PI / 180.0f, 
-        float maxSpotLightAngle = 30.0f * XM_PI / 180.0f);
+        float minLightRange = LIGHT_RANGE_MIN, float maxLightRange = LIGHT_RANGE_MAX,
+        float minSpotLightAngle = LIGHT_SPOT_ANGEL_MIN,
+        float maxSpotLightAngle = LIGHT_SPOT_ANGEL_MAX);
 
     virtual void WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 

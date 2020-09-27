@@ -16,6 +16,11 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 	m_constantBufferData{}
 {
+#if defined(_DEBUG)
+	srand(time(0));
+#else
+	()
+#endif
 }
 
 
@@ -400,8 +405,6 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 	float minLightRange, float maxLightRange,
 	float minSpotLightAngle, float maxSpotLightAngle)
 {
-	srand(time(0));
-
 	uint32_t lightsPerDimension = static_cast<uint32_t>(ceil(cbrt(numLights)));
 	// TODO hard code the light spawing space here
 	XMFLOAT3 bounds(maxPoint.x - minPoint.x, maxPoint.y - minPoint.y, maxPoint.z - minPoint.z);
@@ -411,11 +414,14 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 	for (int i = 0; i < numLights; ++i)
 	{
 		Light& light = m_lightsList[i];
-		// Uniformly distribute lights
+		// Uniformly distribute lights on the cube's corners
 		XMFLOAT3 pos;
-		pos.x = (i % lightsPerDimension) / static_cast<float>(lightsPerDimension);
-		pos.y = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
-		pos.z = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension) / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+		//pos.x = (i % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+		//pos.y = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+		//pos.z = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension) / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+		pos.x = (1.0 * rand() / RAND_MAX);
+		pos.y = (1.0 * rand() / RAND_MAX);
+		pos.z = (1.0 * rand() / RAND_MAX);
 
 		light.m_PositionWS = XMFLOAT4(
 			pos.x * bounds.x + minPoint.x, 
@@ -429,9 +435,9 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 		//light.m_PositionWS = XMFLOAT4(pos.x, pos.y, pos.z, 1.0f);
 
 		// TODO may need a uniform random generator here
-		light.m_Color.x = min(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
-		light.m_Color.y = min(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
-		light.m_Color.z = min(1.0f, (1.0f * rand() / INT_MAX) + 0.1);
+		light.m_Color.x = min(1.0f, (1.0f * rand() / RAND_MAX) + 0.001f);
+		light.m_Color.y = min(1.0f, (1.0f * rand() / RAND_MAX) + 0.001f);
+		light.m_Color.z = min(1.0f, (1.0f * rand() / RAND_MAX) + 0.001f);
 		light.m_Color.w = 1.0f;
 
 		light.m_DirectionWS = XMFLOAT4(
@@ -440,17 +446,17 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 			-light.m_PositionWS.z,
 			0.0f);
 
-		light.m_Range = minLightRange + (1.0f * rand() / INT_MAX) * maxLightRange;
-		light.m_SpotlightAngle = minSpotLightAngle + (1.0f * rand() / INT_MAX) * maxSpotLightAngle;
+		light.m_Range = minLightRange + (1.0f * rand() / RAND_MAX) * (maxLightRange - minLightRange);
+		light.m_SpotlightAngle = minSpotLightAngle + (1.0f * rand() / RAND_MAX) * maxSpotLightAngle;
 
 		// Use probablity to generate three different types lights
-		float fLightPropability = (1.0f * rand() / INT_MAX);
+		float fLightPropability = (1.0f * rand() / RAND_MAX);
 		// TODO hard coding the light types for debugging purpose
 		light.m_Type = Light::LightType::Point;
 
 
-
-		// Test
+#if defined(_DEBUG_LIGHT)
+		// Hardcode light properties for debugging
 		light.m_PositionWS = XMFLOAT4(0.0f, 0.0f, -2.0f, 1.0f);
 
 		light.m_Color.x = 0.5f;
@@ -467,6 +473,8 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 		light.m_Range = 100.0f;
 
 		light.m_SpotlightAngle = 0.745f;
+#endif
+
 	}
 
 	UpdateLightsBuffer();

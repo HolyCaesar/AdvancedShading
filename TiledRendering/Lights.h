@@ -3,6 +3,11 @@
 
 using namespace DirectX;
 
+const float LIGHT_RANGE_MIN = 50.0f;
+const float LIGHT_RANGE_MAX = 1000.0f;
+const float LIGHT_SPOT_ANGEL_MIN = 5.0f * XM_PI / 180.0f;
+const float LIGHT_SPOT_ANGEL_MAX = 90.0f * XM_PI / 180.0f;
+
 __declspec(align(16)) struct Light
 {
     enum class LightType : uint32_t
@@ -77,7 +82,7 @@ __declspec(align(16)) struct Light
         , m_DirectionVS(0, 0, 1, 0)
         , m_Color(1, 1, 1, 1)
         , m_SpotlightAngle(45.0f)
-        , m_Range(100.0f)
+        , m_Range(1000.0f)
         , m_Intensity(1.0f)
         , m_Enabled(true)
         , m_Selected(false)
