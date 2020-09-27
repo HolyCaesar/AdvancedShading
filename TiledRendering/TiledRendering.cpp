@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "TiledRendering.h"
 
+default_random_engine defEngine(time(0));
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void TiledRendering::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -16,11 +18,6 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 	m_constantBufferData{}
 {
-#if defined(_DEBUG)
-	srand(time(0));
-#else
-	()
-#endif
 }
 
 
@@ -223,7 +220,6 @@ void TiledRendering::LoadAssets()
 	GenerateLights(1);
 	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
-	/*Test Area*/
 	// Gui Resource allocation
 	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
@@ -405,8 +401,8 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 	float minLightRange, float maxLightRange,
 	float minSpotLightAngle, float maxSpotLightAngle)
 {
-	uint32_t lightsPerDimension = static_cast<uint32_t>(ceil(cbrt(numLights)));
-	// TODO hard code the light spawing space here
+	uniform_real_distribution<double> dblDistro(0.0, 1.0);
+
 	XMFLOAT3 bounds(maxPoint.x - minPoint.x, maxPoint.y - minPoint.y, maxPoint.z - minPoint.z);
 
 	m_lightsList.clear();
@@ -414,30 +410,21 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 	for (int i = 0; i < numLights; ++i)
 	{
 		Light& light = m_lightsList[i];
-		// Uniformly distribute lights on the cube's corners
 		XMFLOAT3 pos;
-		//pos.x = (i % lightsPerDimension) / static_cast<float>(lightsPerDimension);
-		//pos.y = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
-		//pos.z = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension) / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
-		pos.x = (1.0 * rand() / RAND_MAX);
-		pos.y = (1.0 * rand() / RAND_MAX);
-		pos.z = (1.0 * rand() / RAND_MAX);
+
+		pos.x = dblDistro(defEngine);
+		pos.y = dblDistro(defEngine);
+		pos.z = dblDistro(defEngine);
 
 		light.m_PositionWS = XMFLOAT4(
 			pos.x * bounds.x + minPoint.x, 
 			pos.y * bounds.y + minPoint.y, 
 			pos.z * bounds.z + minPoint.z, 
 			1.0f);
-		// Random distribution (TODO may need a switch to choose which method to use)
-		//pos.x = (rand() / INT_MAX) * bounds.x;
-		//pos.y = (rand() / INT_MAX) * bounds.y;
-		//pos.z = (rand() / INT_MAX) * bounds.z;
-		//light.m_PositionWS = XMFLOAT4(pos.x, pos.y, pos.z, 1.0f);
 
-		// TODO may need a uniform random generator here
-		light.m_Color.x = min(1.0f, (1.0f * rand() / RAND_MAX) + 0.001f);
-		light.m_Color.y = min(1.0f, (1.0f * rand() / RAND_MAX) + 0.001f);
-		light.m_Color.z = min(1.0f, (1.0f * rand() / RAND_MAX) + 0.001f);
+		light.m_Color.x = min(1.0f, dblDistro(defEngine) + 0.001f);
+		light.m_Color.y = min(1.0f, dblDistro(defEngine) + 0.001f);
+		light.m_Color.z = min(1.0f, dblDistro(defEngine) + 0.001f);
 		light.m_Color.w = 1.0f;
 
 		light.m_DirectionWS = XMFLOAT4(
@@ -446,11 +433,11 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 			-light.m_PositionWS.z,
 			0.0f);
 
-		light.m_Range = minLightRange + (1.0f * rand() / RAND_MAX) * (maxLightRange - minLightRange);
-		light.m_SpotlightAngle = minSpotLightAngle + (1.0f * rand() / RAND_MAX) * maxSpotLightAngle;
+		light.m_Range = minLightRange + dblDistro(defEngine) * (maxLightRange - minLightRange);
+		light.m_SpotlightAngle = minSpotLightAngle + dblDistro(defEngine) * maxSpotLightAngle;
 
 		// Use probablity to generate three different types lights
-		float fLightPropability = (1.0f * rand() / RAND_MAX);
+		float fLightPropability = dblDistro(defEngine);
 		// TODO hard coding the light types for debugging purpose
 		light.m_Type = Light::LightType::Point;
 
@@ -478,6 +465,13 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 	}
 
 	UpdateLightsBuffer();
+
+	// TODO: Might be useful later
+	// Uniformly distribute lights on the spawning cube's surface 
+	//uint32_t lightsPerDimension = static_cast<uint32_t>(ceil(cbrt(numLights)));
+	//pos.x = (i % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+	//pos.y = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
+	//pos.z = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension) / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
 }
 
 void TiledRendering::UpdateLightsBuffer()
