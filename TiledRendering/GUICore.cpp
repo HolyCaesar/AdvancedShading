@@ -413,16 +413,21 @@ namespace IGuiCore
 
 			static float MinLightRange = LIGHT_RANGE_MIN;
 			static float MaxLightRange = LIGHT_RANGE_MAX;
-			hasChange = hasChange || ImGui::InputFloat("Min Light Range", &MinLightRange, 25.0f, 100.0f, "%.3f", 0);
-			if (MaxLightRange < MinLightRange) MaxLightRange = MinLightRange;
-			hasChange = hasChange || ImGui::InputFloat("Max Light Range", &MaxLightRange, 900.0f, 2000.0f, "%.3f");
+			hasChange = hasChange || ImGui::InputFloat("Min Light Range", &MinLightRange, 0.1f, 10.0f, "%.3f", 0);
+			MinLightRange = min(max(LIGHT_RANGE_MIN, MinLightRange), MaxLightRange);
+			if (MaxLightRange < MinLightRange)
+			{
+				MaxLightRange = MinLightRange;
+			}
+			hasChange = hasChange || ImGui::InputFloat("Max Light Range", &MaxLightRange, 0.1f, 10.0f, "%.3f");
+			MaxLightRange = max(min(LIGHT_RANGE_MAX, MaxLightRange), MinLightRange);
 
-			static float MinSpotLightAngle = LIGHT_SPOT_ANGEL_MIN;
-			static float MaxSpotLightAngle = LIGHT_SPOT_ANGEL_MAX;
-			float angelToRadian = XM_PI / 180.0f;
-			hasChange = hasChange || ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 5.0f * angelToRadian, 20.0f * angelToRadian, "%.3f");
-			if (MaxSpotLightAngle < MinSpotLightAngle) MaxSpotLightAngle = MinSpotLightAngle;
-			hasChange = hasChange || ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 50.0f * angelToRadian, 120.0f * angelToRadian, "%.3f");
+			static float MinSpotLightAngle = LIGHT_SPOT_ANGLE_MIN;
+			static float MaxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX;
+			hasChange = hasChange || ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 0.1f, 5.0f, "%.3f");
+			MinSpotLightAngle = min(max(LIGHT_SPOT_ANGLE_MIN, MinSpotLightAngle), MaxSpotLightAngle);
+			hasChange = hasChange || ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 0.1f, 5.0f, "%.3f");
+			MaxSpotLightAngle = max(min(LIGHT_SPOT_ANGLE_MAX, MaxSpotLightAngle), MinSpotLightAngle);
 
 			if (hasChange)
 			{

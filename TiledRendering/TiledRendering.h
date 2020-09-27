@@ -49,8 +49,8 @@ public:
         XMFLOAT3 minPoint = XMFLOAT3(-10.0f, -10.0f, -10.0f),
         XMFLOAT3 maxPoint = XMFLOAT3(10.0f, 10.0f, 10.0f),
         float minLightRange = LIGHT_RANGE_MIN, float maxLightRange = LIGHT_RANGE_MAX,
-        float minSpotLightAngle = LIGHT_SPOT_ANGEL_MIN,
-        float maxSpotLightAngle = LIGHT_SPOT_ANGEL_MAX);
+        float minSpotLightAngle = LIGHT_SPOT_ANGLE_MIN,
+        float maxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX);
 
     virtual void WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
