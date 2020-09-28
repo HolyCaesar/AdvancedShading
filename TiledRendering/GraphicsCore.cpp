@@ -13,7 +13,8 @@
 
 #define SWAP_CHAIN_BUFFER_COUNT 3
 
-DXGI_FORMAT SwapChainFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
+DXGI_FORMAT SwapChainFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+//DXGI_FORMAT SwapChainFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
 
 #ifndef SAFE_RELEASE
 #define SAFE_RELEASE(x) if (x != nullptr) { x->Release(); x = nullptr; }
@@ -177,8 +178,7 @@ namespace IGraphics
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 		swapChainDesc.Width = m_DisplayWidth;
 		swapChainDesc.Height = m_DisplayHeight;
-		//swapChainDesc.Format = SwapChainFormat;
-		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.Format = SwapChainFormat;
 		swapChainDesc.Scaling = DXGI_SCALING_NONE;
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.SampleDesc.Count = 1;
@@ -340,7 +340,36 @@ namespace IGraphics
 
 	void GraphicsCore::Resize(uint32_t width, uint32_t height)
 	{
-		// TODO
+		ASSERT(g_pSwapChain != nullptr);
+
+		// Check for invalid window dimensions
+		if (width == 0 || height == 0)
+			return;
+
+		g_CommandManager->IdleGPU();
+
+		m_DisplayWidth = width;
+		m_DisplayHeight = height;
+
+		for (int i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+		{
+			g_DisplayPlane[i].Destroy();
+		}
+
+		ASSERT_SUCCEEDED(g_pSwapChain->ResizeBuffers(SWAP_CHAIN_BUFFER_COUNT, width, height, SwapChainFormat, 0));
+
+		for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+		{
+			ComPtr<ID3D12Resource> DisplayPlane;
+			ASSERT_SUCCEEDED(g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&DisplayPlane)));
+			g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+		}
+
+		g_CurrentBuffer = 0;
+
+		g_CommandManager->IdleGPU();
+
+		// TODO: need to update the buffers that is used in the tiled forward rendering
 	}
 
 	uint64_t GraphicsCore::GetFrameCount(void)

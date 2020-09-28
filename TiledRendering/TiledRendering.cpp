@@ -226,6 +226,60 @@ void TiledRendering::LoadAssets()
 
 }
 
+void TiledRendering::OnResize(uint64_t width, uint64_t height)
+{
+	// Check for invalid window dimensions
+	if (width == 0 || height == 0)
+		return;
+	m_width = width;
+	m_height = height;
+
+	m_viewport.Width = static_cast<float>(width);
+	m_viewport.Height = static_cast<float>(height);
+	m_scissorRect.right = static_cast<LONG>(width);
+	m_scissorRect.bottom = static_cast<LONG>(height);
+
+	IGraphics::g_GraphicsCore->g_CommandManager->IdleGPU();
+
+	// Create Depth Buffer
+	m_sceneDepthBuffer.Destroy();
+	m_sceneDepthBuffer.Create(L"FinalSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	// Camera Setup
+	{
+		// Setup the camera's view parameters
+		static const XMVECTORF32 s_Eye = { 0.0f, 0.0f, -10.0f, 0.f };
+		static const XMVECTORF32 s_At = { 0.0f, 0.0f, 0.0f, 0.f };
+		m_modelViewCamera.SetViewParams(s_Eye, s_At);
+		// Setup the camera's projection parameters
+		float fAspectRatio = m_width / (float)m_height;
+		m_modelViewCamera.SetProjParams(XM_PI / 4, fAspectRatio, 0.01f, 10000.0f);
+		m_modelViewCamera.SetWindow(m_width, m_height);
+		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
+	}
+
+	// Load pre-depth pass resources
+	m_preDepthPassRTV.Destroy();
+	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	m_preDepthPass.Destroy();
+	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+
+	m_LightCullingPass.Destroy();
+	m_LightCullingPass.SetTiledSize(16);
+	m_LightCullingPass.Init(
+		m_width,
+		m_height,
+		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
+
+	// Gui Resource allocation
+	IGuiCore::g_imGuiTexConverter->CleanUp();
+	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
+	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
+}
+
+
 std::vector<UINT8> TiledRendering::GenerateTextureData()
 {
 	const UINT rowPitch = TextureWidth * TexturePixelSize;

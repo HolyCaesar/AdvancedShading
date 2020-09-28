@@ -42,6 +42,7 @@ public:
     virtual void OnInit();
     virtual void OnUpdate();
     virtual void OnRender();
+    virtual void OnResize(uint64_t width, uint64_t height);
     virtual void OnDestroy();
 
     // GenerateLights

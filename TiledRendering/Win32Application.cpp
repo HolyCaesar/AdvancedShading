@@ -119,6 +119,8 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
         if (pWinApp)
         {
             // TODO need to implement something to handle window resize
+            IGraphics::g_GraphicsCore->Resize((UINT)(UINT64)lParam & 0xFFFF, (UINT)(UINT64)lParam >> 16);
+            pWinApp->OnResize((UINT)(UINT64)lParam & 0xFFFF, (UINT)(UINT64)lParam >> 16);
         }
         return 0;
 

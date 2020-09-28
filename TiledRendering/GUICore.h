@@ -23,6 +23,7 @@ public:
 	DX12TextureConverter();
 	~DX12TextureConverter();
 
+	void CleanUp();
 	void Convert(GraphicsContext& gfxContext);
 
 	void AddInputRes(
@@ -74,8 +75,6 @@ private:
 	void CreateTex2DResources(
 		string name, uint32_t width, uint32_t height,
 		uint32_t elementSize, DXGI_FORMAT format, DX12Resource* pResource);
-
-	void ResetResources();
 };
 
 namespace IGuiCore

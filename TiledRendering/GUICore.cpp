@@ -671,10 +671,27 @@ DX12TextureConverter::DX12TextureConverter()
 
 DX12TextureConverter::~DX12TextureConverter()
 {
+	m_inputRes.clear();
+
 	for (auto& pso : m_psoContainer)
 		pso.second.DestroyAll();
 
 	m_outputRes.clear();
+	m_psoContainer.clear();
+}
+
+void DX12TextureConverter::CleanUp()
+{
+	m_inputRes.clear();
+
+	for (auto& o : m_outputRes)
+		o.second.pResource->Release();
+
+	m_psoContainer.clear();
+	m_outputRes.clear();
+
+	m_rtvHeapPtr = 0;
+	IGuiCore::g_heapPtr = 1;
 }
 
 void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
