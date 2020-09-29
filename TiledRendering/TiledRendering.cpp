@@ -416,8 +416,17 @@ void TiledRendering::OnDestroy()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
+	m_lightsList.clear();
 	m_LightCullingPass.Destroy();
 	m_pModel.reset();
+
+	m_sceneDepthBuffer.Destroy();
+	m_vertexBuffer.Destroy();
+	m_indexBuffer.Destroy();
+	m_modelTexture.Destroy();
+
+	m_preDepthPass.Destroy();
+	m_preDepthPassRTV.Destroy();
 }
 
 void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
