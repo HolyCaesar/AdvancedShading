@@ -266,7 +266,7 @@ void TiledRendering::OnResize(uint64_t width, uint64_t height)
 	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
 
-	m_LightCullingPass.Destroy();
+	m_LightCullingPass.ResizeBuffers();
 	m_LightCullingPass.SetTiledSize(16);
 	m_LightCullingPass.Init(
 		m_width,

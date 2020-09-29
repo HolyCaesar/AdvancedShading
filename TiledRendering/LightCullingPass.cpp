@@ -31,9 +31,20 @@ void ForwardPlusLightCulling::Init(
 	LoadLightCullingAsset(ScreenWidth, ScreenHeight, inverseProjection);
 }
 
-void ForwardPlusLightCulling::Resize()
+void ForwardPlusLightCulling::ResizeBuffers()
 {
+	m_CSGridFrustumOutputSB.Destroy();
+	m_CSDebugUAV.Destroy();
 
+	m_oLightIndexCounter.Destroy();
+	m_tLightIndexCounter.Destroy();
+	m_oLightIndexList.Destroy();
+	m_tLightIndexList.Destroy();
+	m_testUAVBuffer.Destroy();
+
+	m_oLightGrid.Destroy();
+	m_tLightGrid.Destroy();
+	m_testUAVTex2D.Destroy();
 }
 
 void ForwardPlusLightCulling::Destroy()
@@ -46,6 +57,12 @@ void ForwardPlusLightCulling::Destroy()
 	m_oLightIndexList.Destroy();
 	m_tLightIndexList.Destroy();
 	m_testUAVBuffer.Destroy();
+
+	m_oLightGrid.Destroy();
+	m_tLightGrid.Destroy();
+	m_testUAVTex2D.Destroy();
+	
+	m_Lights.Destroy();
 }
 
 void ForwardPlusLightCulling::UpdateConstantBuffer(XMMATRIX viewMatrix)

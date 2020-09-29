@@ -20,7 +20,7 @@ public:
     {}
 
     void Init(uint32_t ScreenWidth, uint32_t ScreenHeight, XMMATRIX inverseProjection);
-    void Resize();
+    void ResizeBuffers();
     void Destroy();
     void ExecuteCS(GraphicsContext& gfxContext, DepthBuffer& preDepthPass);
 
@@ -112,9 +112,6 @@ private:
     ColorBuffer m_oLightGrid;
     ColorBuffer m_tLightGrid;
     ColorBuffer m_testUAVTex2D;
-    //ByteAddressBuffer m_oLightGrid;
-    //ByteAddressBuffer m_tLightGrid;
-    //ByteAddressBuffer m_testUAVTex2D;
 
     StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
 
