@@ -1,3 +1,10 @@
+// Implementation of light culling compute shader is based on the presentation
+// "DirectX 11 Rendering in Battlefield 3" (2011) by Johan Andersson, DICE.
+// Retrieved from: http://www.slideshare.net/DICEStudio/directx-11-rendering-in-battlefield-3
+// Retrieved: July 13, 2015
+// And "Forward+: A Step Toward Film-Style Shading in Real Time", Takahiro Harada (2012)
+// published in "GPU Pro 4", Chapter 5 (2013) Taylor & Francis Group, LLC.
+
 #include "CommonIncl.hlsli"
 
 #define BLOCK_SIZE 16 

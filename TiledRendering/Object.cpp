@@ -1,5 +1,4 @@
 #include "Object.h"
-#include "stdafx.h"
 
 namespace ObjAux
 {
@@ -19,4 +18,9 @@ Object::~Object()
 bool Object::operator==(const Object& rhs) const
 {
     return m_objID == rhs.m_objID;
+}
+
+uint64_t Object::GetObjectID() const
+{ 
+    return m_objID; 
 }

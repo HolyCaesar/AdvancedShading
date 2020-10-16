@@ -33,6 +33,7 @@ bld/
 .vs/
 
 # Files built by Visual Studio
+*.cd
 *_i.c
 *_p.c
 *_h.h
