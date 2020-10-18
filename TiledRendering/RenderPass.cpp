@@ -136,56 +136,59 @@ void DX12ShadingPass::AddSamplerDesc(
 	++m_samplerIdx;
 }
 
-void DX12ShadingPass::Finalize()
+void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS)
 {
-	// Number of root parameters (none sampler)
-	int totalRootParams(0), totalSamplers(0);
-	totalRootParams = m_colorBufferMap.size() + m_depthBufferMap.size() + m_structuredBufferMap.size() + m_constantBufferMap.size();
-	totalSamplers = m_samplers.size();
-
-	// Generate
-	m_rootSignature.Reset(totalRootParams, totalSamplers);
-
-	for(auto& s : m_samplers)
+	if (pRS)
 	{
-		m_rootSignature.InitStaticSampler(s.first, s.second.second);
+		m_rootSignature = pRS;
 	}
-
-	UINT registerSlot = 0;
-	for (auto& constBuf : m_constantBufferMap)
+	else
 	{
-		m_rootSignature[constBuf.first].InitAsConstantBuffer(registerSlot);
-		++registerSlot;
+		// Number of root parameters (none sampler)
+		int totalRootParams(0), totalSamplers(0);
+		totalRootParams = m_colorBufferMap.size() + m_depthBufferMap.size() + m_structuredBufferMap.size() + m_constantBufferMap.size();
+		totalSamplers = m_samplers.size();
+
+		// Generate
+		m_rootSignature->Reset(totalRootParams, totalSamplers);
+
+		for (auto& s : m_samplers)
+		{
+			m_rootSignature->InitStaticSampler(s.first, s.second.second);
+		}
+
+		UINT registerSlot = 0;
+		for (auto& constBuf : m_constantBufferMap)
+		{
+			(*m_rootSignature)[constBuf.first].InitAsConstantBuffer(registerSlot);
+			++registerSlot;
+		}
+
+		registerSlot = 0;
+		for (auto& colorBuf : m_colorBufferMap)
+		{
+			// TODO: the shader visibility is hard code here, may need to allow customization later
+			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
+			++registerSlot;
+		}
+
+		registerSlot = 0;
+		for (auto& depthBuf : m_depthBufferMap)
+		{
+			// TODO: the shader visibility is hard code here, may need to allow customization later
+			(*m_rootSignature)[depthBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
+			++registerSlot;
+		}
+
+		registerSlot = 0;
+		for (auto& structBuf : m_structuredBufferMap)
+		{
+			// TODO: the shader visibility is hard code here, may need to allow customization later
+			(*m_rootSignature)[structBuf.first].InitAsBufferSRV(registerSlot);
+			++registerSlot;
+		}
+
 	}
-
-	registerSlot = 0;
-	for (auto& colorBuf : m_colorBufferMap)
-	{
-		// TODO: the shader visibility is hard code here, may need to allow customization later
-		m_rootSignature[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
-		++registerSlot;
-	}
-
-	registerSlot = 0;
-	for (auto& depthBuf : m_depthBufferMap)
-	{
-		// TODO: the shader visibility is hard code here, may need to allow customization later
-		m_rootSignature[depthBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
-		++registerSlot;
-	}
-
-	registerSlot = 0;
-	for (auto& structBuf : m_structuredBufferMap)
-	{
-
-	}
-
-
-	//m_sceneOpaqueRootSignature[e_rootParameterCB].InitAsConstantBuffer(0);
-	//m_sceneOpaqueRootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-	//m_sceneOpaqueRootSignature[e_LightGridRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-	//m_sceneOpaqueRootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
-	//m_sceneOpaq
 }
 
 void DX12ShadingPass::Bind(CommandContext& Context)

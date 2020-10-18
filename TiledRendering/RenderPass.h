@@ -118,7 +118,7 @@ public:
 	}
 
 	// Prepare the pass, create PSO, pipeline
-	virtual void Finalize() = 0;
+	virtual void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr) = 0;
 
 	// Bind to graphics pipeline
 	virtual void Bind(CommandContext& Context) = 0;
@@ -138,8 +138,8 @@ protected:
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<DepthBuffer>>>		m_depthBufferMap;
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<void>>>				m_constantBufferMap;
 
-	DX12RootSignature	m_rootSignature;
-	DX12PSO				m_piplineState;
+	std::shared_ptr<DX12RootSignature> m_rootSignature;
+	std::shared_ptr<DX12PSO>					m_piplineState;
 };
 
 class DX12ShadingPass : public RenderPass
@@ -179,7 +179,7 @@ public:
 		SamplerDesc samplerDesc);
 
 	// Prepare the pass, create PSO, pipeline
-	void Finalize();
+	void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr);
 
 	// Bind to graphics pipeline
 	void Bind(CommandContext& Context);
@@ -208,6 +208,8 @@ public:
 	virtual ~DX12ComputePass();
 
 	HRESULT LoadComputeShader();
+
+	void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr);
 
 	void Compute();
 protected:
