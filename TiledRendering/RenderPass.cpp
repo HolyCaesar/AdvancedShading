@@ -53,87 +53,20 @@ DX12ShadingPass::~DX12ShadingPass()
 	m_samplerIdx = 0;
 }
 
-HRESULT DX12ShadingPass::LoadShaderFromFile(
-	ShaderType type,
-	std::string shaderName,
-	std::string shaderEntryPoint,
-	std::wstring shaderPath,
-	const ShaderMacros& shaderMacros,
-	std::string shaderHlslVersion)
-{
-	HRESULT hr = S_OK;
-
-#if defined(_DEBUG)
-	// Enable better shader debugging with the graphics debugging tools.
-	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-	UINT compileFlags = 0;
-#endif
-
-	// Load shader macros
-	vector<D3D_SHADER_MACRO> vShaderMacro;
-	for (auto& iter : shaderMacros)
-	{
-		string name = iter.first, definition = iter.second;
-		char* c_name = new char[name.size() + 1];
-		char* c_definition = new char[definition.size() + 1];
-		strncpy_s(c_name, name.size() + 1, name.c_str(), name.size());
-		strncpy_s(c_definition, definition.size() + 1, definition.c_str(), definition.size());
-		vShaderMacro.push_back({ c_name, c_definition });
-	}
-	vShaderMacro.push_back({ 0, 0 });
-
-	// Load shader
-	ComPtr<ID3DBlob> shader;
-	ComPtr<ID3DBlob> errorMessages;
-#if defined(_DEBUG)
-	hr = D3DCompileFromFile(shaderPath.c_str(), vShaderMacro.size() ? vShaderMacro.data() : nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, shaderEntryPoint.c_str(), shaderHlslVersion.c_str(), compileFlags, 0, &shader, &errorMessages);
-	if (FAILED(hr) && errorMessages)
-	{
-		const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
-		wstring str;
-		for (int i = 0; i < 500; i++) str += errorMsg[i];
-		MessageBox(nullptr, str.c_str(), L"Shader Compilation Error", MB_RETRYCANCEL);
-		exit(0);
-	}
-#else
-	ThrowIfFailed(D3DCompileFromFile(shaderPath.c_str(), vShaderMacro.size() ? vShaderMacro.data() : nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, shaderEntryPoint.c_str(), shaderHlslVersion.c_str(), compileFlags, 0, &shader, &errorMessages));
-#endif
-
-	return hr;
-}
-
-HRESULT DX12ShadingPass::LoadShaderFromString(
-	ShaderType type,
-	std::string shaderName,
-	std::string shaderEntryPoint,
-	const std::string& source,
-	const ShaderMacros& shaderMacros,
-	std::string shaderHlslVersion)
-{
-	HRESULT hr = S_OK;
-	// TODO
-	return hr;
-}
-
-//void DX12ShadingPass::UpdateRootSignature()
-//{
-//	m_rootSignature.Reset(e_numRootParameters, 1);
-//	m_rootSignature.InitStaticSampler(0, non_static_sampler);
-//	m_rootSignature[e_rootParameterCB].InitAsConstantBuffer(0);
-//	m_rootSignature[e_ModelTexRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-//	m_rootSignature[e_LightGridRootParameterSRV].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-//	m_rootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
-//	m_rootSignature[e_LightBufferRootParameterSRV].InitAsBufferSRV(3);
-//	m_rootSignature.Finalize(L"SceneRootSignature", rootSignatureFlags);
-//}
-
 void DX12ShadingPass::AddSamplerDesc(
 	const std::string name,
 	SamplerDesc samplerDesc)
 {
 	m_samplers[m_samplerIdx] = make_pair(name, samplerDesc);
 	++m_samplerIdx;
+}
+
+void DX12ShadingPass::AddShader(
+	const std::string name,
+	ShaderType type,
+	ComPtr<ID3DBlob> pShader)
+{
+	m_shaders[type] = pShader;
 }
 
 void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS)
@@ -227,12 +160,70 @@ void DX12ShadingPass::FinalizePSO(std::shared_ptr<DX12PSO> pPSO)
 	m_piplineState->GetPSO()->SetName(w_rsName.c_str());
 }
 
-void DX12ShadingPass::Bind(CommandContext& Context)
-{
-
-}
-
 void DX12ShadingPass::Destroy()
 {
+	m_colorBufferSRVMap.clear();
+	m_colorBufferUAVMap.clear();
+	m_structuredBufferSRVMap.clear();
+	m_structuredBufferUAVMap.clear();
+	m_depthBufferSRVMap.clear();
+	m_constantBufferMap.clear();
 
+	m_bEnabled = false;
+	m_renderPassName = "";
+
+	m_shaders.clear();
+	m_samplers.clear();
+}
+
+void DX12ShadingPass::PreRender(GraphicsContext& Context)
+{
+	// Transist resource to the right state
+	for(auto& colorSRV : m_colorBufferSRVMap)
+		Context.TransitionResource(*(colorSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	for(auto& colorUAV : m_colorBufferUAVMap)
+		Context.TransitionResource(*(colorUAV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	for(auto& depthSRV : m_depthBufferSRVMap)
+		Context.TransitionResource(*(depthSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	for(auto& strutSRV : m_structuredBufferSRVMap)
+		Context.TransitionResource(*(strutSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	for(auto& strutUAV : m_structuredBufferUAVMap)
+		Context.TransitionResource(*(strutUAV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	Context.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+}
+
+void DX12ShadingPass::Render(GraphicsContext& gfxContext)
+{
+	gfxContext.SetRootSignature((*m_rootSignature));
+	gfxContext.SetPipelineState((*m_piplineState));
+
+	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	gfxContext.SetIndexBuffer(m_pIndexBuffer->IndexBufferView());
+	gfxContext.SetVertexBuffer(0, m_pVertexBuffer->VertexBufferView());
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+	{
+		m_renderTarget.GetRTV()
+	};
+
+	gfxContext.ClearDepth(m_depthBuffer);
+	gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
+	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer.GetDSV());
+	gfxContext.ClearColor(m_renderTarget);
+
+	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
+
+	gfxContext.DrawIndexed(m_pVertexBuffer->GetElementCount(), 0, 0);
+}
+
+void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
+{
+	gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_PRESENT);
+
+	gfxContext.Finish();
 }

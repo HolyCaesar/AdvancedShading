@@ -22,8 +22,6 @@ using Microsoft::WRL::ComPtr;
 class RenderPass : public Object
 {
 public:
-	typedef std::map< std::string, std::string > ShaderMacros;
-public:
 	RenderPass();
 	virtual ~RenderPass();
 
@@ -94,9 +92,6 @@ public:
 	// Finalize pipeline state object
 	virtual void FinalizePSO(std::shared_ptr<DX12PSO> pPSO = nullptr) = 0;
 
-	// Bind to graphics pipeline
-	virtual void Bind(CommandContext& Context) = 0;
-
 	// Destroy Resources
 	virtual void Destroy() = 0;
 
@@ -134,41 +129,64 @@ public:
 	DX12ShadingPass();
 	virtual ~DX12ShadingPass();
 
-	HRESULT LoadShaderFromFile(
-		ShaderType type,
-		std::string shaderName,
-		std::string shaderEntryPoint,
-		std::wstring shaderPath,
-		const ShaderMacros& shaderMacros,
-		std::string shaderHlslVersion);
-
-	HRESULT LoadShaderFromString(
-		ShaderType type,
-		std::string shaderName,
-		std::string shaderEntryPoint,
-		const std::string& source,
-		const ShaderMacros& shaderMacros,
-		std::string shaderHlslVersion);
-
 	void AddSamplerDesc(
 		const std::string name, 
 		SamplerDesc samplerDesc);
+
+	void AddShader(
+		const std::string name,
+		ShaderType type,
+		ComPtr<ID3DBlob> pShader);
 
 	void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr);
 
 	void FinalizePSO(std::shared_ptr<DX12PSO> pPSO = nullptr);
 
-	// Bind to graphics pipeline
-	void Bind(CommandContext& Context);
-
 	// Destroy Resources
 	void Destroy();
 
-	void PreRender();
+	void PreRender(GraphicsContext& gfxContext);
 
-	void Render();
+	void Render(GraphicsContext& gfxContext);
 
-	void PostRender();
+	void PostRender(GraphicsContext& gfxContext);
+
+	void SetViewPortAndScissorRect(CD3DX12_VIEWPORT vp, CD3DX12_RECT rect)
+	{
+		m_viewport = vp;
+		m_scissorRect = rect;
+	}
+
+	void SetIndexBuffer(std::shared_ptr<StructuredBuffer> idxBuffer)
+	{
+		m_pIndexBuffer = idxBuffer;
+	}
+
+	void SetVertexBuffer(std::shared_ptr<StructuredBuffer> vexBuffer)
+	{
+		m_pVertexBuffer = vexBuffer;
+	}
+
+	void SetRenderTarget(
+		const std::wstring& Name,
+		uint32_t Width,
+		uint32_t Height,
+		uint32_t NumMips,
+		DXGI_FORMAT Format,
+		D3D12_GPU_VIRTUAL_ADDRESS VidMem = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+	{
+		m_renderTarget.Create(Name, Width, Height, NumMips, Format, VidMem);
+	}
+
+	void SetDepthBuffer(
+		const std::wstring& Name, 
+		uint32_t Width, 
+		uint32_t Height, 
+		DXGI_FORMAT Format,
+		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+	{
+		m_depthBuffer.Create(Name, Width, Height, Format, VidMemPtr);
+	}
 
 protected:
 	std::unordered_map<ShaderType, ComPtr<ID3DBlob>> m_shaders;
@@ -176,6 +194,16 @@ protected:
 	uint64_t m_samplerIdx;
 	std::map<int, std::pair<std::string, SamplerDesc>> m_samplers;
 
+	// DX12 related variables
+	D3D12_PRIMITIVE_TOPOLOGY m_primitiveTopology;
+	std::shared_ptr<StructuredBuffer> m_pIndexBuffer;
+	std::shared_ptr<StructuredBuffer> m_pVertexBuffer;
+
+	ColorBuffer m_renderTarget;
+	DepthBuffer m_depthBuffer;
+
+	CD3DX12_VIEWPORT m_viewport;
+	CD3DX12_RECT m_scissorRect;
 };
 
 class DX12ComputePass : public RenderPass
