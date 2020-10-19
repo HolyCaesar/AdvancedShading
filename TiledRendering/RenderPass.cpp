@@ -146,7 +146,9 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 	{
 		// Number of root parameters (none sampler)
 		int totalRootParams(0), totalSamplers(0);
-		totalRootParams = m_colorBufferMap.size() + m_depthBufferMap.size() + m_structuredBufferMap.size() + m_constantBufferMap.size();
+		totalRootParams = m_colorBufferSRVMap.size() + m_colorBufferUAVMap.size() +
+			m_depthBufferSRVMap.size() + m_constantBufferMap.size() +
+			m_structuredBufferSRVMap.size() + m_structuredBufferUAVMap.size();
 		totalSamplers = m_samplers.size();
 
 		// Generate
@@ -165,30 +167,64 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		}
 
 		registerSlot = 0;
-		for (auto& colorBuf : m_colorBufferMap)
+		for (auto& colorBuf : m_colorBufferSRVMap)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		registerSlot = 0;
-		for (auto& depthBuf : m_depthBufferMap)
+		for (auto& depthBuf : m_depthBufferSRVMap)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[depthBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		registerSlot = 0;
-		for (auto& structBuf : m_structuredBufferMap)
+		for (auto& structBuf : m_structuredBufferSRVMap)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[structBuf.first].InitAsBufferSRV(registerSlot);
 			++registerSlot;
 		}
 
+		registerSlot = 0;
+		for (auto& colorBuf : m_colorBufferUAVMap)
+		{
+			// TODO: the shader visibility is hard code here, may need to allow customization later
+			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
+			++registerSlot;
+		}
+
+		for (auto& structBuf : m_structuredBufferUAVMap)
+		{
+			// TODO: the shader visibility is hard code here, may need to allow customization later
+			(*m_rootSignature)[structBuf.first].InitAsBufferUAV(registerSlot);
+			++registerSlot;
+		}
+
+		// Finalize root signature
+		string rsName = m_renderPassName + "-RootSignature";
+		wstring w_rsName(rsName.begin(), rsName.end());
+		m_rootSignature->Finalize(w_rsName);
 	}
+}
+
+void DX12ShadingPass::FinalizePSO(std::shared_ptr<DX12PSO> pPSO)
+{
+	if (pPSO)
+	{
+		m_piplineState = pPSO;
+	}
+	else
+	{
+		// TODO: may need to add a default PSO or this PSO can be 
+		// provided 
+	}
+
+	string rsName = m_renderPassName + "-RootSignature";
+	wstring w_rsName(rsName.begin(), rsName.end());
+	m_piplineState->GetPSO()->SetName(w_rsName.c_str());
 }
 
 void DX12ShadingPass::Bind(CommandContext& Context)

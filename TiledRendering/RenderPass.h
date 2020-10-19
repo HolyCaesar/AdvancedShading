@@ -34,78 +34,49 @@ public:
 	virtual void SetName(std::string name);
 	virtual std::string GetName() const;
 
-	inline void AddColorBuffer(
-		uint64_t rootIndex,
-		std::wstring buffName,
-		uint32_t buffWidth, uint32_t buffHeight,
-		uint32_t buffNumMips, DXGI_FORMAT buffFormat,
-		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
-	{
-		std::shared_ptr<ColorBuffer> colorBufPtr(new ColorBuffer(), [](ColorBuffer* cBuf) {
-			cBuf->Destroy();
-			});
-		colorBufPtr->Create(buffName, buffWidth, buffHeight, buffNumMips, buffFormat, VidMemPtr);
-
-		std::string bufName(buffName.begin(), buffName.end());
-		m_colorBufferMap[rootIndex] = { bufName, colorBufPtr };
-	}
-
-	inline void AddColorBuffer(
+	inline void AddColorBufferSRV(
 		uint64_t rootIndex,
 		std::wstring buffName,
 		std::shared_ptr<ColorBuffer> colorBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_colorBufferMap[rootIndex] = { bufName, colorBufPtr };
+		m_colorBufferSRVMap[rootIndex] = { bufName, colorBufPtr };
 	}
 
-	inline void AddDepthBuffer(
+	inline void AddColorBufferUAV(
 		uint64_t rootIndex,
 		std::wstring buffName,
-		uint32_t buffWidth, uint32_t buffHeight,
-		DXGI_FORMAT buffFormat,
-		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+		std::shared_ptr<ColorBuffer> colorBufPtr)
 	{
-		std::shared_ptr<DepthBuffer> depthBufPtr(new DepthBuffer(), [](DepthBuffer* cBuf) {
-			cBuf->Destroy();
-			});
-		depthBufPtr->Create(buffName, buffWidth, buffHeight, buffFormat, VidMemPtr);
-
 		std::string bufName(buffName.begin(), buffName.end());
-		m_depthBufferMap[rootIndex] = { bufName, depthBufPtr };
+		m_colorBufferUAVMap[rootIndex] = { bufName, colorBufPtr };
 	}
 
-	inline void AddDepthBuffer(
+	inline void AddDepthBufferSRV(
 		uint64_t rootIndex,
 		std::wstring buffName,
 		std::shared_ptr<DepthBuffer> depthBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_depthBufferMap[rootIndex] = { bufName, depthBufPtr };
+		m_depthBufferSRVMap[rootIndex] = { bufName, depthBufPtr };
 	}
 
-	inline void AddStructuredBuffer(
-		uint64_t rootIndex,
-		std::wstring buffName,
-		uint32_t NumElements, uint32_t ElementSize,
-		const void* initialData)
-	{
-		std::shared_ptr<StructuredBuffer> structBufPtr(new StructuredBuffer(), [](StructuredBuffer* cBuf) {
-			cBuf->Destroy();
-			});
-		structBufPtr->Create(buffName, NumElements, ElementSize, initialData);
-
-		std::string bufName(buffName.begin(), buffName.end());
-		m_structuredBufferMap[rootIndex] = { bufName, structBufPtr };
-	}
-
-	inline void AddStructuredBuffer(
+	inline void AddStructuredBufferSRV(
 		uint64_t rootIndex,
 		std::wstring buffName,
 		std::shared_ptr<StructuredBuffer> structBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_structuredBufferMap[rootIndex] = { bufName, structBufPtr };
+		m_structuredBufferSRVMap[rootIndex] = { bufName, structBufPtr };
+	}
+
+	inline void AddStructuredBufferUAV(
+		uint64_t rootIndex,
+		std::wstring buffName,
+		std::shared_ptr<StructuredBuffer> structBufPtr)
+	{
+		std::string bufName(buffName.begin(), buffName.end());
+		m_structuredBufferUAVMap[rootIndex] = { bufName, structBufPtr };
 	}
 
 	inline bool AddConstantBuffer(
@@ -117,8 +88,11 @@ public:
 		m_constantBufferMap[rootIndex] = { bufName, constBufPtr };
 	}
 
-	// Prepare the pass, create PSO, pipeline
+	// Finalize root signature
 	virtual void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr) = 0;
+
+	// Finalize pipeline state object
+	virtual void FinalizePSO(std::shared_ptr<DX12PSO> pPSO = nullptr) = 0;
 
 	// Bind to graphics pipeline
 	virtual void Bind(CommandContext& Context) = 0;
@@ -133,10 +107,12 @@ protected:
 	bool m_bEnabled;
 
 	// Buffer Dictionary
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<ColorBuffer>>>		m_colorBufferMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>> m_structuredBufferMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<DepthBuffer>>>		m_depthBufferMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<void>>>				m_constantBufferMap;
+	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<ColorBuffer>>>				m_colorBufferSRVMap;
+	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<ColorBuffer>>>				m_colorBufferUAVMap;
+	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferSRVMap;
+	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferUAVMap;
+	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<DepthBuffer>>>				m_depthBufferSRVMap;
+	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<void>>>							m_constantBufferMap;
 
 	std::shared_ptr<DX12RootSignature> m_rootSignature;
 	std::shared_ptr<DX12PSO>					m_piplineState;
@@ -178,8 +154,9 @@ public:
 		const std::string name, 
 		SamplerDesc samplerDesc);
 
-	// Prepare the pass, create PSO, pipeline
 	void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr);
+
+	void FinalizePSO(std::shared_ptr<DX12PSO> pPSO = nullptr);
 
 	// Bind to graphics pipeline
 	void Bind(CommandContext& Context);
