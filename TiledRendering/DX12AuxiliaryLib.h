@@ -19,6 +19,7 @@ namespace DX12Aux
 		TessellationEvaluationShader,   // Domain Shader in DirectX
 		GeometryShader,
 		PixelShader,
+		ComputeShader
 	};
 
 	inline ComPtr<ID3DBlob> LoadShaderFromFile(

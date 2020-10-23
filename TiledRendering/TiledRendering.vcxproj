@@ -228,6 +228,7 @@
     <ClInclude Include="CPUProfiler.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DescriptorHeap.h" />
+    <ClInclude Include="DX12AuxiliaryLib.h" />
     <ClInclude Include="DX12GraphicsCommon.h" />
     <ClInclude Include="DX12LinearAllocator.h" />
     <ClInclude Include="DX12PipelineState.h" />

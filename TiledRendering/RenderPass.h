@@ -5,6 +5,7 @@
 #include "DX12PipelineState.h"
 #include "DX12GraphicsCommon.h"
 #include "SamplerManager.h"
+#include "DX12AuxiliaryLib.h"
 #include "GpuBuffer.h"
 #include "GpuResource.h"
 
@@ -15,12 +16,20 @@
 class CommandContext;
 
 using Microsoft::WRL::ComPtr;
+using namespace DX12Aux;
 
 // TODO: need to implement a pass class that is dedicated to just one pass
 // A pass has two types: compute and rendering
 
 class RenderPass : public Object
 {
+public:
+	template <class T>
+	struct RenderPassRes
+	{
+		vector<T> resPool;
+		unordered_map<uint64_t, uint64_t> mapping; // Root Index and the index of the resource in the resPool
+	};
 public:
 	RenderPass();
 	virtual ~RenderPass();
@@ -86,6 +95,11 @@ public:
 		m_constantBufferMap[rootIndex] = { bufName, constBufPtr };
 	}
 
+	void AddShader(
+		const std::string name,
+		ShaderType type,
+		ComPtr<ID3DBlob> pShader);
+
 	// Finalize root signature
 	virtual void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr) = 0;
 
@@ -107,24 +121,24 @@ protected:
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferSRVMap;
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferUAVMap;
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<DepthBuffer>>>				m_depthBufferSRVMap;
+	// TODO: need to add constant buffer size here
+	// Discuss the performance here
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<void>>>							m_constantBufferMap;
+	std::vector<std::tuple<uint64_t, uint64_t, std::shared_ptr<void>>> m_coinstantBufferMap;
+
 
 	std::shared_ptr<DX12RootSignature> m_rootSignature;
 	std::shared_ptr<DX12PSO>					m_piplineState;
+
+	std::unordered_map<ShaderType, ComPtr<ID3DBlob>> m_shaders;
+private:
+	RenderPass(const RenderPass& copy) = delete;
+	RenderPass(RenderPass&& copy) = delete;
+	RenderPass& operator=(const RenderPass& other) = delete;
 };
 
 class DX12ShadingPass : public RenderPass
 {
-public:
-	enum ShaderType
-	{
-		UnknownShaderType = 0,
-		VertexShader,
-		TessellationControlShader,      // Hull Shader in DirectX
-		TessellationEvaluationShader,   // Domain Shader in DirectX
-		GeometryShader,
-		PixelShader,
-	};
 public:
 	DX12ShadingPass();
 	virtual ~DX12ShadingPass();
@@ -132,11 +146,6 @@ public:
 	void AddSamplerDesc(
 		const std::string name, 
 		SamplerDesc samplerDesc);
-
-	void AddShader(
-		const std::string name,
-		ShaderType type,
-		ComPtr<ID3DBlob> pShader);
 
 	void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr);
 
@@ -189,8 +198,6 @@ public:
 	}
 
 protected:
-	std::unordered_map<ShaderType, ComPtr<ID3DBlob>> m_shaders;
-
 	uint64_t m_samplerIdx;
 	std::map<int, std::pair<std::string, SamplerDesc>> m_samplers;
 
@@ -204,19 +211,46 @@ protected:
 
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
+
+//private:
+//	DX12ShadingPass(const DX12ShadingPass& copy) = delete;
+//	DX12ShadingPass(DX12ShadingPass&& copy) = delete;
+//	DX12ShadingPass& operator=(const DX12ShadingPass& other) = delete;
 };
 
 class DX12ComputePass : public RenderPass
 {
 public:
 	DX12ComputePass();
+	DX12ComputePass(const std::string name);
 	virtual ~DX12ComputePass();
-
-	HRESULT LoadComputeShader();
 
 	void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr);
 
-	void Compute();
+	// Finalize pipeline state object
+	void FinalizePSO(std::shared_ptr<DX12PSO> pPSO = nullptr);
+
+	void PreCompute(GraphicsContext& gfxContext);
+
+	void Compute(GraphicsContext& gfxContext);
+
+	void Destroy();
+
+	void SetKernelDimensions(uint64_t xDim, uint64_t yDim, uint64_t zDim)
+	{
+		m_xKernelSize = xDim;
+		m_yKernelSize = yDim;
+		m_zKernelSize = zDim;
+	}
 protected:
 	ComPtr<ID3DBlob> m_shader;
+
+	uint64_t m_xKernelSize;
+	uint64_t m_yKernelSize;
+	uint64_t m_zKernelSize;
+
+	//private:
+//	DX12ComputePass(const DX12ComputePass& copy) = delete;
+//	DX12ComputePass(DX12ComputePass&& copy) = delete;
+//	DX12ComputePass& operator=(const DX12ComputePass& other) = delete;
 };

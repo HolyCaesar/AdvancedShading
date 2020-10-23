@@ -362,7 +362,6 @@ void TiledRendering::OnRender()
 	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
-
 	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
 	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());

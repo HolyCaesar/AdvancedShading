@@ -133,10 +133,10 @@ private:
 
 private:
     // Pre-Depth pass resources
-    DepthBuffer         m_preDepthPass;
-    ColorBuffer         m_preDepthPassRTV;
-    DX12RootSignature   m_preDepthPassRootSignature;
-    GraphicsPSO         m_preDepthPassPSO;
+    DepthBuffer					m_preDepthPass;
+    ColorBuffer					m_preDepthPassRTV;
+    DX12RootSignature		m_preDepthPassRootSignature;
+    GraphicsPSO				m_preDepthPassPSO;
     
     // Light Culling Pass
     vector<Light>       m_lightsList;
