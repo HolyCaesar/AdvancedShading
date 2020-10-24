@@ -86,9 +86,10 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 
 		// Number of root parameters (none sampler)
 		int totalRootParams(0), totalSamplers(0);
-		totalRootParams = m_colorBufferSRVMap.size() + m_colorBufferUAVMap.size() +
-			m_depthBufferSRVMap.size() + m_constantBufferMap.resPool.size() +
-			m_structuredBufferSRVMap.size() + m_structuredBufferUAVMap.size();
+		totalRootParams = 
+			m_colorBufferSRVMap.resPool.size() + m_colorBufferUAVMap.resPool.size() +
+			m_depthBufferSRVMap.resPool.size() + m_constantBufferMap.resPool.size() +
+			m_structuredBufferSRVMap.resPool.size() + m_structuredBufferUAVMap.resPool.size();
 		totalSamplers = m_samplers.size();
 
 		// Generate
@@ -108,21 +109,21 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		}
 
 		registerSlot = 0;
-		for (auto& colorBuf : m_colorBufferSRVMap)
+		for (auto& colorBuf : m_colorBufferSRVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		for (auto& depthBuf : m_depthBufferSRVMap)
+		for (auto& depthBuf : m_depthBufferSRVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[depthBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		for (auto& structBuf : m_structuredBufferSRVMap)
+		for (auto& structBuf : m_structuredBufferSRVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[structBuf.first].InitAsBufferSRV(registerSlot);
@@ -130,14 +131,14 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		}
 
 		registerSlot = 0;
-		for (auto& colorBuf : m_colorBufferUAVMap)
+		for (auto& colorBuf : m_colorBufferUAVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		for (auto& structBuf : m_structuredBufferUAVMap)
+		for (auto& structBuf : m_structuredBufferUAVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[structBuf.first].InitAsBufferUAV(registerSlot);
@@ -170,11 +171,11 @@ void DX12ShadingPass::FinalizePSO(std::shared_ptr<DX12PSO> pPSO)
 
 void DX12ShadingPass::Destroy()
 {
-	m_colorBufferSRVMap.clear();
-	m_colorBufferUAVMap.clear();
-	m_structuredBufferSRVMap.clear();
-	m_structuredBufferUAVMap.clear();
-	m_depthBufferSRVMap.clear();
+	m_colorBufferSRVMap.Clear();
+	m_colorBufferUAVMap.Clear();
+	m_structuredBufferSRVMap.Clear();
+	m_structuredBufferUAVMap.Clear();
+	m_depthBufferSRVMap.Clear();
 	m_constantBufferMap.Clear();
 
 	m_bEnabled = false;
@@ -187,20 +188,20 @@ void DX12ShadingPass::Destroy()
 void DX12ShadingPass::PreRender(GraphicsContext& Context)
 {
 	// Transist resource to the right state
-	for(auto& colorSRV : m_colorBufferSRVMap)
-		Context.TransitionResource(*(colorSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for(auto& colorSRV : m_colorBufferSRVMap.resPool)
+		Context.TransitionResource(*(colorSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for(auto& colorUAV : m_colorBufferUAVMap)
-		Context.TransitionResource(*(colorUAV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for(auto& colorUAV : m_colorBufferUAVMap.resPool)
+		Context.TransitionResource(*(colorUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for(auto& depthSRV : m_depthBufferSRVMap)
-		Context.TransitionResource(*(depthSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for(auto& depthSRV : m_depthBufferSRVMap.resPool)
+		Context.TransitionResource(*(depthSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for(auto& strutSRV : m_structuredBufferSRVMap)
-		Context.TransitionResource(*(strutSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for(auto& strutSRV : m_structuredBufferSRVMap.resPool)
+		Context.TransitionResource(*(strutSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for(auto& strutUAV : m_structuredBufferUAVMap)
-		Context.TransitionResource(*(strutUAV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for(auto& strutUAV : m_structuredBufferUAVMap.resPool)
+		Context.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	Context.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 }
@@ -232,29 +233,29 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 		gfxContext.SetDynamicConstantBufferView(rootIdx, bufSize, bufPtr);
 	}
 
-	for (auto& cBuf : m_colorBufferSRVMap) // color SRV
-		gfxContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second.second->GetSRV());
+	for (auto& cBuf : m_colorBufferSRVMap.resPool) // color SRV
+		gfxContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second->GetSRV());
 
-	for (auto& dBuf : m_depthBufferSRVMap) // depth SRV
-		gfxContext.SetDynamicDescriptor(dBuf.first, 0, dBuf.second.second->GetDepthSRV());
+	for (auto& dBuf : m_depthBufferSRVMap.resPool) // depth SRV
+		gfxContext.SetDynamicDescriptor(dBuf.first, 0, dBuf.second->GetDepthSRV());
 
-	for (auto& sBuf : m_structuredBufferSRVMap) // structured SRV
-		gfxContext.SetBufferSRV(sBuf.first, *sBuf.second.second);
+	for (auto& sBuf : m_structuredBufferSRVMap.resPool) // structured SRV
+		gfxContext.SetBufferSRV(sBuf.first, *sBuf.second);
 
-	for (auto& cBuf : m_colorBufferUAVMap) // color UAV
-		gfxContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second.second->GetUAV());
+	for (auto& cBuf : m_colorBufferUAVMap.resPool) // color UAV
+		gfxContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second->GetUAV());
 
-	for (auto& sBuf : m_structuredBufferUAVMap) // structured UAV 
-		gfxContext.SetBufferUAV(sBuf.first, *sBuf.second.second);
+	for (auto& sBuf : m_structuredBufferUAVMap.resPool) // structured UAV 
+		gfxContext.SetBufferUAV(sBuf.first, *sBuf.second);
 
 	// Reset the UAV counter for this frame.
-	for (auto& cBuf : m_colorBufferUAVMap) // color UAV
-		gfxContext.ClearUAV(*cBuf.second.second);
+	for (auto& cBuf : m_colorBufferUAVMap.resPool) // color UAV
+		gfxContext.ClearUAV(*cBuf.second);
 
 	// TODO sizeof(UINT) is hardcode here, need to make is a parameter or should
 	// be returned by the structure buffer itself
-	for (auto& sBuf : m_structuredBufferUAVMap) // structured UAV 
-		gfxContext.CopyBufferRegion(*sBuf.second.second, 0, sBuf.second.second->GetCounterBuffer(), 0, sizeof(UINT));
+	for (auto& sBuf : m_structuredBufferUAVMap.resPool) // structured UAV 
+		gfxContext.CopyBufferRegion(*sBuf.second, 0, sBuf.second->GetCounterBuffer(), 0, sizeof(UINT));
 
 	gfxContext.DrawIndexed(m_pVertexBuffer->GetElementCount(), 0, 0);
 }
@@ -303,9 +304,10 @@ void DX12ComputePass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 
 		// Number of root parameters (none sampler)
 		int totalRootParams(0), totalSamplers(0);
-		totalRootParams = m_colorBufferSRVMap.size() + m_colorBufferUAVMap.size() +
-			m_depthBufferSRVMap.size() + m_constantBufferMap.resPool.size() +
-			m_structuredBufferSRVMap.size() + m_structuredBufferUAVMap.size();
+		totalRootParams = 
+			m_colorBufferSRVMap.resPool.size() + m_colorBufferUAVMap.resPool.size() +
+			m_depthBufferSRVMap.resPool.size() + m_constantBufferMap.resPool.size() +
+			m_structuredBufferSRVMap.resPool.size() + m_structuredBufferUAVMap.resPool.size();
 		//totalSamplers = m_samplers.size();
 
 		// Generate
@@ -325,21 +327,21 @@ void DX12ComputePass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		}
 
 		registerSlot = 0;
-		for (auto& colorBuf : m_colorBufferSRVMap)
+		for (auto& colorBuf : m_colorBufferSRVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		for (auto& depthBuf : m_depthBufferSRVMap)
+		for (auto& depthBuf : m_depthBufferSRVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[depthBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		for (auto& structBuf : m_structuredBufferSRVMap)
+		for (auto& structBuf : m_structuredBufferSRVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[structBuf.first].InitAsBufferSRV(registerSlot);
@@ -347,14 +349,14 @@ void DX12ComputePass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		}
 
 		registerSlot = 0;
-		for (auto& colorBuf : m_colorBufferUAVMap)
+		for (auto& colorBuf : m_colorBufferUAVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[colorBuf.first].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, registerSlot, 1, D3D12_SHADER_VISIBILITY_ALL);
 			++registerSlot;
 		}
 
-		for (auto& structBuf : m_structuredBufferUAVMap)
+		for (auto& structBuf : m_structuredBufferUAVMap.resPool)
 		{
 			// TODO: the shader visibility is hard code here, may need to allow customization later
 			(*m_rootSignature)[structBuf.first].InitAsBufferUAV(registerSlot);
@@ -390,20 +392,20 @@ void DX12ComputePass::PreCompute(GraphicsContext& gfxContext)
 	ComputeContext& computeContext = gfxContext.GetComputeContext();
 
 	// Transist resource to the right state
-	for (auto& colorSRV : m_colorBufferSRVMap)
-		computeContext.TransitionResource(*(colorSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for (auto& colorSRV : m_colorBufferSRVMap.resPool)
+		computeContext.TransitionResource(*(colorSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for (auto& colorUAV : m_colorBufferUAVMap)
-		computeContext.TransitionResource(*(colorUAV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for (auto& colorUAV : m_colorBufferUAVMap.resPool)
+		computeContext.TransitionResource(*(colorUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for (auto& depthSRV : m_depthBufferSRVMap)
-		computeContext.TransitionResource(*(depthSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for (auto& depthSRV : m_depthBufferSRVMap.resPool)
+		computeContext.TransitionResource(*(depthSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for (auto& strutSRV : m_structuredBufferSRVMap)
-		computeContext.TransitionResource(*(strutSRV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for (auto& strutSRV : m_structuredBufferSRVMap.resPool)
+		computeContext.TransitionResource(*(strutSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	for (auto& strutUAV : m_structuredBufferUAVMap)
-		computeContext.TransitionResource(*(strutUAV.second.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	for (auto& strutUAV : m_structuredBufferUAVMap.resPool)
+		computeContext.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	computeContext.FlushResourceBarriers();
 }
@@ -415,42 +417,46 @@ void DX12ComputePass::Compute(GraphicsContext& gfxContext)
 	computeContext.SetRootSignature(*m_rootSignature);
 	computeContext.SetPipelineState(*m_piplineState);
 
-	// TODO const buffer, need to refer to LightCullingPass
+	for (auto& constBuf : m_constantBufferMap.resPool)
+	{
+		auto& [rootIdx, bufSize, bufPtr] = constBuf;
+		computeContext.SetDynamicConstantBufferView(rootIdx, bufSize, bufPtr);
+	}
 
-	for (auto& cBuf : m_colorBufferSRVMap) // color SRV
-		computeContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second.second->GetSRV());
+	for (auto& cBuf : m_colorBufferSRVMap.resPool) // color SRV
+		computeContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second->GetSRV());
 
-	for(auto& dBuf : m_depthBufferSRVMap) // depth SRV
-		computeContext.SetDynamicDescriptor(dBuf.first, 0, dBuf.second.second->GetDepthSRV());
+	for(auto& dBuf : m_depthBufferSRVMap.resPool) // depth SRV
+		computeContext.SetDynamicDescriptor(dBuf.first, 0, dBuf.second->GetDepthSRV());
 
-	for (auto& sBuf : m_structuredBufferSRVMap) // structured SRV
-		computeContext.SetBufferSRV(sBuf.first, *sBuf.second.second);
+	for (auto& sBuf : m_structuredBufferSRVMap.resPool) // structured SRV
+		computeContext.SetBufferSRV(sBuf.first, *sBuf.second);
 
-	for(auto& cBuf : m_colorBufferUAVMap) // color UAV
-		computeContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second.second->GetUAV());
+	for(auto& cBuf : m_colorBufferUAVMap.resPool) // color UAV
+		computeContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second->GetUAV());
 
-	for (auto& sBuf : m_structuredBufferUAVMap) // structured UAV 
-		computeContext.SetBufferUAV(sBuf.first, *sBuf.second.second);
+	for (auto& sBuf : m_structuredBufferUAVMap.resPool) // structured UAV 
+		computeContext.SetBufferUAV(sBuf.first, *sBuf.second);
 
 	// Reset the UAV counter for this frame.
-	for (auto& cBuf : m_colorBufferUAVMap) // color UAV
-		computeContext.ClearUAV(*cBuf.second.second);
+	for (auto& cBuf : m_colorBufferUAVMap.resPool) // color UAV
+		computeContext.ClearUAV(*cBuf.second);
 
 	// TODO sizeof(UINT) is hardcode here, need to make is a parameter or should
 	// be returned by the structure buffer itself
-	for (auto& sBuf : m_structuredBufferUAVMap) // structured UAV 
-		computeContext.CopyBufferRegion(*sBuf.second.second, 0, sBuf.second.second->GetCounterBuffer(), 0, sizeof(UINT));
+	for (auto& sBuf : m_structuredBufferUAVMap.resPool) // structured UAV 
+		computeContext.CopyBufferRegion(*sBuf.second, 0, sBuf.second->GetCounterBuffer(), 0, sizeof(UINT));
 
 	computeContext.Dispatch(m_xKernelSize, m_yKernelSize, m_zKernelSize);
 }
 
 void DX12ComputePass::Destroy()
 {
-	m_colorBufferSRVMap.clear();
-	m_colorBufferUAVMap.clear();
-	m_structuredBufferSRVMap.clear();
-	m_structuredBufferUAVMap.clear();
-	m_depthBufferSRVMap.clear();
+	m_colorBufferSRVMap.Clear();
+	m_colorBufferUAVMap.Clear();
+	m_structuredBufferSRVMap.Clear();
+	m_structuredBufferUAVMap.Clear();
+	m_depthBufferSRVMap.Clear();
 	m_constantBufferMap.Clear();
 
 	m_bEnabled = false;

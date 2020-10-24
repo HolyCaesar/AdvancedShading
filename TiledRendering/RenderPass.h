@@ -53,7 +53,8 @@ public:
 		std::shared_ptr<ColorBuffer> colorBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_colorBufferSRVMap[rootIndex] = { bufName, colorBufPtr };
+		m_colorBufferSRVMap.resPool.push_back({ rootIndex, colorBufPtr });
+		m_colorBufferSRVMap.mapping[bufName] = static_cast<int>(m_colorBufferSRVMap.resPool.size()) - 1;
 	}
 
 	inline void AddColorBufferUAV(
@@ -62,7 +63,8 @@ public:
 		std::shared_ptr<ColorBuffer> colorBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_colorBufferUAVMap[rootIndex] = { bufName, colorBufPtr };
+		m_colorBufferUAVMap.resPool.push_back({ rootIndex, colorBufPtr });
+		m_colorBufferUAVMap.mapping[bufName] = static_cast<int>(m_colorBufferUAVMap.resPool.size()) - 1;
 	}
 
 	inline void AddDepthBufferSRV(
@@ -71,7 +73,8 @@ public:
 		std::shared_ptr<DepthBuffer> depthBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_depthBufferSRVMap[rootIndex] = { bufName, depthBufPtr };
+		m_depthBufferSRVMap.resPool.push_back({ rootIndex, depthBufPtr });
+		m_depthBufferSRVMap.mapping[bufName] = static_cast<int>(m_depthBufferSRVMap.resPool.size()) - 1;
 	}
 
 	inline void AddStructuredBufferSRV(
@@ -80,7 +83,8 @@ public:
 		std::shared_ptr<StructuredBuffer> structBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_structuredBufferSRVMap[rootIndex] = { bufName, structBufPtr };
+		m_structuredBufferSRVMap.resPool.push_back({ rootIndex, structBufPtr });
+		m_structuredBufferSRVMap.mapping[bufName] = static_cast<int>(m_structuredBufferSRVMap.resPool.size()) - 1;
 	}
 
 	inline void AddStructuredBufferUAV(
@@ -89,7 +93,8 @@ public:
 		std::shared_ptr<StructuredBuffer> structBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_structuredBufferUAVMap[rootIndex] = { bufName, structBufPtr };
+		m_structuredBufferUAVMap.resPool.push_back({ rootIndex, structBufPtr });
+		m_structuredBufferUAVMap.mapping[bufName] = static_cast<int>(m_structuredBufferUAVMap.resPool.size()) - 1;
 	}
 
 	inline bool AddConstantBuffer(
@@ -124,15 +129,17 @@ protected:
 	bool m_bEnabled;
 
 	// Buffer Dictionary
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<ColorBuffer>>>				m_colorBufferSRVMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<ColorBuffer>>>				m_colorBufferUAVMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferSRVMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferUAVMap;
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<DepthBuffer>>>				m_depthBufferSRVMap;
+	RenderPassRes<pair<uint64_t, std::shared_ptr<ColorBuffer>>>			m_colorBufferSRVMap;
+	RenderPassRes<pair<uint64_t, std::shared_ptr<ColorBuffer>>>			m_colorBufferUAVMap;
 
-	RenderPassRes< std::tuple<uint64_t, uint64_t, const void*>> m_constantBufferMap;
+	RenderPassRes<pair<uint64_t, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferSRVMap;
+	RenderPassRes<pair<uint64_t, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferUAVMap;
 
-	std::shared_ptr<DX12RootSignature> m_rootSignature;
+	RenderPassRes<pair<uint64_t, std::shared_ptr<DepthBuffer>>>			m_depthBufferSRVMap;
+
+	RenderPassRes< std::tuple<uint64_t, uint64_t, const void*>>					m_constantBufferMap;
+
+	std::shared_ptr<DX12RootSignature>	m_rootSignature;
 	std::shared_ptr<DX12PSO>					m_piplineState;
 
 	std::unordered_map<ShaderType, ComPtr<ID3DBlob>> m_shaders;
