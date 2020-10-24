@@ -87,7 +87,7 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		// Number of root parameters (none sampler)
 		int totalRootParams(0), totalSamplers(0);
 		totalRootParams = m_colorBufferSRVMap.size() + m_colorBufferUAVMap.size() +
-			m_depthBufferSRVMap.size() + m_constantBufferMap.size() +
+			m_depthBufferSRVMap.size() + m_constantBufferMap.resPool.size() +
 			m_structuredBufferSRVMap.size() + m_structuredBufferUAVMap.size();
 		totalSamplers = m_samplers.size();
 
@@ -100,9 +100,10 @@ void DX12ShadingPass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		}
 
 		UINT registerSlot = 0;
-		for (auto& constBuf : m_constantBufferMap)
+		for (auto& constBuf : m_constantBufferMap.resPool)
 		{
-			(*m_rootSignature)[constBuf.first].InitAsConstantBuffer(registerSlot);
+			auto & [rootIdx, bufSize, bufPtr] = constBuf;
+			(*m_rootSignature)[rootIdx].InitAsConstantBuffer(registerSlot);
 			++registerSlot;
 		}
 
@@ -174,7 +175,7 @@ void DX12ShadingPass::Destroy()
 	m_structuredBufferSRVMap.clear();
 	m_structuredBufferUAVMap.clear();
 	m_depthBufferSRVMap.clear();
-	m_constantBufferMap.clear();
+	m_constantBufferMap.Clear();
 
 	m_bEnabled = false;
 	m_renderPassName = "";
@@ -225,7 +226,11 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 
 	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
-	// TODO const buffer, need to refer to LightCullingPass
+	for (auto& constBuf : m_constantBufferMap.resPool)
+	{
+		auto& [rootIdx, bufSize, bufPtr] = constBuf;
+		gfxContext.SetDynamicConstantBufferView(rootIdx, bufSize, bufPtr);
+	}
 
 	for (auto& cBuf : m_colorBufferSRVMap) // color SRV
 		gfxContext.SetDynamicDescriptor(cBuf.first, 0, cBuf.second.second->GetSRV());
@@ -299,7 +304,7 @@ void DX12ComputePass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		// Number of root parameters (none sampler)
 		int totalRootParams(0), totalSamplers(0);
 		totalRootParams = m_colorBufferSRVMap.size() + m_colorBufferUAVMap.size() +
-			m_depthBufferSRVMap.size() + m_constantBufferMap.size() +
+			m_depthBufferSRVMap.size() + m_constantBufferMap.resPool.size() +
 			m_structuredBufferSRVMap.size() + m_structuredBufferUAVMap.size();
 		//totalSamplers = m_samplers.size();
 
@@ -312,9 +317,10 @@ void DX12ComputePass::FinalizeRootSignature(std::shared_ptr<DX12RootSignature> p
 		//}
 
 		UINT registerSlot = 0;
-		for (auto& constBuf : m_constantBufferMap)
+		for (auto& constBuf : m_constantBufferMap.resPool)
 		{
-			(*m_rootSignature)[constBuf.first].InitAsConstantBuffer(registerSlot);
+			auto& [rootIdx, bufSize, bufPtr] = constBuf;
+			(*m_rootSignature)[rootIdx].InitAsConstantBuffer(registerSlot);
 			++registerSlot;
 		}
 
@@ -445,7 +451,7 @@ void DX12ComputePass::Destroy()
 	m_structuredBufferSRVMap.clear();
 	m_structuredBufferUAVMap.clear();
 	m_depthBufferSRVMap.clear();
-	m_constantBufferMap.clear();
+	m_constantBufferMap.Clear();
 
 	m_bEnabled = false;
 	m_renderPassName = "";

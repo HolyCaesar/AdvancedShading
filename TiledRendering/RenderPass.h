@@ -12,24 +12,30 @@
 #include <string>
 #include <unordered_map>
 #include <map>
+#include <tuple>
 
 class CommandContext;
 
 using Microsoft::WRL::ComPtr;
 using namespace DX12Aux;
 
-// TODO: need to implement a pass class that is dedicated to just one pass
 // A pass has two types: compute and rendering
+// Pack the memory usage for cache efficiency
+template <class T>
+struct RenderPassRes
+{
+	vector<T> resPool;
+	unordered_map<std::string, int> mapping; // Root Index and the index of the resource in the resPool
+
+	void Clear()
+	{
+		resPool.clear();
+		mapping.clear();
+	}
+};
 
 class RenderPass : public Object
 {
-public:
-	template <class T>
-	struct RenderPassRes
-	{
-		vector<T> resPool;
-		unordered_map<uint64_t, uint64_t> mapping; // Root Index and the index of the resource in the resPool
-	};
 public:
 	RenderPass();
 	virtual ~RenderPass();
@@ -89,10 +95,12 @@ public:
 	inline bool AddConstantBuffer(
 		uint64_t rootIndex,
 		std::wstring buffName,
-		std::shared_ptr<void> constBufPtr)
+		uint64_t bufSize,
+		const void* constBufPtr)
 	{
 		std::string bufName(buffName.begin(), buffName.end());
-		m_constantBufferMap[rootIndex] = { bufName, constBufPtr };
+		m_constantBufferMap.resPool.push_back({ rootIndex, bufSize, constBufPtr });
+		m_constantBufferMap.mapping[bufName] =  static_cast<int>(m_constantBufferMap.resPool.size()) - 1;
 	}
 
 	void AddShader(
@@ -121,11 +129,8 @@ protected:
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferSRVMap;
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<StructuredBuffer>>>		m_structuredBufferUAVMap;
 	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<DepthBuffer>>>				m_depthBufferSRVMap;
-	// TODO: need to add constant buffer size here
-	// Discuss the performance here
-	std::unordered_map<uint64_t, std::pair<std::string, std::shared_ptr<void>>>							m_constantBufferMap;
-	std::vector<std::tuple<uint64_t, uint64_t, std::shared_ptr<void>>> m_coinstantBufferMap;
 
+	RenderPassRes< std::tuple<uint64_t, uint64_t, const void*>> m_constantBufferMap;
 
 	std::shared_ptr<DX12RootSignature> m_rootSignature;
 	std::shared_ptr<DX12PSO>					m_piplineState;
