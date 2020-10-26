@@ -7,7 +7,7 @@
 using namespace std;
 
 /*****************************/
-/*  RenderPass definitions   */
+/*   RenderPass definitions   */
 /*****************************/
 RenderPass::RenderPass() :
 	m_bEnabled(false)
@@ -46,9 +46,9 @@ void RenderPass::AddShader(
 	m_shaders[type] = pShader;
 }
 
-/*****************************/
+/*******************************/
 /*DX12ShadingPass definitions*/
-/*****************************/
+/*******************************/
 DX12ShadingPass::DX12ShadingPass()
 {
 	m_renderPassName = "";

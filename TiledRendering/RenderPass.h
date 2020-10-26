@@ -97,7 +97,7 @@ public:
 		m_structuredBufferUAVMap.mapping[bufName] = static_cast<int>(m_structuredBufferUAVMap.resPool.size()) - 1;
 	}
 
-	inline bool AddConstantBuffer(
+	inline void AddConstantBuffer(
 		uint64_t rootIndex,
 		std::wstring buffName,
 		uint64_t bufSize,
@@ -223,6 +223,8 @@ protected:
 
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
+
+	GraphicsPSO m_pso;
 
 //private:
 //	DX12ShadingPass(const DX12ShadingPass& copy) = delete;
