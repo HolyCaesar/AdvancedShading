@@ -62,7 +62,7 @@ void ForwardPlusLightCulling::Destroy()
 	m_tLightGrid.Destroy();
 	m_testUAVTex2D.Destroy();
 	
-	m_Lights.Destroy();
+	m_Lights->Destroy();
 }
 
 void ForwardPlusLightCulling::UpdateConstantBuffer(XMMATRIX viewMatrix)
@@ -81,8 +81,8 @@ void ForwardPlusLightCulling::ExecuteCS(GraphicsContext& gfxContext, DepthBuffer
 void ForwardPlusLightCulling::UpdateLightBuffer(vector<Light>& lightList)
 {
 	IGraphics::g_GraphicsCore->g_CommandManager->IdleGPU();
-	m_Lights.Destroy();
-	m_Lights.Create(L"LightLists", lightList.size(), sizeof(Light), lightList.data());
+	m_Lights->Destroy();
+	m_Lights->Create(L"LightLists", lightList.size(), sizeof(Light), lightList.data());
 	//IGraphics::g_GraphicsCore->g_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_Lights.GetResource(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 }
 
@@ -265,6 +265,7 @@ void ForwardPlusLightCulling::LoadLightCullingAsset(
 	m_oLightGrid.Create(L"OpaqueLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_UINT);
 	m_tLightGrid.Create(L"TransparentLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_UINT);
 	m_testUAVTex2D.Create(L"TestMap", ScreenWidth, ScreenHeight, 1, DXGI_FORMAT_R32G32_FLOAT);
+
 }
 
 void ForwardPlusLightCulling::UpdateLightCullingCB()
@@ -295,7 +296,7 @@ void ForwardPlusLightCulling::ExecuteLightCullingCS(GraphicsContext& gfxContext,
 	computeContext.TransitionResource(m_testUAVBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	computeContext.TransitionResource(m_oLightGrid, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	computeContext.TransitionResource(m_tLightGrid, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	computeContext.TransitionResource(m_Lights, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	computeContext.TransitionResource(*m_Lights, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	computeContext.TransitionResource(m_testUAVTex2D, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
 
 
@@ -310,7 +311,7 @@ void ForwardPlusLightCulling::ExecuteLightCullingCS(GraphicsContext& gfxContext,
 	computeContext.SetDynamicDescriptor(e_LightCullingDebugUAVTex2D, 0, m_testUAVTex2D.GetUAV());
 
 	computeContext.SetBufferSRV(e_LightCullingFrustumSRV, m_CSGridFrustumOutputSB);
-	computeContext.SetBufferSRV(e_LightCullingLightsSRV, m_Lights);
+	computeContext.SetBufferSRV(e_LightCullingLightsSRV, *m_Lights);
 	computeContext.SetDynamicDescriptor(e_LightCullingDepthSRV, 0, preDepthPass.GetDepthSRV());
 
 

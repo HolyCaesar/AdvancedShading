@@ -372,7 +372,7 @@ void TiledRendering::OnRender()
 	gfxContext.SetDynamicDescriptor(e_ModelTexRootParameterSRV, 0, m_modelTexture.GetSRV());
 	gfxContext.SetDynamicDescriptor(e_LightGridRootParameterSRV, 0, m_LightCullingPass.GetOpaqueLightGrid().GetSRV());
 	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
-	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, m_LightCullingPass.GetLightBuffer());
+	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, *m_LightCullingPass.GetLightBuffer());
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{

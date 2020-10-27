@@ -15,7 +15,9 @@ class ForwardPlusLightCulling
 public:
     ForwardPlusLightCulling() :
         m_TiledSize(16), m_BlockSizeX(1), m_BlockSizeY(1)
-    {}
+    {
+		m_Lights = make_shared<StructuredBuffer>();
+	}
     ~ForwardPlusLightCulling()
     {}
 
@@ -33,7 +35,7 @@ public:
     ColorBuffer& GetTransparentLightGrid() { return m_tLightGrid; }
     StructuredBuffer& GetOpaqueLightIndex() { return m_oLightIndexList; }
     StructuredBuffer& GetTransparentLightIndex() { return m_tLightIndexList; }
-    StructuredBuffer& GetLightBuffer() { return m_Lights; }
+    shared_ptr<StructuredBuffer> GetLightBuffer() { return m_Lights; }
     
     // Common Resources
 private:
@@ -113,7 +115,7 @@ private:
     ColorBuffer m_tLightGrid;
     ColorBuffer m_testUAVTex2D;
 
-    StructuredBuffer m_Lights; // The light structures should be provided by other classes, not this one
+    shared_ptr<StructuredBuffer> m_Lights; // The light structures should be provided by other classes, not this one
 
     // Indexes for the root parameter table
     enum LightCullingRootParameters : uint32_t
