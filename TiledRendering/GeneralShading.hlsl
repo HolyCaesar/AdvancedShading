@@ -1,4 +1,4 @@
-#include "CommanIncl.hlsi"
+#include "CommonIncl.hlsli"
 
 cbuffer ConstBuffer : register(b0)
 {
@@ -34,7 +34,7 @@ PSInput VSMain(VSInput input)
 	return result;
 }
 
-StructuredBuffer<Light> g_Lights : register(t3);
+StructuredBuffer<Light> g_Lights : register(t0);
 SamplerState g_sampler : register(s0);
 
 float4 PSMain(PSInput input) : SV_TARGET
@@ -52,6 +52,9 @@ float4 PSMain(PSInput input) : SV_TARGET
 	for (uint i = 0; i < lightsCount; ++i)
 	{
 		Light light = g_Lights[i];
+
+		LightingResult res = (LightingResult)0;
+
 		if (!light.Enabled) continue;
 
 		if (light.Type != DIRECTIONAL_LIGHT && length(mul(ViewMatrix, light.PositionWS) - posVS) > light.Range) continue;
@@ -80,5 +83,5 @@ float4 PSMain(PSInput input) : SV_TARGET
 
 	color = saturate(lit.lightDiffuse);
 
-	return pos;
+	return color;
 }

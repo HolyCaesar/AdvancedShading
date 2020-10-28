@@ -102,5 +102,3 @@ namespace IGuiCore
 	void ShowAboutWindow(bool* p_open);
 	void ShowMainMenuFile();
 }
-
-

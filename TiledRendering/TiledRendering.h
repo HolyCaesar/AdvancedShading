@@ -20,6 +20,8 @@
 #include "CPUProfiler.h"
 #include "GpuProfiler.h"
 
+#include "RenderTechnique.h"
+
 // Experimental classes 
 #include "SimpleComputeShader.h"
 
@@ -153,5 +155,12 @@ private:
 
     // Update Lights Buffer
     void UpdateLightsBuffer();
+
+private:
+	GeneralRendering	m_generalRenderingTech;
+
+	void LoadGeneralShadingTech(string name);
+
+	void testRenderFunction();
 };
 

@@ -302,7 +302,7 @@ namespace IGuiCore
 		static bool show_deferred_rendering_ = false;
 		if (ImGui::CollapsingHeader("Rendering Technique"))
 		{
-			static int rendering_technique = 2;
+			static int rendering_technique = 0;
 			ImGui::RadioButton("Normal Rendering", &rendering_technique, 0); //ImGui::SameLine();
 			ImGui::RadioButton("Deferred Rendering", &rendering_technique, 1); //ImGui::SameLine();
 			ImGui::RadioButton("Tiled Forward Rendering", &rendering_technique, 2);

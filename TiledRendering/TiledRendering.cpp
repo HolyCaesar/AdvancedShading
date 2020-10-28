@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "TiledRendering.h"
+#include "RenderPass.h"
 
 default_random_engine defEngine(time(0));
 
@@ -212,7 +213,7 @@ void TiledRendering::LoadAssets()
 
 	m_LightCullingPass.SetTiledSize(16);
 	m_LightCullingPass.Init(
-		m_width, 
+		m_width,
 		m_height,
 		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
@@ -224,6 +225,118 @@ void TiledRendering::LoadAssets()
 	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 
+	// General Shading Technique
+	LoadGeneralShadingTech("GeneralShadingTechnique");
+}
+
+void TiledRendering::LoadGeneralShadingTech(string name)
+{
+	m_generalRenderingTech.SetName(name);
+
+	// Initialize a default render pass for general rendering technique
+	shared_ptr<DX12ShadingPass> generalPass(new DX12ShadingPass(),
+		[](DX12ShadingPass* ptr) { ptr->Destroy(); });
+
+	// RootSignature
+	shared_ptr<DX12RootSignature> generalShadingRS = make_shared<DX12RootSignature>();
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+	//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+	// Load test root signature
+	D3D12_SAMPLER_DESC non_static_sampler;
+	non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+	non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.MipLODBias = 0.0f;
+	non_static_sampler.MaxAnisotropy = 8;
+	non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	non_static_sampler.BorderColor[0] = 1.0f;
+	non_static_sampler.BorderColor[1] = 1.0f;
+	non_static_sampler.BorderColor[2] = 1.0f;
+	non_static_sampler.BorderColor[3] = 1.0f;
+	non_static_sampler.MinLOD = 0.0f;
+	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
+
+	UINT numRootParameters(2), numRootParamIdx(0), numSampler(1);
+	generalShadingRS->Reset(numRootParameters, numSampler);
+	generalShadingRS->InitStaticSampler(0, non_static_sampler);
+	(*generalShadingRS)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*generalShadingRS)[numRootParamIdx++].InitAsBufferSRV(0);
+	wstring rsName(name.begin(), name.end());
+	generalShadingRS->Finalize(rsName.c_str(), rootSignatureFlags);
+
+
+	// Shaders and pipline 
+	ComPtr<ID3DBlob> vertexShader;
+	ComPtr<ID3DBlob> pixelShader;
+
+#if defined(_DEBUG)
+	// Enable better shader debugging with the graphics debugging tools.
+	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	UINT compileFlags = 0;
+#endif
+
+	wstring shaderName = L"GeneralShading.hlsl";
+
+	ShaderMacros nullShaderMacros;
+	// Load vertex shader
+	vertexShader = DX12Aux::LoadShaderFromFile(ShaderType::VertexShader, "GeneralShading", "VSMain", L"GeneralShading.hlsl", nullShaderMacros, "vs_5_1");
+	// Load pixel shader
+	pixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "GeneralShading", "PSMain", L"GeneralShading.hlsl", nullShaderMacros, "ps_5_1");
+
+
+
+	// Define the vertex input layout.
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+	shared_ptr<GraphicsPSO> generalShadingPSO = make_shared<GraphicsPSO>();
+	generalShadingPSO->SetRootSignature(*generalShadingRS);
+	generalShadingPSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	generalShadingPSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+	generalShadingPSO->SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
+	generalShadingPSO->SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	generalShadingPSO->SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	generalShadingPSO->SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
+		D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+	generalShadingPSO->SetSampleMask(UINT_MAX);
+	generalShadingPSO->SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	generalShadingPSO->SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	generalShadingPSO->Finalize();
+
+	// Add shaders to the renderpass.	(Although it is not nessary to store shaders because they will bind to PSO
+	generalPass->AddShader("GeneralShading_VS", ShaderType::VertexShader, vertexShader);
+	generalPass->AddShader("GeneralShading_PS", ShaderType::PixelShader, pixelShader);
+
+	generalPass->FinalizeRootSignature(generalShadingRS);
+	generalPass->FinalizePSO(generalShadingPSO);
+
+	// Add Buffers
+	generalPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
+	// TODO: their is dependency here, need to get light buffer out of light culling pass class.
+	auto pLightBuffer = m_LightCullingPass.GetLightBuffer();
+	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", pLightBuffer);
+
+	generalPass->SetRenderTarget(L"GeneralLightRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	generalPass->SetDepthBuffer(L"GeneralLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	//generalPass->SetVertexBuffer();
+	//generalPass->SetIndexBuffer();
+
+	m_generalRenderingTech.AddPass(generalPass);
 }
 
 void TiledRendering::OnResize(uint64_t width, uint64_t height)
@@ -332,16 +445,26 @@ void TiledRendering::OnUpdate()
 	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
 
 	m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
+
+	m_generalRenderingTech.UpdatePerFrameContBuffer(
+		0,
+		m_constantBufferData.worldMatrix,
+		m_constantBufferData.viewMatrix,
+		m_constantBufferData.worldViewProjMatrix);
 }
 
 // Render the scene.
 void TiledRendering::OnRender()
 {
+	//testRenderFunction();
+	//return;
+
 	GpuTimeCore::BeginReadBack();
 
 	IGuiCore::ShowImGUI();
 
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
+
 	m_gpuProfiler.Start("TotalGpuTime", gfxContext);
 
 	m_gpuProfiler.Start("PreDepthGpuTime", gfxContext);
@@ -409,6 +532,21 @@ void TiledRendering::OnRender()
 	IGraphics::g_GraphicsCore->Present();
 }
 
+void TiledRendering::testRenderFunction()
+{
+	IGuiCore::ShowImGUI();
+
+	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
+	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+
+	m_generalRenderingTech.Render(gfxContext);
+
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
+	IGuiCore::RenderImGUI(gfxContext);
+	IGraphics::g_GraphicsCore->Present();
+}
+
 void TiledRendering::OnDestroy()
 {
 	ImGui_ImplDX12_Shutdown();
@@ -426,6 +564,8 @@ void TiledRendering::OnDestroy()
 
 	m_preDepthPass.Destroy();
 	m_preDepthPassRTV.Destroy();
+
+	m_generalRenderingTech.Destroy();
 }
 
 void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
@@ -479,9 +619,9 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 		pos.z = dblDistro(defEngine);
 
 		light.m_PositionWS = XMFLOAT4(
-			pos.x * bounds.x + minPoint.x, 
-			pos.y * bounds.y + minPoint.y, 
-			pos.z * bounds.z + minPoint.z, 
+			pos.x * bounds.x + minPoint.x,
+			pos.y * bounds.y + minPoint.y,
+			pos.z * bounds.z + minPoint.z,
 			1.0f);
 
 		light.m_Color.x = min(1.0f, dblDistro(defEngine) + 0.001f);

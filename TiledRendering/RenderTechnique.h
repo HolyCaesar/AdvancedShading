@@ -15,12 +15,21 @@ public:
 	RenderTechnique();
 	virtual ~RenderTechnique();
 
-	virtual void Render(CommandContext& Context) = 0;
+	virtual void Render(GraphicsContext& Context) = 0;
 
 	virtual void Destroy() = 0;
 
 	virtual uint64_t AddPass(std::shared_ptr<RenderPass> pass);
 	std::shared_ptr<RenderPass> GetPass(uint64_t passIdx);
+
+	virtual void SetName(std::string name)
+	{
+		m_name = name;
+	}
+	virtual std::string GetName()
+	{
+		return m_name;
+	}
 
 protected:
 	std::string m_name;
@@ -59,12 +68,6 @@ public:
 	GeneralRendering();
 	virtual ~GeneralRendering();
 
-	void Init(
-		std::string name, 
-		uint64_t width, 
-		uint64_t height,
-		std::shared_ptr<StructuredBuffer> pLightBuffer);
-
 	void Render(GraphicsContext& Context);
 
 	void Destroy();
@@ -76,15 +79,6 @@ public:
 		XMMATRIX worldViewProjMatrix);
 
 	void UpdateLightBuffer(UINT passID, std::shared_ptr<StructuredBuffer> pLightBuffer);
-
-private:
-	__declspec(align(16)) struct CBuffer
-	{
-		XMMATRIX worldMatrix;
-		XMMATRIX viewMatrix;
-		XMMATRIX worldViewProjMatrix;
-	};
-	CBuffer m_perFrameCBuffer;
 
 private:
 	GeneralRendering(const GeneralRendering& copy) = delete;
