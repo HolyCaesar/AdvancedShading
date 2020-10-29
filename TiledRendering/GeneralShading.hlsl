@@ -46,19 +46,20 @@ float4 PSMain(PSInput input) : SV_TARGET
 
 	LightingResult lit = (LightingResult)0;
 
-	uint lightsCount = 0, stride = 0;
-	g_Lights.GetDimensions(lightsCount, stride);
+	//uint lightsCount = 0, stride = 0;
+	//g_Lights.GetDimensions(lightsCount, stride);
 
-	for (uint i = 0; i < lightsCount; ++i)
+	for (uint i = 0; i < 1; ++i)
 	{
 		Light light = g_Lights[i];
 
 		LightingResult res = (LightingResult)0;
 
-		if (!light.Enabled) continue;
+		// TODO: uncommented this will give black image, no idea why this happens
+		//if (!light.Enabled) continue;
 
 		if (light.Type != DIRECTIONAL_LIGHT && length(mul(ViewMatrix, light.PositionWS) - posVS) > light.Range) continue;
-		
+
 		switch (light.Type)
 		{
 		case POINT_LIGHT:

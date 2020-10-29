@@ -123,8 +123,8 @@ private:
     };
 
     // App resources.
-    StructuredBuffer    m_vertexBuffer;
-    StructuredBuffer    m_indexBuffer;
+    shared_ptr<StructuredBuffer>    m_vertexBuffer;
+    shared_ptr<StructuredBuffer>    m_indexBuffer;
     ColorBuffer         m_modelTexture;
 
     CBuffer             m_constantBufferData;

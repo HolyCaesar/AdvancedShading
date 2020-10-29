@@ -203,7 +203,11 @@ void DX12ShadingPass::PreRender(GraphicsContext& Context)
 	for(auto& strutUAV : m_structuredBufferUAVMap.resPool)
 		Context.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	Context.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	if (m_bEnableOwnRenderTarget)
+	{
+		Context.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		Context.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+	}
 }
 
 void DX12ShadingPass::Render(GraphicsContext& gfxContext)
@@ -215,15 +219,18 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 	gfxContext.SetIndexBuffer(m_pIndexBuffer->IndexBufferView());
 	gfxContext.SetVertexBuffer(0, m_pVertexBuffer->VertexBufferView());
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+	// TODO: right now just use the back buffer of the swap chain
+	if (m_bEnableOwnRenderTarget)
 	{
-		m_renderTarget.GetRTV()
-	};
-
-	gfxContext.ClearDepth(m_depthBuffer);
-	gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
-	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer.GetDSV());
-	gfxContext.ClearColor(m_renderTarget);
+		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+		{
+			m_renderTarget.GetRTV()
+		};
+		gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer.GetDSV());
+		gfxContext.ClearColor(m_renderTarget);
+		gfxContext.ClearDepth(m_depthBuffer);
+		gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
+	}
 
 	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
@@ -262,9 +269,8 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 
 void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 {
-	gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_PRESENT);
-
-	gfxContext.Finish();
+	if(m_bEnableOwnRenderTarget)
+		gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_PRESENT);
 }
 
 /********************************/

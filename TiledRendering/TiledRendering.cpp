@@ -19,6 +19,8 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 	m_constantBufferData{}
 {
+	m_vertexBuffer = make_shared<StructuredBuffer>();
+	m_indexBuffer = make_shared<StructuredBuffer>();
 }
 
 
@@ -185,8 +187,8 @@ void TiledRendering::LoadAssets()
 	m_pModel = make_shared<Model>();
 	{
 		m_pModel->Load("bunny.obj");
-		m_vertexBuffer.Create(L"BunnyVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
-		m_indexBuffer.Create(L"BunnyIndexBuffer", m_pModel->m_vecIndexData.size(), sizeof(uint32_t), m_pModel->m_vecIndexData.data());
+		m_vertexBuffer->Create(L"BunnyVertexBuffer", m_pModel->m_vecVertexData.size(), sizeof(Vertex), m_pModel->m_vecVertexData.data());
+		m_indexBuffer->Create(L"BunnyIndexBuffer", m_pModel->m_vecIndexData.size(), sizeof(uint32_t), m_pModel->m_vecIndexData.data());
 		m_modelTexture.Create(L"RabbitTexture", TextureWidth, TextureHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 	}
 
@@ -330,11 +332,15 @@ void TiledRendering::LoadGeneralShadingTech(string name)
 	auto pLightBuffer = m_LightCullingPass.GetLightBuffer();
 	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", pLightBuffer);
 
-	generalPass->SetRenderTarget(L"GeneralLightRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	//generalPass->SetRenderTarget(L"GeneralLightRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	// Use buack buffer of the swap chain
+	generalPass->SetEnableOwnRenderTarget(false);
 	generalPass->SetDepthBuffer(L"GeneralLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
-	//generalPass->SetVertexBuffer();
-	//generalPass->SetIndexBuffer();
+	generalPass->SetVertexBuffer(m_vertexBuffer);
+	generalPass->SetIndexBuffer(m_indexBuffer);
+
+	generalPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
 
 	m_generalRenderingTech.AddPass(generalPass);
 }
@@ -487,8 +493,8 @@ void TiledRendering::OnRender()
 
 	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
 	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());
-	gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
+	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
+	gfxContext.SetVertexBuffer(0, m_vertexBuffer->VertexBufferView());
 	gfxContext.SetPipelineState(m_scenePSO);
 
 	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
@@ -526,7 +532,6 @@ void TiledRendering::OnRender()
 
 	gfxContext.Finish();
 
-
 	GpuTimeCore::EndReadBack();
 
 	IGraphics::g_GraphicsCore->Present();
@@ -538,12 +543,29 @@ void TiledRendering::testRenderFunction()
 
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
 	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+	gfxContext.TransitionResource(*(m_LightCullingPass.GetLightBuffer()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+	{
+		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
+	};
+
+	gfxContext.ClearDepth(m_sceneDepthBuffer);
+	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
+	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
+	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 
 	m_generalRenderingTech.Render(gfxContext);
 
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
 	IGuiCore::RenderImGUI(gfxContext);
+
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
+	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	gfxContext.Finish();
+
 	IGraphics::g_GraphicsCore->Present();
 }
 
@@ -558,8 +580,8 @@ void TiledRendering::OnDestroy()
 	m_pModel.reset();
 
 	m_sceneDepthBuffer.Destroy();
-	m_vertexBuffer.Destroy();
-	m_indexBuffer.Destroy();
+	m_vertexBuffer->Destroy();
+	m_indexBuffer->Destroy();
 	m_modelTexture.Destroy();
 
 	m_preDepthPass.Destroy();
@@ -572,8 +594,8 @@ void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
 {
 	gfxContext.SetRootSignature(m_preDepthPassRootSignature);
 	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	gfxContext.SetIndexBuffer(m_indexBuffer.IndexBufferView());
-	gfxContext.SetVertexBuffer(0, m_vertexBuffer.VertexBufferView());
+	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
+	gfxContext.SetVertexBuffer(0, m_vertexBuffer->VertexBufferView());
 
 	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
 

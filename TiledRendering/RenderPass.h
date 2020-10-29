@@ -198,6 +198,10 @@ public:
 	{
 		m_renderTarget.Create(Name, Width, Height, NumMips, Format, VidMem);
 	}
+	void SetRenderTarget(ColorBuffer& renderTarget)
+	{
+		m_renderTarget = renderTarget;
+	}
 
 	void SetDepthBuffer(
 		const std::wstring& Name, 
@@ -207,6 +211,15 @@ public:
 		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
 	{
 		m_depthBuffer.Create(Name, Width, Height, Format, VidMemPtr);
+	}
+	void SetDepthBuffer(DepthBuffer& depthBuffer)
+	{
+		m_depthBuffer = depthBuffer;
+	}
+
+	void SetEnableOwnRenderTarget(bool enable)
+	{
+		m_bEnableOwnRenderTarget = enable;
 	}
 
 protected:
@@ -225,6 +238,8 @@ protected:
 	CD3DX12_RECT m_scissorRect;
 
 	GraphicsPSO m_pso;
+
+	bool m_bEnableOwnRenderTarget;
 
 //private:
 //	DX12ShadingPass(const DX12ShadingPass& copy) = delete;
