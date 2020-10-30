@@ -206,8 +206,10 @@ void DX12ShadingPass::PreRender(GraphicsContext& Context)
 	if (m_bEnableOwnRenderTarget)
 	{
 		Context.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		Context.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+		Context.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
+
+	Context.FlushResourceBarriers();
 }
 
 void DX12ShadingPass::Render(GraphicsContext& gfxContext)
@@ -271,6 +273,8 @@ void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 {
 	if(m_bEnableOwnRenderTarget)
 		gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_PRESENT);
+
+	gfxContext.FlushResourceBarriers();
 }
 
 /********************************/

@@ -462,8 +462,8 @@ void TiledRendering::OnUpdate()
 // Render the scene.
 void TiledRendering::OnRender()
 {
-	//testRenderFunction();
-	//return;
+	testRenderFunction();
+	return;
 
 	GpuTimeCore::BeginReadBack();
 
@@ -664,6 +664,7 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 		float fLightPropability = dblDistro(defEngine);
 		// TODO hard coding the light types for debugging purpose
 		light.m_Type = Light::LightType::Point;
+		light.m_Enabled = true;
 
 
 #if defined(_DEBUG_LIGHT)

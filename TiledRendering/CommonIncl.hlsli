@@ -92,13 +92,13 @@ struct Light
     /**
     * Disable or enable the light.
     */
-    bool    Enabled;
+    uint Enabled;
     //--------------------------------------------------------------( 16 bytes )
 
     /**
      * Is the light selected in the editor?
      */
-    bool    Selected;
+    uint Selected;
 
     /**
     * The type of the light.
