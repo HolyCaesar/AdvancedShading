@@ -220,8 +220,9 @@ void TiledRendering::LoadAssets()
 		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
 	// Generate lights
+	m_Lights = make_shared<StructuredBuffer>();
 	GenerateLights(1);
-	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
+	//m_LightCullingPass.UpdateLightBuffer(m_lightsList);
 
 	// Gui Resource allocation
 	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
@@ -462,8 +463,8 @@ void TiledRendering::OnUpdate()
 // Render the scene.
 void TiledRendering::OnRender()
 {
-	testRenderFunction();
-	return;
+	//testRenderFunction();
+	//return;
 
 	GpuTimeCore::BeginReadBack();
 
@@ -711,5 +712,10 @@ void TiledRendering::UpdateLightsBuffer()
 		XMVECTOR dirVecWS = XMLoadFloat4(&light.m_DirectionWS);
 		XMStoreFloat4(&light.m_DirectionVS, XMVector4Transform(dirVecWS, viewMatrix));
 	}
-	m_LightCullingPass.UpdateLightBuffer(m_lightsList);
+
+	IGraphics::g_GraphicsCore->g_CommandManager->IdleGPU();
+	m_Lights->Destroy();
+	m_Lights->Create(L"LightLists", m_lightsList.size(), sizeof(Light), m_lightsList.data());
+
+	m_LightCullingPass.UpdateLightBuffer(m_Lights);
 }

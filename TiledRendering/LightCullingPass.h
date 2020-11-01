@@ -27,7 +27,7 @@ public:
     void ExecuteCS(GraphicsContext& gfxContext, DepthBuffer& preDepthPass);
 
     void SetTiledSize(uint32_t tileSize) { m_TiledSize = tileSize; }
-    void UpdateLightBuffer(vector<Light>& lightList);
+    void UpdateLightBuffer(shared_ptr<StructuredBuffer> pLightsBuffer);
     void UpdateConstantBuffer(XMMATRIX viewMatrix);
 
     // Get result

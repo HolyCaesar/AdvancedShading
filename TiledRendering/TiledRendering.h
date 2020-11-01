@@ -67,15 +67,16 @@ private:
 
     // Pipeline objects.
     CD3DX12_VIEWPORT    m_viewport;
-    CD3DX12_RECT        m_scissorRect;
+    CD3DX12_RECT				m_scissorRect;
 
-    DepthBuffer         m_sceneDepthBuffer;
+    DepthBuffer					m_sceneDepthBuffer;
 
     // DXUT Model-View Camera
     CModelViewerCamera  m_modelViewCamera;
     IMath::Camera       m_perspectiveCamera;
 
-
+	// Lights
+	shared_ptr<StructuredBuffer> m_Lights;
 private:
     DX12RootSignature   m_sceneOpaqueRootSignature;
     DX12RootSignature   m_sceneTransparentRootSignature;
@@ -156,6 +157,9 @@ private:
     // Update Lights Buffer
     void UpdateLightsBuffer();
 
+	/*****************************************/
+	/*General Shading Technique resources*/
+	/*****************************************/
 private:
 	GeneralRendering	m_generalRenderingTech;
 
