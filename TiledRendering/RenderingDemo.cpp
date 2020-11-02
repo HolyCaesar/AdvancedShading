@@ -21,6 +21,8 @@ RenderingDemo::RenderingDemo(UINT width, UINT height, std::wstring name) :
 {
 	m_vertexBuffer = make_shared<StructuredBuffer>();
 	m_indexBuffer = make_shared<StructuredBuffer>();
+
+	m_renderingOption = GeneralRenderingOption;
 }
 
 
@@ -346,6 +348,7 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	generalPass->AddGpuProfiler(&m_gpuProfiler);
 	generalPass->SetGPUQueryStatus(true);
 
+	generalPass->SetName("GeneralShading");
 	m_generalRenderingTech.AddPass(generalPass);
 }
 
@@ -387,7 +390,6 @@ void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 
 	m_preDepthPass.Destroy();
 	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
-
 
 	m_LightCullingPass.ResizeBuffers();
 	m_LightCullingPass.SetTiledSize(16);
@@ -466,9 +468,6 @@ void RenderingDemo::OnUpdate()
 // Render the scene.
 void RenderingDemo::OnRender()
 {
-	testRenderFunction();
-	return;
-
 	GpuTimeCore::BeginReadBack();
 
 	IGuiCore::ShowImGUI();
@@ -477,35 +476,27 @@ void RenderingDemo::OnRender()
 
 	m_gpuProfiler.Start("TotalGpuTime", gfxContext);
 
-	m_gpuProfiler.Start("PreDepthGpuTime", gfxContext);
-	// Get scene depth in the screen space
-	PreDepthPass(gfxContext);
-	m_gpuProfiler.Stop("PreDepthGpuTime", gfxContext);
+	// TODO: tmp solution, need to removed in the future 
+	if (m_renderingOption == TiledForwardRenderingOption)
+	{
+		m_gpuProfiler.Start("PreDepthGpuTime", gfxContext);
+		// Get scene depth in the screen space
+		PreDepthPass(gfxContext);
+		m_gpuProfiler.Stop("PreDepthGpuTime", gfxContext);
+
+		m_gpuProfiler.Start("ForwardRendering", gfxContext);
+		// Forward Plus Rendering calculation
+		m_LightCullingPass.ExecuteCS(gfxContext, m_preDepthPass);
+		m_gpuProfiler.Stop("ForwardRendering", gfxContext);
+	}
 
 
-	m_gpuProfiler.Start("ForwardRendering", gfxContext);
-	// Forward Plus Rendering calculation
-	m_LightCullingPass.ExecuteCS(gfxContext, m_preDepthPass);
-	m_gpuProfiler.Stop("ForwardRendering", gfxContext);
 
-
-	m_gpuProfiler.Start("MainPassGpu", gfxContext);
 	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
 	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
-	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
-	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
-	gfxContext.SetVertexBuffer(0, m_vertexBuffer->VertexBufferView());
-	gfxContext.SetPipelineState(m_scenePSO);
-
-	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
-	gfxContext.SetDynamicDescriptor(e_ModelTexRootParameterSRV, 0, m_modelTexture.GetSRV());
-	gfxContext.SetDynamicDescriptor(e_LightGridRootParameterSRV, 0, m_LightCullingPass.GetOpaqueLightGrid().GetSRV());
-	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
-	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, *m_LightCullingPass.GetLightBuffer());
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{
@@ -517,14 +508,20 @@ void RenderingDemo::OnRender()
 	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
 	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 
-	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
-	//gfxContext.CopyBuffer(IGuiCore::g_srvDict[IGuiCore::OpaqueLightGridSRV], m_LightCullingPass.GetOpaqueLightGrid());
-
-	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
-
-
-	m_gpuProfiler.Stop("MainPassGpu", gfxContext);
+	switch (m_renderingOption)
+	{
+	case GeneralRenderingOption:
+		m_generalRenderingTech.Render(gfxContext);
+		break;
+	case DefferredRenderingOption:
+		break;
+	case TiledForwardRenderingOption:
+		TiledForwardRenderingTechnique(gfxContext);
+		break;
+	default:
+		break;
+	}
 
 	m_gpuProfiler.Start("ImGUIPass", gfxContext);
 	IGuiCore::RenderImGUI(gfxContext);
@@ -541,40 +538,28 @@ void RenderingDemo::OnRender()
 	IGraphics::g_GraphicsCore->Present();
 }
 
-void RenderingDemo::testRenderFunction()
+void RenderingDemo::TiledForwardRenderingTechnique(GraphicsContext& gfxContext)
 {
-	GpuTimeCore::BeginReadBack();
+	m_gpuProfiler.Start("MainPassGpu", gfxContext);
 
-	IGuiCore::ShowImGUI();
+	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
+	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
+	gfxContext.SetVertexBuffer(0, m_vertexBuffer->VertexBufferView());
+	gfxContext.SetPipelineState(m_scenePSO);
 
-	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
-	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
-	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-	gfxContext.TransitionResource(*(m_LightCullingPass.GetLightBuffer()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
+	gfxContext.SetDynamicDescriptor(e_ModelTexRootParameterSRV, 0, m_modelTexture.GetSRV());
+	gfxContext.SetDynamicDescriptor(e_LightGridRootParameterSRV, 0, m_LightCullingPass.GetOpaqueLightGrid().GetSRV());
+	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
+	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, *m_LightCullingPass.GetLightBuffer());
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
-	{
-		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
-	};
 
-	gfxContext.ClearDepth(m_sceneDepthBuffer);
-	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
-	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
-	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
+	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
 
-	m_generalRenderingTech.Render(gfxContext);
+	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
 
-	IGuiCore::RenderImGUI(gfxContext);
-
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
-	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-	gfxContext.Finish();
-
-	GpuTimeCore::EndReadBack();
-
-	IGraphics::g_GraphicsCore->Present();
+	m_gpuProfiler.Stop("MainPassGpu", gfxContext);
 }
 
 void RenderingDemo::OnDestroy()

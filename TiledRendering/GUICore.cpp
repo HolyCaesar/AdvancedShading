@@ -303,10 +303,11 @@ namespace IGuiCore
 		if (ImGui::CollapsingHeader("Rendering Technique"))
 		{
 			static int rendering_technique = 0;
-			ImGui::RadioButton("Normal Rendering", &rendering_technique, 0); //ImGui::SameLine();
+			ImGui::RadioButton("General Rendering", &rendering_technique, 0); //ImGui::SameLine();
 			ImGui::RadioButton("Deferred Rendering", &rendering_technique, 1); //ImGui::SameLine();
 			ImGui::RadioButton("Tiled Forward Rendering", &rendering_technique, 2);
 
+			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
 			switch (rendering_technique)
 			{
 			case 0:
@@ -315,6 +316,7 @@ namespace IGuiCore
 				show_tiled_forward_rendering = false;
 				show_normal_rendering = true;
 				show_deferred_rendering_ = false;
+				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::GeneralRenderingOption;
 				break;
 			}
 			case 1:
@@ -323,6 +325,7 @@ namespace IGuiCore
 				show_tiled_forward_rendering = false;
 				show_normal_rendering = false;
 				show_deferred_rendering_ = true;
+				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::DefferredRenderingOption;
 				break;
 			}
 			case 2:
@@ -331,6 +334,7 @@ namespace IGuiCore
 				show_tiled_forward_rendering = true;
 				show_normal_rendering = false;
 				show_deferred_rendering_ = false;
+				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::TiledForwardRenderingOption;
 				break;
 			}
 			}

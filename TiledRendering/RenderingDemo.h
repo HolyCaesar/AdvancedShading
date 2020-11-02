@@ -33,138 +33,152 @@
 #endif
 
 
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 class RenderingDemo : public Win32FrameWork
 {
 public:
-    RenderingDemo(UINT width, UINT height, std::wstring name);
+	enum RenderTechniqueOption
+	{
+		GeneralRenderingOption = 0,
+		TiledForwardRenderingOption,
+		DefferredRenderingOption
+	};
+public:
+	RenderingDemo(UINT width, UINT height, std::wstring name);
 
-    virtual void OnInit();
-    virtual void OnUpdate();
-    virtual void OnRender();
-    virtual void OnResize(uint64_t width, uint64_t height);
-    virtual void OnDestroy();
+	virtual void OnInit();
+	virtual void OnUpdate();
+	virtual void OnRender();
+	virtual void OnResize(uint64_t width, uint64_t height);
+	virtual void OnDestroy();
 
-    // GenerateLights
-    void GenerateLights(uint32_t numLights,
-        XMFLOAT3 minPoint = XMFLOAT3(-10.0f, -10.0f, -10.0f),
-        XMFLOAT3 maxPoint = XMFLOAT3(10.0f, 10.0f, 10.0f),
-        float minLightRange = LIGHT_RANGE_MIN, float maxLightRange = LIGHT_RANGE_MAX,
-        float minSpotLightAngle = LIGHT_SPOT_ANGLE_MIN,
-        float maxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX);
+	// GenerateLights
+	void GenerateLights(uint32_t numLights,
+		XMFLOAT3 minPoint = XMFLOAT3(-10.0f, -10.0f, -10.0f),
+		XMFLOAT3 maxPoint = XMFLOAT3(10.0f, 10.0f, 10.0f),
+		float minLightRange = LIGHT_RANGE_MIN, float maxLightRange = LIGHT_RANGE_MAX,
+		float minSpotLightAngle = LIGHT_SPOT_ANGLE_MIN,
+		float maxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX);
 
-    virtual void WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	virtual void WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-    // Profiling
-    CPUProfiler         m_cpuProfiler;
-    GpuProfiler         m_gpuProfiler;
+	// Profiling
+	CPUProfiler         m_cpuProfiler;
+	GpuProfiler         m_gpuProfiler;
+
+	// Rendering Technique Option
+	RenderTechniqueOption m_renderingOption;
 private:
-    static const UINT   TextureWidth = 256;
-    static const UINT   TextureHeight = 256;
-    static const UINT   TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
+	static const UINT   TextureWidth = 256;
+	static const UINT   TextureHeight = 256;
+	static const UINT   TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
 
-    // Pipeline objects.
-    CD3DX12_VIEWPORT    m_viewport;
-    CD3DX12_RECT				m_scissorRect;
+	// Pipeline objects.
+	CD3DX12_VIEWPORT		m_viewport;
+	CD3DX12_RECT					m_scissorRect;
 
-    DepthBuffer					m_sceneDepthBuffer;
+	DepthBuffer						m_sceneDepthBuffer;
 
-    // DXUT Model-View Camera
-    CModelViewerCamera  m_modelViewCamera;
-    IMath::Camera       m_perspectiveCamera;
+	// DXUT Model-View Camera
+	CModelViewerCamera  m_modelViewCamera;
+	IMath::Camera       m_perspectiveCamera;
 
 	// Lights
 	shared_ptr<StructuredBuffer> m_Lights;
-private:
-    DX12RootSignature   m_sceneOpaqueRootSignature;
-    DX12RootSignature   m_sceneTransparentRootSignature;
-    GraphicsPSO         m_scenePSO;
-
-    // Scene 
-    enum SceneRootParameters : uint32_t
-    {
-        e_rootParameterCB = 0,
-        e_ModelTexRootParameterSRV,
-        e_LightGridRootParameterSRV,
-        e_LightIndexRootParameterSRV,
-        e_LightBufferRootParameterSRV,
-        e_numRootParameters
-    };
-    // indexes of resources into the descriptor heap
-    enum SceneDescriptorHeapCount : uint32_t
-    {
-        e_cCB = 1,
-        e_cSRV = 1,
-        e_cUAV = 0,
-    };
-    enum DescriptorHeapIndex : uint32_t
-    {
-        e_iCB = 0,
-        e_iSRV = e_iCB + e_cCB,
-        e_iUAV = e_iSRV + e_cSRV,
-        e_iHeapEnd = e_cUAV + e_iUAV
-    };
 
 private:
-    struct Vertex
-    {
-        XMFLOAT3 position;
-        XMFLOAT3 color;
-        XMFLOAT2 uv;
-    };
+	DX12RootSignature   m_sceneOpaqueRootSignature;
+	DX12RootSignature   m_sceneTransparentRootSignature;
+	GraphicsPSO				m_scenePSO;
 
-    __declspec( align( 16 ) ) struct CBuffer 
-    {
-        XMMATRIX worldMatrix;
-        XMMATRIX viewMatrix;
-        XMMATRIX worldViewProjMatrix;
-        //XMFLOAT4 offset;
-    };
-
-    // App resources.
-    shared_ptr<StructuredBuffer>    m_vertexBuffer;
-    shared_ptr<StructuredBuffer>    m_indexBuffer;
-    ColorBuffer         m_modelTexture;
-
-    CBuffer             m_constantBufferData;
-    UINT8*              m_pCbvDataBegin;
-
-    // Model
-    shared_ptr<Model>   m_pModel;
+	// Scene 
+	enum SceneRootParameters : uint32_t
+	{
+		e_rootParameterCB = 0,
+		e_ModelTexRootParameterSRV,
+		e_LightGridRootParameterSRV,
+		e_LightIndexRootParameterSRV,
+		e_LightBufferRootParameterSRV,
+		e_numRootParameters
+	};
+	// indexes of resources into the descriptor heap
+	enum SceneDescriptorHeapCount : uint32_t
+	{
+		e_cCB = 1,
+		e_cSRV = 1,
+		e_cUAV = 0,
+	};
+	enum DescriptorHeapIndex : uint32_t
+	{
+		e_iCB = 0,
+		e_iSRV = e_iCB + e_cCB,
+		e_iUAV = e_iSRV + e_cSRV,
+		e_iHeapEnd = e_cUAV + e_iUAV
+	};
 
 private:
-    // Pre-Depth pass resources
-    DepthBuffer					m_preDepthPass;
-    ColorBuffer					m_preDepthPassRTV;
-    DX12RootSignature		m_preDepthPassRootSignature;
-    GraphicsPSO				m_preDepthPassPSO;
-    
-    // Light Culling Pass
-    vector<Light>       m_lightsList;
-    ForwardPlusLightCulling m_LightCullingPass;
+	struct Vertex
+	{
+		XMFLOAT3 position;
+		XMFLOAT3 color;
+		XMFLOAT2 uv;
+	};
 
-    // Compute Shader Demo
-    //SimpleComputeShader m_simpleCS;
+	__declspec(align(16)) struct CBuffer
+	{
+		XMMATRIX worldMatrix;
+		XMMATRIX viewMatrix;
+		XMMATRIX worldViewProjMatrix;
+		//XMFLOAT4 offset;
+	};
+
+	// App resources.
+	shared_ptr<StructuredBuffer>    m_vertexBuffer;
+	shared_ptr<StructuredBuffer>    m_indexBuffer;
+	ColorBuffer				m_modelTexture;
+
+	CBuffer						m_constantBufferData;
+	UINT8* m_pCbvDataBegin;
+
+	// Model
+	shared_ptr<Model>   m_pModel;
+
 private:
-    void LoadPipeline();
-    void LoadAssets();
-    std::vector<UINT8> GenerateTextureData(); // For test purpose
+	// Pre-Depth pass resources
+	DepthBuffer					m_preDepthPass;
+	ColorBuffer					m_preDepthPassRTV;
+	DX12RootSignature		m_preDepthPassRootSignature;
+	GraphicsPSO				m_preDepthPassPSO;
 
-    void PreDepthPass(GraphicsContext& gfxContext);
+	// Light Culling Pass
+	vector<Light>       m_lightsList;
+	ForwardPlusLightCulling m_LightCullingPass;
 
-    // Update Lights Buffer
-    void UpdateLightsBuffer();
-
-	/*****************************************/
-	/*General Shading Technique resources*/
-	/*****************************************/
+	// Compute Shader Demo
+	//SimpleComputeShader m_simpleCS;
 private:
-	GeneralRendering	m_generalRenderingTech;
+	void LoadPipeline();
+	void LoadAssets();
+	std::vector<UINT8> GenerateTextureData(); // For test purpose
 
+	void PreDepthPass(GraphicsContext& gfxContext);
+
+	// Update Lights Buffer
+	void UpdateLightsBuffer();
+
+	// TODO: a temporary function. Tiled forward rendering will be implemented
+	// using my new rendering technique and rendering pass function.
+	void TiledForwardRenderingTechnique(GraphicsContext& gfxContext);
+
+	//
+	// General Shading Technique resources
+	//
+private:
 	void LoadGeneralShadingTech(string name);
 
-	void testRenderFunction();
+	GeneralRendering	m_generalRenderingTech;
 };
 
