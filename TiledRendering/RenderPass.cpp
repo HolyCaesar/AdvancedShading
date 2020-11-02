@@ -10,7 +10,10 @@ using namespace std;
 /*   RenderPass definitions   */
 /*****************************/
 RenderPass::RenderPass() :
-	m_bEnabled(false)
+	m_bEnabled(false),
+	m_bEnableGPUQuery(false),
+	m_cpuProfiler(nullptr),
+	m_gpuProfiler(nullptr)
 {
 }
 
@@ -185,31 +188,35 @@ void DX12ShadingPass::Destroy()
 	m_samplers.clear();
 }
 
-void DX12ShadingPass::PreRender(GraphicsContext& Context)
+void DX12ShadingPass::PreRender(GraphicsContext& gfxContext)
 {
+	if (m_bEnableGPUQuery and m_gpuProfiler)
+		m_gpuProfiler->Start(m_renderPassName + " GPU Time", gfxContext);
+
+
 	// Transist resource to the right state
 	for(auto& colorSRV : m_colorBufferSRVMap.resPool)
-		Context.TransitionResource(*(colorSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		gfxContext.TransitionResource(*(colorSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	for(auto& colorUAV : m_colorBufferUAVMap.resPool)
-		Context.TransitionResource(*(colorUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		gfxContext.TransitionResource(*(colorUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	for(auto& depthSRV : m_depthBufferSRVMap.resPool)
-		Context.TransitionResource(*(depthSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		gfxContext.TransitionResource(*(depthSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	for(auto& strutSRV : m_structuredBufferSRVMap.resPool)
-		Context.TransitionResource(*(strutSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		gfxContext.TransitionResource(*(strutSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	for(auto& strutUAV : m_structuredBufferUAVMap.resPool)
-		Context.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		gfxContext.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	if (m_bEnableOwnRenderTarget)
 	{
-		Context.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		Context.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		gfxContext.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 
-	Context.FlushResourceBarriers();
+	gfxContext.FlushResourceBarriers();
 }
 
 void DX12ShadingPass::Render(GraphicsContext& gfxContext)
@@ -275,6 +282,9 @@ void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 		gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.FlushResourceBarriers();
+
+	if (m_bEnableGPUQuery and m_gpuProfiler)
+		m_gpuProfiler->Stop(m_renderPassName + " GPU Time", gfxContext);
 }
 
 /********************************/

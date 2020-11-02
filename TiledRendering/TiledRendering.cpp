@@ -343,6 +343,9 @@ void TiledRendering::LoadGeneralShadingTech(string name)
 
 	generalPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
 
+	generalPass->AddGpuProfiler(&m_gpuProfiler);
+	generalPass->SetGPUQueryStatus(true);
+
 	m_generalRenderingTech.AddPass(generalPass);
 }
 
@@ -463,8 +466,8 @@ void TiledRendering::OnUpdate()
 // Render the scene.
 void TiledRendering::OnRender()
 {
-	//testRenderFunction();
-	//return;
+	testRenderFunction();
+	return;
 
 	GpuTimeCore::BeginReadBack();
 
@@ -540,6 +543,8 @@ void TiledRendering::OnRender()
 
 void TiledRendering::testRenderFunction()
 {
+	GpuTimeCore::BeginReadBack();
+
 	IGuiCore::ShowImGUI();
 
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Tiled Forward Rendering");
@@ -566,6 +571,8 @@ void TiledRendering::testRenderFunction()
 	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	gfxContext.Finish();
+
+	GpuTimeCore::EndReadBack();
 
 	IGraphics::g_GraphicsCore->Present();
 }

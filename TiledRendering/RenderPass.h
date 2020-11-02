@@ -9,6 +9,9 @@
 #include "GpuBuffer.h"
 #include "GpuResource.h"
 
+#include "CPUProfiler.h"
+#include "GpuProfiler.h"
+
 #include <string>
 #include <unordered_map>
 #include <map>
@@ -113,6 +116,12 @@ public:
 		ShaderType type,
 		ComPtr<ID3DBlob> pShader);
 
+	void AddGpuProfiler(GpuProfiler* gpuProfiler) { m_gpuProfiler = gpuProfiler; }
+	void AddCpuProfiler(CPUProfiler* cpuProfiler) { m_cpuProfiler  = cpuProfiler; }
+
+	void SetGPUQueryStatus(bool enable) { m_bEnableGPUQuery = enable; }
+	bool GetGPUQueryStatus() { return m_bEnableGPUQuery; }
+
 	// Finalize root signature
 	virtual void FinalizeRootSignature(std::shared_ptr<DX12RootSignature> pRS = nullptr) = 0;
 
@@ -128,6 +137,12 @@ protected:
 
 	bool m_bEnabled;
 
+	// Profiling
+	CPUProfiler				*m_cpuProfiler;
+	bool							m_bEnableGPUQuery;
+	GpuProfiler				*m_gpuProfiler;
+
+protected:
 	// Buffer Dictionary
 	RenderPassRes<pair<uint64_t, std::shared_ptr<ColorBuffer>>>			m_colorBufferSRVMap;
 	RenderPassRes<pair<uint64_t, std::shared_ptr<ColorBuffer>>>			m_colorBufferUAVMap;
@@ -241,10 +256,6 @@ protected:
 
 	bool m_bEnableOwnRenderTarget;
 
-//private:
-//	DX12ShadingPass(const DX12ShadingPass& copy) = delete;
-//	DX12ShadingPass(DX12ShadingPass&& copy) = delete;
-//	DX12ShadingPass& operator=(const DX12ShadingPass& other) = delete;
 };
 
 class DX12ComputePass : public RenderPass
@@ -277,9 +288,4 @@ protected:
 	uint64_t m_xKernelSize;
 	uint64_t m_yKernelSize;
 	uint64_t m_zKernelSize;
-
-	//private:
-//	DX12ComputePass(const DX12ComputePass& copy) = delete;
-//	DX12ComputePass(DX12ComputePass&& copy) = delete;
-//	DX12ComputePass& operator=(const DX12ComputePass& other) = delete;
 };
