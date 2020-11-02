@@ -36,10 +36,10 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-class TiledRendering : public Win32FrameWork
+class RenderingDemo : public Win32FrameWork
 {
 public:
-    TiledRendering(UINT width, UINT height, std::wstring name);
+    RenderingDemo(UINT width, UINT height, std::wstring name);
 
     virtual void OnInit();
     virtual void OnUpdate();

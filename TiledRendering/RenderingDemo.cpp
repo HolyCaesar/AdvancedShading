@@ -1,18 +1,18 @@
 #include "stdafx.h"
-#include "TiledRendering.h"
+#include "RenderingDemo.h"
 #include "RenderPass.h"
 
 default_random_engine defEngine(time(0));
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void TiledRendering::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+void RenderingDemo::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam);
 
 	m_modelViewCamera.HandleMessages(hWnd, message, wParam, lParam);
 }
 
-TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
+RenderingDemo::RenderingDemo(UINT width, UINT height, std::wstring name) :
 	Win32FrameWork(width, height, name),
 	m_pCbvDataBegin(nullptr),
 	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
@@ -25,7 +25,7 @@ TiledRendering::TiledRendering(UINT width, UINT height, std::wstring name) :
 
 
 
-void TiledRendering::OnInit()
+void RenderingDemo::OnInit()
 {
 	m_cpuProfiler.AddTimeStamp("LoadPipelineCPU");
 	LoadPipeline();
@@ -37,7 +37,7 @@ void TiledRendering::OnInit()
 }
 
 // Load the rendering pipeline dependencies.
-void TiledRendering::LoadPipeline()
+void RenderingDemo::LoadPipeline()
 {
 	UINT dxgiFactoryFlags = 0;
 
@@ -49,7 +49,7 @@ void TiledRendering::LoadPipeline()
 }
 
 // Load the sample assets.
-void TiledRendering::LoadAssets()
+void RenderingDemo::LoadAssets()
 {
 	// Create a root signature consisting of a descriptor table with a single CBV
 	{
@@ -232,7 +232,7 @@ void TiledRendering::LoadAssets()
 	LoadGeneralShadingTech("GeneralShadingTechnique");
 }
 
-void TiledRendering::LoadGeneralShadingTech(string name)
+void RenderingDemo::LoadGeneralShadingTech(string name)
 {
 	m_generalRenderingTech.SetName(name);
 
@@ -349,7 +349,7 @@ void TiledRendering::LoadGeneralShadingTech(string name)
 	m_generalRenderingTech.AddPass(generalPass);
 }
 
-void TiledRendering::OnResize(uint64_t width, uint64_t height)
+void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 {
 	// Check for invalid window dimensions
 	if (width == 0 || height == 0)
@@ -403,7 +403,7 @@ void TiledRendering::OnResize(uint64_t width, uint64_t height)
 }
 
 
-std::vector<UINT8> TiledRendering::GenerateTextureData()
+std::vector<UINT8> RenderingDemo::GenerateTextureData()
 {
 	const UINT rowPitch = TextureWidth * TexturePixelSize;
 	const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
@@ -440,7 +440,7 @@ std::vector<UINT8> TiledRendering::GenerateTextureData()
 }
 
 // Update frame-based values.
-void TiledRendering::OnUpdate()
+void RenderingDemo::OnUpdate()
 {
 	m_modelViewCamera.FrameMove(ImGui::GetIO().DeltaTime);
 
@@ -464,7 +464,7 @@ void TiledRendering::OnUpdate()
 }
 
 // Render the scene.
-void TiledRendering::OnRender()
+void RenderingDemo::OnRender()
 {
 	testRenderFunction();
 	return;
@@ -541,7 +541,7 @@ void TiledRendering::OnRender()
 	IGraphics::g_GraphicsCore->Present();
 }
 
-void TiledRendering::testRenderFunction()
+void RenderingDemo::testRenderFunction()
 {
 	GpuTimeCore::BeginReadBack();
 
@@ -577,7 +577,7 @@ void TiledRendering::testRenderFunction()
 	IGraphics::g_GraphicsCore->Present();
 }
 
-void TiledRendering::OnDestroy()
+void RenderingDemo::OnDestroy()
 {
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
@@ -598,7 +598,7 @@ void TiledRendering::OnDestroy()
 	m_generalRenderingTech.Destroy();
 }
 
-void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
+void RenderingDemo::PreDepthPass(GraphicsContext& gfxContext)
 {
 	gfxContext.SetRootSignature(m_preDepthPassRootSignature);
 	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -628,7 +628,7 @@ void TiledRendering::PreDepthPass(GraphicsContext& gfxContext)
 }
 
 // Lights generation
-void TiledRendering::GenerateLights(uint32_t numLights,
+void RenderingDemo::GenerateLights(uint32_t numLights,
 	XMFLOAT3 minPoint, XMFLOAT3 maxPoint,
 	float minLightRange, float maxLightRange,
 	float minSpotLightAngle, float maxSpotLightAngle)
@@ -707,7 +707,7 @@ void TiledRendering::GenerateLights(uint32_t numLights,
 	//pos.z = (static_cast<uint32_t>(floor(i / static_cast<float>(lightsPerDimension) / static_cast<float>(lightsPerDimension))) % lightsPerDimension) / static_cast<float>(lightsPerDimension);
 }
 
-void TiledRendering::UpdateLightsBuffer()
+void RenderingDemo::UpdateLightsBuffer()
 {
 	XMMATRIX viewMatrix = m_modelViewCamera.GetViewMatrix();
 

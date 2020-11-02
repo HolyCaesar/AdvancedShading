@@ -45,9 +45,6 @@
     <ClCompile Include="Win32FrameWork.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TiledRendering.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -159,6 +156,9 @@
     <ClCompile Include="RenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RenderingDemo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -174,9 +174,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DXSampleHelper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TiledRendering.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_dx12.h">
@@ -333,6 +330,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DX12AuxiliaryLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderingDemo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

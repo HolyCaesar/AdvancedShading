@@ -6,7 +6,7 @@
 #endif
 
 #include "Win32FrameWork.h"
-#include "TiledRendering.h"
+#include "RenderingDemo.h"
 
 #include <iostream>
 #include <ctype.h>          // toupper
@@ -387,7 +387,7 @@ namespace IGuiCore
 		{
 			ImGui::Separator();
 			ImGui::Text("Resources Preview");
-			auto appPtr = reinterpret_cast<TiledRendering*>(g_appPtr);
+			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
 			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
@@ -474,7 +474,7 @@ namespace IGuiCore
 		sprintf(buf, "%f ms", val);
 		ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f), buf);
 
-		auto appPtr = reinterpret_cast<TiledRendering*>(g_appPtr);
+		auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
 		unordered_map<string, CpuTimer>* cpuTimers = appPtr->m_cpuProfiler.GetCpuTimes();
 
 		for (auto iter = cpuTimers->begin(); iter != cpuTimers->end(); iter++)
