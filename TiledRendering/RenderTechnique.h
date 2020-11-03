@@ -69,6 +69,8 @@ public:
 	virtual ~GeneralRendering();
 
 	void Render(GraphicsContext& Context);
+	
+	void Resize(uint64_t width, uint64_t height);
 
 	void Destroy();
 

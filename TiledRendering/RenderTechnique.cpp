@@ -50,6 +50,11 @@ void GeneralRendering::UpdatePerFrameContBuffer(
 	// TODO
 }
 
+void GeneralRendering::Resize(uint64_t width, uint64_t height)
+{
+	 // TODO
+}
+
 void GeneralRendering::UpdateLightBuffer(UINT passID, shared_ptr<StructuredBuffer> pLightBuffer)
 {
 	auto generalPass = m_renderPassList[passID];
