@@ -212,7 +212,8 @@ void DX12ShadingPass::PreRender(GraphicsContext& gfxContext)
 
 	if (m_bEnableOwnRenderTarget)
 	{
-		gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		for(auto& rtv : m_renderTargets)
+			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		gfxContext.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 
@@ -231,12 +232,14 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 	// TODO: right now just use the back buffer of the swap chain
 	if (m_bEnableOwnRenderTarget)
 	{
-		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
-		{
-			m_renderTarget.GetRTV()
-		};
-		gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer.GetDSV());
-		gfxContext.ClearColor(m_renderTarget);
+		vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvs;
+		for (auto& rtv : m_renderTargets)
+			rtvs.push_back(rtv->GetRTV());
+		gfxContext.SetRenderTargets(rtvs.size(), rtvs.data(), m_depthBuffer.GetDSV());
+
+		for(auto& rtv : m_renderTargets)
+			gfxContext.ClearColor(*rtv);
+
 		gfxContext.ClearDepth(m_depthBuffer);
 		gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
 	}
@@ -278,8 +281,11 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 
 void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 {
-	if(m_bEnableOwnRenderTarget)
-		gfxContext.TransitionResource(m_renderTarget, D3D12_RESOURCE_STATE_PRESENT);
+	if (m_bEnableOwnRenderTarget)
+	{
+		for(auto& rtv : m_renderTargets)
+			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_PRESENT);
+	}
 
 	gfxContext.FlushResourceBarriers();
 

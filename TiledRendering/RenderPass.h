@@ -203,7 +203,7 @@ public:
 		m_pVertexBuffer = vexBuffer;
 	}
 
-	void SetRenderTarget(
+	void AddRenderTarget(
 		const std::wstring& Name,
 		uint32_t Width,
 		uint32_t Height,
@@ -211,11 +211,25 @@ public:
 		DXGI_FORMAT Format,
 		D3D12_GPU_VIRTUAL_ADDRESS VidMem = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
 	{
-		m_renderTarget.Create(Name, Width, Height, NumMips, Format, VidMem);
+		std::shared_ptr<ColorBuffer> rtv(new ColorBuffer, [](ColorBuffer* colBuffer) { colBuffer->Destroy(); });
+		rtv->Create(Name, Width, Height, NumMips, Format, VidMem);
+
+		// The pixel shader can only take maximum 8 render targets
+		ASSERT(m_renderTargets.size() < 8);
+
+		if (m_renderTargets.size() < 8)
+		{
+			m_renderTargets.push_back(rtv);
+		}
+		else
+		{
+			return;
+		}
 	}
-	void SetRenderTarget(ColorBuffer& renderTarget)
+	void AddRenderTarget(ColorBuffer* renderTarget)
 	{
-		m_renderTarget = renderTarget;
+		std::shared_ptr<ColorBuffer> rtv(renderTarget, [](ColorBuffer* colBuffer) { colBuffer->Destroy(); });
+		m_renderTargets.push_back(rtv);
 	}
 
 	void SetDepthBuffer(
@@ -246,7 +260,7 @@ protected:
 	std::shared_ptr<StructuredBuffer> m_pIndexBuffer;
 	std::shared_ptr<StructuredBuffer> m_pVertexBuffer;
 
-	ColorBuffer m_renderTarget;
+	std::vector<std::shared_ptr<ColorBuffer>> m_renderTargets;
 	DepthBuffer m_depthBuffer;
 
 	CD3DX12_VIEWPORT m_viewport;
