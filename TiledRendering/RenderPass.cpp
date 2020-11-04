@@ -293,6 +293,29 @@ void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 		m_gpuProfiler->Stop(m_renderPassName + " GPU Time", gfxContext);
 }
 
+void DX12ShadingPass::Resize(uint64_t width, uint64_t height)
+{
+	wstring name(m_renderPassName.begin(), m_renderPassName.end());
+	for (auto& rtv : m_renderTargets)
+	{
+		// TODO, right now the color buffer doesn't store the name of the resource
+		// need to add it later
+		DXGI_FORMAT format = rtv->GetFormat();
+		rtv->Destroy();
+		rtv->Create(name + L" RTV", width, height, 1, format);
+	}
+
+	DXGI_FORMAT format = m_depthBuffer.GetFormat();
+	m_depthBuffer.Destroy();
+	m_depthBuffer.Create(name + L"DSV", width, height, format);
+
+	m_viewport.Width = width;
+	m_viewport.Height = height;
+
+	m_scissorRect.right = width;
+	m_scissorRect.bottom = height;
+}
+
 /********************************/
 /*DX12ShadingPass definitions*/
 /********************************/

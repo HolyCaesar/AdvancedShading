@@ -398,6 +398,8 @@ void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 		m_height,
 		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
+	m_generalRenderingTech.Resize(width, height);
+
 	// Gui Resource allocation
 	IGuiCore::g_imGuiTexConverter->CleanUp();
 	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);

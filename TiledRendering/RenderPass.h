@@ -251,6 +251,7 @@ public:
 		m_bEnableOwnRenderTarget = enable;
 	}
 
+	void Resize(uint64_t width, uint64_t height);
 protected:
 	uint64_t m_samplerIdx;
 	std::map<int, std::pair<std::string, SamplerDesc>> m_samplers;
