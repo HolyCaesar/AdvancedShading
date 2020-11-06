@@ -180,5 +180,12 @@ private:
 	void LoadGeneralShadingTech(string name);
 
 	GeneralRendering	m_generalRenderingTech;
+
+	//
+	// Deferred Shading Technique resources
+	//
+private:
+	void LoadDefferredShadingTech(string name);
+
 };
 

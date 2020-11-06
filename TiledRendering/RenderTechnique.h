@@ -48,13 +48,11 @@ public:
 	DeferredRendering();
 	virtual ~DeferredRendering();
 
-	void Init(std::string name, uint64_t width, uint64_t height);
+	void Render(GraphicsContext& gfxContext);
 
-	void Render(CommandContext& Context) {}
+	void Resize(uint64_t width, uint64_t height);
 
-	void Destroy() {}
-
-private:
+	void Destroy();
 
 private:
 	DeferredRendering(const DeferredRendering& copy) = delete;
