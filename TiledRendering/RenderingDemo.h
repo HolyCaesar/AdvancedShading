@@ -187,5 +187,6 @@ private:
 private:
 	void LoadDefferredShadingTech(string name);
 
+	DeferredRendering m_deferredRenderingTech;
 };
 

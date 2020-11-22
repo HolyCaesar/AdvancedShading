@@ -352,6 +352,203 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	m_generalRenderingTech.AddPass(generalPass);
 }
 
+void RenderingDemo::LoadDefferredShadingTech(string name)
+{
+	m_deferredRenderingTech.SetName(name);
+
+	// RootSignature
+	shared_ptr<DX12RootSignature> rs = make_shared<DX12RootSignature>();
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+	//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+	// Load test root signature
+	D3D12_SAMPLER_DESC non_static_sampler;
+	non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+	non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.MipLODBias = 0.0f;
+	non_static_sampler.MaxAnisotropy = 8;
+	non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	non_static_sampler.BorderColor[0] = 1.0f;
+	non_static_sampler.BorderColor[1] = 1.0f;
+	non_static_sampler.BorderColor[2] = 1.0f;
+	non_static_sampler.BorderColor[3] = 1.0f;
+	non_static_sampler.MinLOD = 0.0f;
+	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
+
+	// Root signature for deferred phase
+	UINT numRootParameters(1), numRootParamIdx(0), numSampler(1);
+	rs->Reset(numRootParameters, numSampler);
+	rs->InitStaticSampler(0, non_static_sampler);
+	(*rs)[numRootParamIdx++].InitAsConstantBuffer(0);
+	wstring rsName(name.begin(), name.end());
+	rsName += L"DeferredPhase";
+	rs->Finalize(rsName.c_str(), rootSignatureFlags);
+
+	// Root signature for rendering phase
+	shared_ptr<DX12RootSignature> rs_render = make_shared<DX12RootSignature>();
+	numRootParameters = 5, numRootParamIdx = 0, numSampler = 1;
+	rs_render->Reset(numRootParameters, numSampler);
+	rs_render->InitStaticSampler(0, non_static_sampler);
+	(*rs_render)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL); // LightAccumulation texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Diffuse texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Specular texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 1, D3D12_SHADER_VISIBILITY_PIXEL); // normal texture
+	wstring rsNameRendering(name.begin(), name.end());
+	rsNameRendering += L"RenderingPhase";
+	rs_render->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
+
+
+
+	// Shaders and pipline
+	ComPtr<ID3DBlob> vertexShader;
+	ComPtr<ID3DBlob> deferredPixelShader;
+	ComPtr<ID3DBlob> renderPixelShader;
+
+#if defined(_DEBUG)
+	// Enable better shader debugging with the graphics debugging tools.
+	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	UINT compileFlags = 0;
+#endif
+
+	wstring shaderName = L"DeferredShading.hlsl";
+
+	ShaderMacros nullShaderMacros;
+	// Load vertex shader
+	vertexShader = DX12Aux::LoadShaderFromFile(ShaderType::VertexShader, "DeferredShading", "VSMain", L"DeferredShading.hlsl", nullShaderMacros, "vs_5_1");
+	// Load pixel shader for deferred phase
+	deferredPixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "DeferredShading", "PSGeometry", L"DeferredShading.hlsl", nullShaderMacros, "ps_5_1");
+	// Load pixel shader for rendering phase
+	renderPixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "DeferredShading", "PSMain", L"DeferredShading.hlsl", nullShaderMacros, "ps_5_1");
+
+	// Define the vertex input layout.
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+	shared_ptr<GraphicsPSO> deferredPhasePSO;
+	deferredPhasePSO->SetRootSignature(*rs);
+	deferredPhasePSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	deferredPhasePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+	deferredPhasePSO->SetPixelShader(CD3DX12_SHADER_BYTECODE(deferredPixelShader.Get()));
+	deferredPhasePSO->SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	deferredPhasePSO->SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	deferredPhasePSO->SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
+		D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+	deferredPhasePSO->SetSampleMask(UINT_MAX);
+	deferredPhasePSO->SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	//deferredPhasePSO->SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	DXGI_FORMAT rtvFormats[] = { DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT };
+	deferredPhasePSO->SetRenderTargetFormats(4, rtvFormats, DXGI_FORMAT_D32_FLOAT);
+	deferredPhasePSO->Finalize();
+
+	shared_ptr<GraphicsPSO> renderPhasePSO;
+	renderPhasePSO->SetRootSignature(*rs_render);
+	renderPhasePSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	renderPhasePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+	renderPhasePSO->SetPixelShader(CD3DX12_SHADER_BYTECODE(renderPixelShader.Get()));
+	renderPhasePSO->SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	renderPhasePSO->SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	renderPhasePSO->SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
+		D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+	renderPhasePSO->SetSampleMask(UINT_MAX);
+	renderPhasePSO->SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	renderPhasePSO->SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	renderPhasePSO->Finalize();
+
+	// Configure a pass for deferred phase
+	shared_ptr<DX12ShadingPass> deferredPass(new DX12ShadingPass(),
+		[](DX12ShadingPass* ptr) { ptr->Destroy(); });
+
+	deferredPass->AddShader("DeferredPass_VS", ShaderType::VertexShader, vertexShader);
+	deferredPass->AddShader("DeferredPass_PS", ShaderType::PixelShader, deferredPixelShader);
+
+	deferredPass->FinalizeRootSignature(rs);
+	deferredPass->FinalizePSO(deferredPhasePSO);
+
+	// Add Buffers
+	deferredPass->AddConstantBuffer(0, L"DeferredPhaseConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
+	deferredPass->AddStructuredBufferSRV(1, L"LightBuffer", m_Lights);
+
+	// Use buack buffer of the swap chain
+	deferredPass->SetEnableOwnRenderTarget(true);
+
+	ColorBuffer lightAccumulationTex2D;
+	lightAccumulationTex2D.Create(L"LightAccumulationTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	ColorBuffer diffuseTex2D;
+	diffuseTex2D.Create(L"DiffuseTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	ColorBuffer specularTex2D;
+	specularTex2D.Create(L"SpecularTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	ColorBuffer normalVSTex2D;
+	normalVSTex2D.Create(L"normalVSTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+	deferredPass->AddRenderTarget(&lightAccumulationTex2D);
+	deferredPass->AddRenderTarget(&diffuseTex2D);
+	deferredPass->AddRenderTarget(&specularTex2D);
+	deferredPass->AddRenderTarget(&normalVSTex2D);
+	deferredPass->SetDepthBuffer(L"DeferredPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	deferredPass->SetVertexBuffer(m_vertexBuffer);
+	deferredPass->SetIndexBuffer(m_indexBuffer);
+
+	deferredPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
+
+	deferredPass->AddGpuProfiler(&m_gpuProfiler);
+	deferredPass->SetGPUQueryStatus(true);
+
+	deferredPass->SetName("DeferredPass");
+
+	// Configure a pass for deferred rendering phase
+	shared_ptr<DX12ShadingPass> renderPass(new DX12ShadingPass(),
+		[](DX12ShadingPass* ptr) { ptr->Destroy(); });
+
+	renderPass->AddShader("DeferredRenderPass_VS", ShaderType::VertexShader, vertexShader);
+	renderPass->AddShader("DeferredRenderPass_PS", ShaderType::PixelShader, renderPixelShader);
+
+	renderPass->FinalizeRootSignature(rs_render);
+	renderPass->FinalizePSO(renderPhasePSO);
+
+	// Add Buffers
+	renderPass->AddConstantBuffer(0, L"DeferredRenderPhaseConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
+	renderPass->AddStructuredBufferSRV(1, L"LightBuffer", m_Lights);
+
+	// Use buack buffer of the swap chain
+	renderPass->SetEnableOwnRenderTarget(true);
+	// TODO need to add own render target
+	//deferredPass->AddRenderTarget(m_scene)
+	renderPass->SetDepthBuffer(L"DeferredRenderPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	renderPass->SetVertexBuffer(m_vertexBuffer);
+	renderPass->SetIndexBuffer(m_indexBuffer);
+
+	renderPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
+
+	renderPass->AddGpuProfiler(&m_gpuProfiler);
+	renderPass->SetGPUQueryStatus(true);
+
+	renderPass->SetName("DeferredRenderPass");
+
+	// Add all pass to this render technique
+	m_deferredRenderingTech.AddPass(deferredPass);
+	m_deferredRenderingTech.AddPass(renderPass);
+}
+
+
 void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 {
 	// Check for invalid window dimensions
@@ -492,13 +689,10 @@ void RenderingDemo::OnRender()
 		m_gpuProfiler.Stop("ForwardRendering", gfxContext);
 	}
 
-
-
 	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
 	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
 	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{
@@ -509,7 +703,6 @@ void RenderingDemo::OnRender()
 	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
 	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
 	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
-
 
 	switch (m_renderingOption)
 	{
