@@ -361,6 +361,9 @@
     <FxCompile Include="DeferredShading.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="SquareShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\MiniEngineMath\Functions.inl">

@@ -18,7 +18,7 @@ struct PSInput
 
 GSInput VSMain(VSInput input)
 {
-    GSInput output(0);
+    GSInput output;
 
     output.position = float4(input.position, 1.0f);
     output.tex = float2(0.0f, 0.0f);
@@ -27,7 +27,7 @@ GSInput VSMain(VSInput input)
 }
 
 [maxvertexcount(6)]
-PSInput GSMain(GSInput input)
+PSInput GSMain(triangle GSInput input[3], inout TriangleStream<PSInput> triStream)
 {
     PSInput v1 = (PSInput)0;
     v1.position = input[0].position;
@@ -56,9 +56,10 @@ PSInput GSMain(GSInput input)
     triStream.Append(v2);
 }
 
+Texture2D<float4> inputTex2D : register(t0);
 SamplerState g_sampler : register(s0);
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    return inputTexture.Sample(g_sampler, input.tex);
+    return inputTex2D.Sample(g_sampler, input.tex);
 }

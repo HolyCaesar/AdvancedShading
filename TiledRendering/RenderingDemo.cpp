@@ -695,7 +695,6 @@ void RenderingDemo::OnRender()
 	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 
-
 	switch (m_renderingOption)
 	{
 	case GeneralRenderingOption:
