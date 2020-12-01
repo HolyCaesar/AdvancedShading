@@ -738,6 +738,17 @@ void RenderingDemo::TiledForwardRenderingTechnique(GraphicsContext& gfxContext)
 {
 	m_gpuProfiler.Start("MainPassGpu", gfxContext);
 
+	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+	{
+		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
+	};
+
+	gfxContext.ClearDepth(m_sceneDepthBuffer);
+	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
+	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
+	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
+
 	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
 	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
