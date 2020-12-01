@@ -694,15 +694,7 @@ void RenderingDemo::OnRender()
 	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
-	{
-		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
-	};
 
-	gfxContext.ClearDepth(m_sceneDepthBuffer);
-	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
-	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
-	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 
 	switch (m_renderingOption)
 	{
@@ -717,6 +709,16 @@ void RenderingDemo::OnRender()
 	default:
 		break;
 	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+	{
+		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
+	};
+
+	gfxContext.ClearDepth(m_sceneDepthBuffer);
+	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
+	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
+	//gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 
 	m_gpuProfiler.Start("ImGUIPass", gfxContext);
 	IGuiCore::RenderImGUI(gfxContext);

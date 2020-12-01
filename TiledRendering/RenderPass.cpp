@@ -216,6 +216,11 @@ void DX12ShadingPass::PreRender(GraphicsContext& gfxContext)
 			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		gfxContext.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
+	else // Otherwise just use the backbuffer
+	{
+		UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+		gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+	}
 
 	gfxContext.FlushResourceBarriers();
 }
@@ -242,6 +247,19 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 
 		gfxContext.ClearDepth(m_depthBuffer);
 		gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
+	}
+	else // otherwise just use the backbuffer
+	{
+		UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
+		{
+			IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
+		};
+
+		gfxContext.ClearDepth(m_depthBuffer);
+		gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
+		gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer.GetDSV());
+		gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 	}
 
 	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
@@ -285,6 +303,11 @@ void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 	{
 		for(auto& rtv : m_renderTargets)
 			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	else // Otherwise just use the back buffer
+	{
+		UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+		gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
 	}
 
 	gfxContext.FlushResourceBarriers();
