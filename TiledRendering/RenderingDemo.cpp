@@ -335,10 +335,10 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	auto pLightBuffer = m_LightCullingPass.GetLightBuffer();
 	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", pLightBuffer);
 
-	//generalPass->SetRenderTarget(L"GeneralLightRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 	// Use buack buffer of the swap chain
 	generalPass->SetEnableOwnRenderTarget(false);
-	generalPass->SetDepthBuffer(L"GeneralLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+	//generalPass->SetDepthBuffer(L"GeneralLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+	generalPass->SetDepthBuffer(m_sceneDepthBuffer);
 
 	generalPass->SetVertexBuffer(m_vertexBuffer);
 	generalPass->SetIndexBuffer(m_indexBuffer);
@@ -689,10 +689,7 @@ void RenderingDemo::OnRender()
 		m_gpuProfiler.Stop("ForwardRendering", gfxContext);
 	}
 
-	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
 	gfxContext.TransitionResource(m_modelTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 
 	switch (m_renderingOption)
@@ -709,10 +706,15 @@ void RenderingDemo::OnRender()
 		break;
 	}
 
+	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
+
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
 	{
 		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
 	};
+
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	gfxContext.ClearDepth(m_sceneDepthBuffer);
 	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
@@ -743,6 +745,8 @@ void RenderingDemo::TiledForwardRenderingTechnique(GraphicsContext& gfxContext)
 	{
 		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
 	};
+	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	gfxContext.ClearDepth(m_sceneDepthBuffer);
 	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());

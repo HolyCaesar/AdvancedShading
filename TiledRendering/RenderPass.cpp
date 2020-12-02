@@ -220,6 +220,7 @@ void DX12ShadingPass::PreRender(GraphicsContext& gfxContext)
 	{
 		UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
 		gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+		gfxContext.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 
 	gfxContext.FlushResourceBarriers();
