@@ -42,6 +42,24 @@ private:
 	RenderTechnique& operator=(const RenderTechnique& other) = delete;
 };
 
+class TiledForwardRendering : public RenderTechnique
+{
+public:
+	TiledForwardRendering();
+	virtual ~TiledForwardRendering();
+
+	void Render(GraphicsContext& gfxContext);
+
+	void Resize(uint64_t width, uint64_t height);
+
+	void Destroy();
+	
+private:
+	TiledForwardRendering(const TiledForwardRendering& copy) = delete;
+	TiledForwardRendering(const TiledForwardRendering&& copy) = delete;
+	TiledForwardRendering& operator=(const TiledForwardRendering& other) = delete;
+};
+
 class DeferredRendering : public RenderTechnique
 {
 public:

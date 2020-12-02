@@ -188,5 +188,13 @@ private:
 	void LoadDefferredShadingTech(string name);
 
 	DeferredRendering m_deferredRenderingTech;
+
+	//
+	// Deferred Shading Technique resources
+	//
+private:
+	void LoadTiledForwardShadingTech(string name);
+
+
 };
 
