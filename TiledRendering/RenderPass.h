@@ -246,6 +246,8 @@ public:
 		m_depthBuffer = depthBuffer;
 	}
 
+	// TODO need to make m_depthBuffer a smart pointer
+
 	void SetEnableOwnRenderTarget(bool enable)
 	{
 		m_bEnableOwnRenderTarget = enable;

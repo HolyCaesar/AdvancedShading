@@ -794,6 +794,31 @@ void RenderingDemo::LoadTiledForwardShadingTech(string name)
 	shared_ptr<ColorBuffer> debugTex2D(new ColorBuffer(),
 		[](ColorBuffer* ptr) { ptr->Destroy(); });
 	lightCullingPass->AddColorBufferUAV(11, L"DebugTex2D", debugTex2D);
+
+	// Final rendering setup.
+	renderPass->AddShader("TiledForwardPass_VS", ShaderType::VertexShader, vertexShader);
+	renderPass->AddShader("TiledForwardPass_PS", ShaderType::PixelShader, pixelShader);
+
+	renderPass->FinalizeRootSignature(rs_renderPass);
+	renderPass->FinalizePSO(scenePSO);
+
+	renderPass->AddConstantBuffer(0, L"ConstBuffer", sizeof(CBuffer), &m_constantBufferData);
+	renderPass->AddColorBufferSRV(1, L"oLightGrid", oLightGrid);
+	renderPass->AddStructuredBufferSRV(2, L"oLightIndex", oLightIndexList);
+	renderPass->AddStructuredBufferSRV(3, L"Lights", m_Lights);
+
+	renderPass->SetEnableOwnRenderTarget(true);
+	renderPass->AddRenderTarget(L"RenderPassRTV", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	renderPass->SetDepthBuffer(L"RenderPassDSV", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	renderPass->SetVertexBuffer(m_vertexBuffer);
+	renderPass->SetIndexBuffer(m_indexBuffer);
+	renderPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
+
+	renderPass->AddGpuProfiler(&m_gpuProfiler);
+	renderPass->SetGPUQueryStatus(true);
+
+	renderPass->SetName("TiledForwardRenderPass");
 }
 
 
