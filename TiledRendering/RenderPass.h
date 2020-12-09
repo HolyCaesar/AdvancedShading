@@ -239,9 +239,12 @@ public:
 		DXGI_FORMAT Format,
 		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
 	{
-		m_depthBuffer.Create(Name, Width, Height, Format, VidMemPtr);
+		if (m_depthBuffer == nullptr) m_depthBuffer = make_shared<DepthBuffer>();
+		else m_depthBuffer->Destroy();
+
+		m_depthBuffer->Create(Name, Width, Height, Format, VidMemPtr);
 	}
-	void SetDepthBuffer(DepthBuffer& depthBuffer)
+	void SetDepthBuffer(std::shared_ptr<DepthBuffer>& depthBuffer)
 	{
 		m_depthBuffer = depthBuffer;
 	}
@@ -264,7 +267,7 @@ protected:
 	std::shared_ptr<StructuredBuffer> m_pVertexBuffer;
 
 	std::vector<std::shared_ptr<ColorBuffer>> m_renderTargets;
-	DepthBuffer m_depthBuffer;
+	std::shared_ptr<DepthBuffer> m_depthBuffer;
 
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;

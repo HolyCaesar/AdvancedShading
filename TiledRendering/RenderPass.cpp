@@ -214,13 +214,13 @@ void DX12ShadingPass::PreRender(GraphicsContext& gfxContext)
 	{
 		for(auto& rtv : m_renderTargets)
 			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		gfxContext.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		gfxContext.TransitionResource(*m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 	else // Otherwise just use the backbuffer
 	{
 		UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
 		gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
-		gfxContext.TransitionResource(m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		gfxContext.TransitionResource(*m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 
 	gfxContext.FlushResourceBarriers();
@@ -241,13 +241,13 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 		vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvs;
 		for (auto& rtv : m_renderTargets)
 			rtvs.push_back(rtv->GetRTV());
-		gfxContext.SetRenderTargets(rtvs.size(), rtvs.data(), m_depthBuffer.GetDSV());
+		gfxContext.SetRenderTargets(rtvs.size(), rtvs.data(), m_depthBuffer->GetDSV());
 
 		for(auto& rtv : m_renderTargets)
 			gfxContext.ClearColor(*rtv);
 
-		gfxContext.ClearDepth(m_depthBuffer);
-		gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
+		gfxContext.ClearDepth(*m_depthBuffer);
+		gfxContext.SetDepthStencilTarget(m_depthBuffer->GetDSV());
 	}
 	else // otherwise just use the backbuffer
 	{
@@ -257,9 +257,9 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 			IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
 		};
 
-		gfxContext.ClearDepth(m_depthBuffer);
-		gfxContext.SetDepthStencilTarget(m_depthBuffer.GetDSV());
-		gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer.GetDSV());
+		gfxContext.ClearDepth(*m_depthBuffer);
+		gfxContext.SetDepthStencilTarget(m_depthBuffer->GetDSV());
+		gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_depthBuffer->GetDSV());
 		gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
 	}
 
@@ -329,9 +329,9 @@ void DX12ShadingPass::Resize(uint64_t width, uint64_t height)
 		rtv->Create(name + L" RTV", width, height, 1, format);
 	}
 
-	DXGI_FORMAT format = m_depthBuffer.GetFormat();
-	m_depthBuffer.Destroy();
-	m_depthBuffer.Create(name + L"DSV", width, height, format);
+	DXGI_FORMAT format = m_depthBuffer->GetFormat();
+	m_depthBuffer->Destroy();
+	m_depthBuffer->Create(name + L"DSV", width, height, format);
 
 	m_viewport.Width = width;
 	m_viewport.Height = height;

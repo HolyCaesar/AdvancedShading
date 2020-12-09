@@ -337,8 +337,8 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 
 	// Use buack buffer of the swap chain
 	generalPass->SetEnableOwnRenderTarget(false);
-	//generalPass->SetDepthBuffer(L"GeneralLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
-	generalPass->SetDepthBuffer(m_sceneDepthBuffer);
+	generalPass->SetDepthBuffer(L"GeneralLightDepthBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+	//generalPass->SetDepthBuffer(m_sceneDepthBuffer);
 
 	generalPass->SetVertexBuffer(m_vertexBuffer);
 	generalPass->SetIndexBuffer(m_indexBuffer);
