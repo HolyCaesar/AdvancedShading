@@ -195,6 +195,37 @@ private:
 private:
 	void LoadTiledForwardShadingTech(string name);
 
+	TiledForwardRendering m_tiledForwardRenderingTech;
 
+	__declspec(align(16)) struct DispatchParams
+	{
+		XMUINT3 numThreadGroups;  // Number of groups dispatched
+		UINT padding1;
+		XMUINT3 numThreads;       // Totla number of threads dispatched
+		UINT padding2;
+		XMUINT2 blockSize;        // threads in x and y dimension of a thread group
+		XMUINT2 padding3;
+	};
+	DispatchParams m_dispatchParamsData;
+
+	__declspec(align(16)) struct ScreenToViewParams
+	{
+		XMMATRIX InverseProjection;
+		XMMATRIX ViewMatrix;
+		XMUINT2 ScreenDimensions;
+		XMUINT2 Padding;
+	};
+	ScreenToViewParams m_screenToViewParamsData;
+
+	__declspec(align(16)) struct Frustum
+	{
+		XMFLOAT4 planes[4];   // left, right, top, bottom frustum planes.
+	};
+
+	const uint32_t AVERAGE_OVERLAPPING_LIGHTS = 200;
+
+	uint32_t m_TiledSize;
+	uint32_t m_BlockSizeX;
+	uint32_t m_BlockSizeY;
 };
 

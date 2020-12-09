@@ -366,7 +366,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 	//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
-	// Load test root signature
+	// Define non-static sampler
 	D3D12_SAMPLER_DESC non_static_sampler;
 	non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
 	non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -546,6 +546,254 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	// Add all pass to this render technique
 	m_deferredRenderingTech.AddPass(deferredPass);
 	m_deferredRenderingTech.AddPass(renderPass);
+}
+
+void RenderingDemo::LoadTiledForwardShadingTech(string name)
+{
+	m_tiledForwardRenderingTech.SetName(name);
+
+	// Initialize parameters
+	m_TiledSize = 16; // This is a default value. TODO: need a function to update this parameter
+	m_BlockSizeX = ceil(m_width * 1.0f / m_TiledSize);
+	m_BlockSizeY = ceil(m_height * 1.0f / m_TiledSize);
+
+	m_dispatchParamsData.numThreadGroups = XMUINT3(ceil(1.0f * m_BlockSizeX / m_TiledSize), ceil(1.0f * m_BlockSizeY / m_TiledSize), 1);
+	m_dispatchParamsData.numThreads = XMUINT3(m_BlockSizeX, m_BlockSizeY, 1);
+	m_dispatchParamsData.blockSize = XMUINT2(m_TiledSize, m_TiledSize);
+	m_dispatchParamsData.padding1 = 1;
+	m_dispatchParamsData.padding2 = 1;
+	m_dispatchParamsData.padding3 = XMUINT2(1, 1);
+
+	m_screenToViewParamsData.InverseProjection = XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix());
+	m_screenToViewParamsData.ViewMatrix = XMMatrixIdentity();
+	m_screenToViewParamsData.ScreenDimensions = XMUINT2(m_width, m_height);
+
+	// Create passes
+	shared_ptr<DX12ShadingPass> sceneDepthPass(new DX12ShadingPass(),
+		[](DX12ShadingPass* ptr) { ptr->Destroy(); });
+	shared_ptr<DX12ComputePass> frustumPass(new DX12ComputePass(),
+		[](DX12ComputePass* ptr) { ptr->Destroy(); });
+	shared_ptr<DX12ComputePass> lightCullingPass(new DX12ComputePass(),
+		[](DX12ComputePass* ptr) { ptr->Destroy(); });
+	shared_ptr<DX12ShadingPass> renderPass(new DX12ShadingPass(),
+		[](DX12ShadingPass* ptr) { ptr->Destroy(); });
+
+	// RootSignature
+	shared_ptr<DX12RootSignature> rs_depthPass = make_shared<DX12RootSignature>();
+	shared_ptr<DX12RootSignature> rs_frustumPass = make_shared<DX12RootSignature>();
+	shared_ptr<DX12RootSignature> rs_lightCullingPass = make_shared<DX12RootSignature>();
+	shared_ptr<DX12RootSignature> rs_renderPass = make_shared<DX12RootSignature>();
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+	//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+	// Define non-static sampler
+	D3D12_SAMPLER_DESC non_static_sampler;
+	non_static_sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+	non_static_sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	non_static_sampler.MipLODBias = 0.0f;
+	non_static_sampler.MaxAnisotropy = 8;
+	non_static_sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	non_static_sampler.BorderColor[0] = 1.0f;
+	non_static_sampler.BorderColor[1] = 1.0f;
+	non_static_sampler.BorderColor[2] = 1.0f;
+	non_static_sampler.BorderColor[3] = 1.0f;
+	non_static_sampler.MinLOD = 0.0f;
+	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
+
+	// Root signature for scene depth phase
+	UINT numRootParameters(2), numRootParamIdx(0), numSampler(0);
+	rs_depthPass->Reset(numRootParameters, numSampler);
+	(*rs_depthPass)[numRootParamIdx++].InitAsConstantBuffer(0);
+	wstring rsNameRendering(name.begin(), name.end());
+	rsNameRendering += L"SceneDepthPass";
+	rs_depthPass->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
+
+	// Root signature for grid frustum calculation pass 
+	numRootParameters = 4, numRootParamIdx = 0, numSampler = 0;
+	rs_frustumPass->Reset(numRootParameters, numSampler);
+	(*rs_frustumPass)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*rs_frustumPass)[numRootParamIdx++].InitAsConstantBuffer(1);
+	(*rs_frustumPass)[numRootParamIdx++].InitAsBufferUAV(0);
+	(*rs_frustumPass)[numRootParamIdx++].InitAsBufferUAV(1);
+	rsNameRendering.resize(name.size());
+	rsNameRendering += L"GridFrustumPass";
+	rs_frustumPass->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
+
+	// Root signature for light culling calculation pass 
+	numRootParameters = 13, numRootParamIdx = 0, numSampler = 0;
+	rs_lightCullingPass->Reset(numRootParameters, numSampler);
+	(*rs_depthPass)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*rs_depthPass)[numRootParamIdx++].InitAsConstantBuffer(1);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferUAV(0);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferUAV(1);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferUAV(2);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferUAV(3);
+	(*rs_depthPass)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 1);
+	(*rs_depthPass)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 5, 1);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferSRV(0);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferSRV(1);
+	(*rs_depthPass)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);
+	(*rs_depthPass)[numRootParamIdx++].InitAsBufferUAV(6);
+	(*rs_depthPass)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 7, 1);
+	rsNameRendering.resize(name.size());
+	rsNameRendering += L"LightCullingPass";
+	rs_frustumPass->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
+
+
+	// Root signature for rendering pass
+	numRootParameters = 5, numRootParamIdx = 0, numSampler = 1;
+	rs_renderPass->Reset(numRootParameters, numSampler);
+	rs_renderPass->InitStaticSampler(0, non_static_sampler);
+	(*rs_renderPass)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*rs_renderPass)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	(*rs_renderPass)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	(*rs_renderPass)[numRootParamIdx++].InitAsBufferSRV(2);
+	(*rs_renderPass)[numRootParamIdx++].InitAsBufferSRV(3);
+	rsNameRendering.resize(name.size());
+	rsNameRendering += L"RenderingPass";
+	rs_frustumPass->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
+
+
+	// Shaders and pipline
+	ComPtr<ID3DBlob> vertexShader;
+	ComPtr<ID3DBlob> pixelShader;
+	ComPtr<ID3DBlob> frustumComputeShader;
+	ComPtr<ID3DBlob> lightCullingComputeShader;
+	
+#if defined(_DEBUG)
+	// Enable better shader debugging with the graphics debugging tools.
+	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	UINT compileFlags = 0;
+#endif
+
+	wstring shaderName = L"TiledForwardShading.hlsl";
+	
+	ShaderMacros nullShaderMacros;
+	// Load vertex shader
+	vertexShader = DX12Aux::LoadShaderFromFile(ShaderType::VertexShader, "TiledForwardRendering", "VSMain", L"shaders.hlsl", nullShaderMacros, "vs_5_1");
+	// Load pixel shader for deferred phase
+	pixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "TiledForwardRendering", "PSMain", L"shaders.hlsl", nullShaderMacros, "ps_5_1");
+	// Load frustum compute shader for frustum calculation
+	frustumComputeShader = DX12Aux::LoadShaderFromFile(ShaderType::ComputeShader, "TiledForwardRendering", "CS_GridFrustumPass", L"GridFrustumPass.hlsl", nullShaderMacros, "cs_5_1");
+	// Load light culling compute shader for frustum calculation
+	lightCullingComputeShader = DX12Aux::LoadShaderFromFile(ShaderType::ComputeShader, "TiledForwardRendering", "CS_LightCullingPass", L"LightCullingPass.hlsl", nullShaderMacros, "cs_5_1");
+
+	// Define the vertex input layout.
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	
+	shared_ptr<GraphicsPSO> scenePSO;
+	scenePSO->SetRootSignature(*rs_depthPass);
+	scenePSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	scenePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+	scenePSO->SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShader.Get()));
+	scenePSO->SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	scenePSO->SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	scenePSO->SetDepthStencilState(CD3DX12_DEPTH_STENCIL_DESC(TRUE, D3D12_DEPTH_WRITE_MASK_ALL,
+		D3D12_COMPARISON_FUNC_LESS, TRUE, 0xFF, 0xFF,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_INCR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS,
+		D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_DECR, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS));
+	scenePSO->SetSampleMask(UINT_MAX);
+	scenePSO->SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	scenePSO->SetRenderTargetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_D32_FLOAT);
+	//DXGI_FORMAT rtvFormats[] = { DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT };
+	//scenePSO->SetRenderTargetFormats(4, rtvFormats, DXGI_FORMAT_D32_FLOAT);
+	scenePSO->Finalize();
+
+	// Depth pass setup
+	sceneDepthPass->AddShader("TiledForwardDepthPass_VS", ShaderType::VertexShader, vertexShader);
+	sceneDepthPass->AddShader("TiledForwardDepthPass_PS", ShaderType::PixelShader, pixelShader);
+	sceneDepthPass->FinalizeRootSignature(rs_depthPass);
+	sceneDepthPass->FinalizePSO(scenePSO);
+	sceneDepthPass->SetEnableOwnRenderTarget(true);
+	sceneDepthPass->AddRenderTarget(L"DepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	sceneDepthPass->SetDepthBuffer(L"DepthPassDSV", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	sceneDepthPass->SetVertexBuffer(m_vertexBuffer);
+	sceneDepthPass->SetIndexBuffer(m_indexBuffer);
+	sceneDepthPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
+
+	sceneDepthPass->AddGpuProfiler(&m_gpuProfiler);
+	sceneDepthPass->SetGPUQueryStatus(true);
+
+	sceneDepthPass->SetName("TiledForwardDepthPass");
+
+	// Grid frustum setup
+	shared_ptr<ComputePSO> frustumPSO;
+	frustumPSO->SetRootSignature(*rs_frustumPass);
+	frustumPSO->SetComputeShader(CD3DX12_SHADER_BYTECODE(frustumComputeShader.Get()));
+	frustumPSO->Finalize();
+
+	frustumPass->AddShader("TiledForwardFrustumPass_CS", ShaderType::ComputeShader, frustumComputeShader);
+	frustumPass->AddConstantBuffer(0, L"DispatchParameterCB", sizeof(DispatchParams), &m_dispatchParamsData);
+	frustumPass->AddConstantBuffer(1, L"ScreenToViewParameterCB", sizeof(ScreenToViewParams), &m_screenToViewParamsData);
+	shared_ptr<StructuredBuffer> gridFrustumUAV = make_shared<StructuredBuffer>();
+	gridFrustumUAV->Create(L"GridFrustumSB", m_BlockSizeX* m_BlockSizeY, sizeof(Frustum));
+	frustumPass->AddStructuredBufferUAV(2, L"GridFrustumUAV", gridFrustumUAV);
+	shared_ptr<StructuredBuffer> debugFrustumUAV = make_shared<StructuredBuffer>();
+	debugFrustumUAV->Create(L"DebugUAV", m_BlockSizeX * m_BlockSizeY, sizeof(float));
+	frustumPass->AddStructuredBufferUAV(3, L"DebugUAV", debugFrustumUAV);
+
+	// Light Culling setup
+	shared_ptr<ComputePSO> lightCullingPSO;
+	lightCullingPSO->SetRootSignature(*rs_lightCullingPass);
+	lightCullingPSO->SetComputeShader(CD3DX12_SHADER_BYTECODE(lightCullingComputeShader.Get()));
+	lightCullingPSO->Finalize();
+
+	lightCullingPass->AddShader("TiledForwardLightCullingPass_CS", ShaderType::ComputeShader, lightCullingComputeShader);
+	lightCullingPass->AddConstantBuffer(0, L"DispatchParameterCB", sizeof(DispatchParams), &m_dispatchParamsData);
+	lightCullingPass->AddConstantBuffer(1, L"ScreenToViewParameterCB", sizeof(ScreenToViewParams), &m_screenToViewParamsData);
+
+	vector<UINT> indexCounter(1, 1);
+	shared_ptr<StructuredBuffer> oLightIndexCounter = make_shared<StructuredBuffer>();
+	oLightIndexCounter->Create(L"oLightIndexCounter", 1, sizeof(UINT), indexCounter.data());
+	lightCullingPass->AddStructuredBufferUAV(2, L"oLightIndexCounter", oLightIndexCounter);
+
+	shared_ptr<StructuredBuffer> tLightIndexCounter = make_shared<StructuredBuffer>();
+	tLightIndexCounter->Create(L"tLightIndexCounter", 1, sizeof(UINT), indexCounter.data());
+	lightCullingPass->AddStructuredBufferUAV(3, L"tLightIndexCounter", tLightIndexCounter);
+
+	shared_ptr<StructuredBuffer> oLightIndexList = make_shared<StructuredBuffer>();
+	oLightIndexList->Create(L"oLightIndexList", m_BlockSizeX * m_BlockSizeY * AVERAGE_OVERLAPPING_LIGHTS, sizeof(UINT));
+	lightCullingPass->AddStructuredBufferUAV(4, L"oLightIndexList", oLightIndexList);
+
+	shared_ptr<StructuredBuffer> tLightIndexList = make_shared<StructuredBuffer>();
+	tLightIndexList->Create(L"tLightIndexList", m_BlockSizeX * m_BlockSizeY * AVERAGE_OVERLAPPING_LIGHTS, sizeof(UINT));
+	lightCullingPass->AddStructuredBufferUAV(5, L"tLightIndexList", tLightIndexList);
+
+	shared_ptr<ColorBuffer> oLightGrid(new ColorBuffer(),
+		[](ColorBuffer* ptr) { ptr->Destroy(); });
+	oLightGrid->Create(L"OpaqueLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_UINT);
+	lightCullingPass->AddColorBufferUAV(6, L"OpaqueLightGridMap", oLightGrid);
+
+	shared_ptr<ColorBuffer> tLightGrid(new ColorBuffer(),
+		[](ColorBuffer* ptr) { ptr->Destroy(); });
+	tLightGrid->Create(L"TransparentLightGridMap", m_BlockSizeX, m_BlockSizeY, 1, DXGI_FORMAT_R32G32_UINT);
+	lightCullingPass->AddColorBufferUAV(7, L"TransparentLightGridMap", tLightGrid);
+
+	lightCullingPass->AddStructuredBufferSRV(8, L"CullingFrustumSRV", gridFrustumUAV);
+	lightCullingPass->AddStructuredBufferSRV(9, L"LightsSRV", m_Lights);
+
+ //lightCullingPass->AddDepthBufferSRV(10, L"SceneDepthSRV", sceneDepthPass->);
+
+	shared_ptr<StructuredBuffer> testSB = make_shared<StructuredBuffer>();
+	lightCullingPass->AddStructuredBufferUAV(10, L"DebugSB", testSB);
+
+	shared_ptr<ColorBuffer> debugTex2D(new ColorBuffer(),
+		[](ColorBuffer* ptr) { ptr->Destroy(); });
+	lightCullingPass->AddColorBufferUAV(11, L"DebugTex2D", debugTex2D);
 }
 
 
