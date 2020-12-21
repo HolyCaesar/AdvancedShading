@@ -232,6 +232,7 @@ void RenderingDemo::LoadAssets()
 
 	// General Shading Technique
 	LoadGeneralShadingTech("GeneralShadingTechnique");
+	LoadDefferredShadingTech("DefferredShadingTechnique");
 }
 
 void RenderingDemo::LoadGeneralShadingTech(string name)
@@ -869,6 +870,7 @@ void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
 
 	m_generalRenderingTech.Resize(width, height);
+	m_deferredRenderingTech.Resize(width, height);
 
 	// Gui Resource allocation
 	IGuiCore::g_imGuiTexConverter->CleanUp();
@@ -971,6 +973,7 @@ void RenderingDemo::OnRender()
 		m_generalRenderingTech.Render(gfxContext);
 		break;
 	case DefferredRenderingOption:
+		m_deferredRenderingTech.Render(gfxContext);
 		break;
 	case TiledForwardRenderingOption:
 		TiledForwardRenderingTechnique(gfxContext);
@@ -1065,6 +1068,7 @@ void RenderingDemo::OnDestroy()
 	m_preDepthPassRTV.Destroy();
 
 	m_generalRenderingTech.Destroy();
+	m_deferredRenderingTech.Destroy();
 }
 
 void RenderingDemo::PreDepthPass(GraphicsContext& gfxContext)
