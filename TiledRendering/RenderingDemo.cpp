@@ -438,7 +438,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
-	shared_ptr<GraphicsPSO> deferredPhasePSO;
+	shared_ptr<GraphicsPSO> deferredPhasePSO = make_shared<GraphicsPSO>();
 	deferredPhasePSO->SetRootSignature(*rs);
 	deferredPhasePSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 	deferredPhasePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
@@ -456,7 +456,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	deferredPhasePSO->SetRenderTargetFormats(4, rtvFormats, DXGI_FORMAT_D32_FLOAT);
 	deferredPhasePSO->Finalize();
 
-	shared_ptr<GraphicsPSO> renderPhasePSO;
+	shared_ptr<GraphicsPSO> renderPhasePSO = make_shared<GraphicsPSO>();
 	renderPhasePSO->SetRootSignature(*rs_render);
 	renderPhasePSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 	renderPhasePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));

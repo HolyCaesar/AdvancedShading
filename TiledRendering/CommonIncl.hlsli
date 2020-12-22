@@ -1,4 +1,3 @@
-
 #define NUM_LIGHTS 1
 #ifdef NUM_LIGHTS
 #pragma message("NUM_LIGHTS undefined. Default to 8.")

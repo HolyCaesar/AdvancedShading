@@ -50,7 +50,7 @@ namespace DX12Aux
 			strncpy_s(c_definition, definition.size() + 1, definition.c_str(), definition.size());
 			vShaderMacro.push_back({ c_name, c_definition });
 		}
-		vShaderMacro.push_back({ 0, 0 });
+		if(vShaderMacro.size()) vShaderMacro.push_back({ 0, 0 });
 
 		// Load shader
 		ComPtr<ID3DBlob> shader;
