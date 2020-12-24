@@ -226,10 +226,9 @@ public:
 			return;
 		}
 	}
-	void AddRenderTarget(ColorBuffer* renderTarget)
+	void AddRenderTarget(shared_ptr<ColorBuffer> renderTarget)
 	{
-		std::shared_ptr<ColorBuffer> rtv(renderTarget, [](ColorBuffer* colBuffer) { colBuffer->Destroy(); });
-		m_renderTargets.push_back(rtv);
+		m_renderTargets.push_back(renderTarget);
 	}
 
 	void SetDepthBuffer(

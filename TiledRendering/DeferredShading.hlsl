@@ -44,6 +44,7 @@ struct PSOutput
 	float4 normalVS : SV_Target3;
 };
 
+StructuredBuffer<Light> g_Lights : register(t0);
 SamplerState g_sampler : register(s0);
 
 [earlydepthstencil]
@@ -78,6 +79,11 @@ PSOutput PSGeometry(PSInput input)
 
 	return output;
 }
+
+Texture2D<float4> lightAccumulation : register(t1);
+Texture2D<float4> Diffuse : register(t2);
+Texture2D<float4> Specular : register(t3);
+Texture2D<float4> normalVS : register(t4);
 
 [earlydepthstencil]
 float4 PSMain(PSInput input) : SV_TARGET

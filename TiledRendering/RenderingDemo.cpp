@@ -334,7 +334,8 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	generalPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
 	// TODO: their is dependency here, need to get light buffer out of light culling pass class.
 	auto pLightBuffer = m_LightCullingPass.GetLightBuffer();
-	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", pLightBuffer);
+	//generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", pLightBuffer);
+	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", m_Lights);
 
 	// Use buack buffer of the swap chain
 	generalPass->SetEnableOwnRenderTarget(false);
@@ -384,24 +385,26 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 	// Root signature for deferred phase
-	UINT numRootParameters(1), numRootParamIdx(0), numSampler(1);
+	UINT numRootParameters(2), numRootParamIdx(0), numSampler(1);
 	rs->Reset(numRootParameters, numSampler);
 	rs->InitStaticSampler(0, non_static_sampler);
 	(*rs)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*rs)[numRootParamIdx++].InitAsBufferSRV(0);
 	wstring rsName(name.begin(), name.end());
 	rsName += L"DeferredPhase";
 	rs->Finalize(rsName.c_str(), rootSignatureFlags);
 
 	// Root signature for rendering phase
 	shared_ptr<DX12RootSignature> rs_render = make_shared<DX12RootSignature>();
-	numRootParameters = 5, numRootParamIdx = 0, numSampler = 1;
+	numRootParameters = 6, numRootParamIdx = 0, numSampler = 1;
 	rs_render->Reset(numRootParameters, numSampler);
 	rs_render->InitStaticSampler(0, non_static_sampler);
 	(*rs_render)[numRootParamIdx++].InitAsConstantBuffer(0);
-	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL); // LightAccumulation texture
-	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Diffuse texture
-	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Specular texture
-	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 1, D3D12_SHADER_VISIBILITY_PIXEL); // normal texture
+	(*rs_render)[numRootParamIdx++].InitAsBufferSRV(0);
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL); // LightAccumulation texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Diffuse texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Specular texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, D3D12_SHADER_VISIBILITY_PIXEL); // normal texture
 	wstring rsNameRendering(name.begin(), name.end());
 	rsNameRendering += L"RenderingPhase";
 	rs_render->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
@@ -489,20 +492,26 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	// Use buack buffer of the swap chain
 	deferredPass->SetEnableOwnRenderTarget(true);
 
-	ColorBuffer lightAccumulationTex2D;
-	lightAccumulationTex2D.Create(L"LightAccumulationTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	ColorBuffer diffuseTex2D;
-	diffuseTex2D.Create(L"DiffuseTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	ColorBuffer specularTex2D;
-	specularTex2D.Create(L"SpecularTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	ColorBuffer normalVSTex2D;
-	normalVSTex2D.Create(L"normalVSTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	shared_ptr<ColorBuffer> lightAccumulationTex2D(new ColorBuffer(),
+		[](ColorBuffer* ptr) {ptr->Destroy(); });
+	lightAccumulationTex2D->Create(L"LightAccumulationTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	shared_ptr<ColorBuffer> diffuseTex2D(new ColorBuffer(),
+		[](ColorBuffer* ptr) {ptr->Destroy(); });
+	diffuseTex2D->Create(L"DiffuseTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	shared_ptr<ColorBuffer> specularTex2D(new ColorBuffer(),
+		[](ColorBuffer* ptr) {ptr->Destroy(); });
+	specularTex2D->Create(L"SpecularTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	shared_ptr<ColorBuffer> normalVSTex2D(new ColorBuffer(),
+		[](ColorBuffer* ptr) {ptr->Destroy(); });
+	normalVSTex2D->Create(L"normalVSTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-	deferredPass->AddRenderTarget(&lightAccumulationTex2D);
-	deferredPass->AddRenderTarget(&diffuseTex2D);
-	deferredPass->AddRenderTarget(&specularTex2D);
-	deferredPass->AddRenderTarget(&normalVSTex2D);
+	deferredPass->AddRenderTarget(lightAccumulationTex2D);
+	deferredPass->AddRenderTarget(diffuseTex2D);
+	deferredPass->AddRenderTarget(specularTex2D);
+	deferredPass->AddRenderTarget(normalVSTex2D);
 	deferredPass->SetDepthBuffer(L"DeferredPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
+
+	deferredPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
 
 	deferredPass->SetVertexBuffer(m_vertexBuffer);
 	deferredPass->SetIndexBuffer(m_indexBuffer);
@@ -525,11 +534,11 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	renderPass->FinalizePSO(renderPhasePSO);
 
 	// Add Buffers
-	renderPass->AddConstantBuffer(0, L"DeferredRenderPhaseConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
+	renderPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
 	renderPass->AddStructuredBufferSRV(1, L"LightBuffer", m_Lights);
 
 	// Use buack buffer of the swap chain
-	renderPass->SetEnableOwnRenderTarget(true);
+	renderPass->SetEnableOwnRenderTarget(false);
 	// TODO need to add own render target
 	//deferredPass->AddRenderTarget(m_scene)
 	renderPass->SetDepthBuffer(L"DeferredRenderPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
