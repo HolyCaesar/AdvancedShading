@@ -505,10 +505,10 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 		[](ColorBuffer* ptr) {ptr->Destroy(); });
 	normalVSTex2D->Create(L"normalVSTex2D", m_width, m_height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-	deferredPass->AddRenderTarget(lightAccumulationTex2D);
-	deferredPass->AddRenderTarget(diffuseTex2D);
-	deferredPass->AddRenderTarget(specularTex2D);
-	deferredPass->AddRenderTarget(normalVSTex2D);
+	deferredPass->AddRenderTarget(lightAccumulationTex2D, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	deferredPass->AddRenderTarget(diffuseTex2D, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	deferredPass->AddRenderTarget(specularTex2D, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	deferredPass->AddRenderTarget(normalVSTex2D, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	deferredPass->SetDepthBuffer(L"DeferredPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
 	deferredPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);

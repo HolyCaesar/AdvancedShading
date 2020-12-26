@@ -213,7 +213,7 @@ void DX12ShadingPass::PreRender(GraphicsContext& gfxContext)
 	if (m_bEnableOwnRenderTarget)
 	{
 		for(auto& rtv : m_renderTargets)
-			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			gfxContext.TransitionResource(*(rtv.m_pRTV), rtv.beforeState);
 		gfxContext.TransitionResource(*m_depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 	else // Otherwise just use the backbuffer
@@ -240,11 +240,11 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 	{
 		vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvs;
 		for (auto& rtv : m_renderTargets)
-			rtvs.push_back(rtv->GetRTV());
+			rtvs.push_back(rtv.m_pRTV->GetRTV());
 		gfxContext.SetRenderTargets(rtvs.size(), rtvs.data(), m_depthBuffer->GetDSV());
 
 		for(auto& rtv : m_renderTargets)
-			gfxContext.ClearColor(*rtv);
+			gfxContext.ClearColor(*(rtv.m_pRTV));
 
 		gfxContext.ClearDepth(*m_depthBuffer);
 		gfxContext.SetDepthStencilTarget(m_depthBuffer->GetDSV());
@@ -303,7 +303,7 @@ void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)
 	if (m_bEnableOwnRenderTarget)
 	{
 		for(auto& rtv : m_renderTargets)
-			gfxContext.TransitionResource(*rtv, D3D12_RESOURCE_STATE_PRESENT);
+			gfxContext.TransitionResource(*(rtv.m_pRTV), rtv.afterState);
 	}
 	else // Otherwise just use the back buffer
 	{
@@ -324,9 +324,9 @@ void DX12ShadingPass::Resize(uint64_t width, uint64_t height)
 	{
 		// TODO, right now the color buffer doesn't store the name of the resource
 		// need to add it later
-		DXGI_FORMAT format = rtv->GetFormat();
-		rtv->Destroy();
-		rtv->Create(name + L" RTV", width, height, 1, format);
+		DXGI_FORMAT format = rtv.m_pRTV->GetFormat();
+		rtv.m_pRTV->Destroy();
+		rtv.m_pRTV->Create(name + L" RTV", width, height, 1, format);
 	}
 
 	DXGI_FORMAT format = m_depthBuffer->GetFormat();

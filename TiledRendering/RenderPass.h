@@ -167,6 +167,27 @@ private:
 class DX12ShadingPass : public RenderPass
 {
 public:
+	struct RTVInfo
+	{
+		std::shared_ptr<ColorBuffer> m_pRTV;
+		D3D12_RESOURCE_STATES beforeState;
+		D3D12_RESOURCE_STATES afterState;
+
+		RTVInfo() :
+			m_pRTV(nullptr),
+			beforeState(D3D12_RESOURCE_STATE_RENDER_TARGET),
+			afterState(D3D12_RESOURCE_STATE_PRESENT) {}
+
+		RTVInfo(std::shared_ptr<ColorBuffer> rtvPtr,
+			D3D12_RESOURCE_STATES before,
+			D3D12_RESOURCE_STATES after) 
+		{
+			m_pRTV = rtvPtr;
+			beforeState = before;
+			afterState = after;
+		}
+	};
+public:
 	DX12ShadingPass();
 	virtual ~DX12ShadingPass();
 
@@ -209,6 +230,8 @@ public:
 		uint32_t Height,
 		uint32_t NumMips,
 		DXGI_FORMAT Format,
+		D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_PRESENT,
 		D3D12_GPU_VIRTUAL_ADDRESS VidMem = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
 	{
 		std::shared_ptr<ColorBuffer> rtv(new ColorBuffer, [](ColorBuffer* colBuffer) { colBuffer->Destroy(); });
@@ -219,16 +242,20 @@ public:
 
 		if (m_renderTargets.size() < 8)
 		{
-			m_renderTargets.push_back(rtv);
+			m_renderTargets.push_back({ rtv, beforeState, afterState });
 		}
 		else
 		{
 			return;
 		}
 	}
-	void AddRenderTarget(shared_ptr<ColorBuffer> renderTarget)
+
+	void AddRenderTarget(
+		shared_ptr<ColorBuffer> renderTarget,
+		D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATES afterState = D3D12_RESOURCE_STATE_PRESENT)
 	{
-		m_renderTargets.push_back(renderTarget);
+		m_renderTargets.push_back({ renderTarget, beforeState, afterState });
 	}
 
 	void SetDepthBuffer(
@@ -265,7 +292,7 @@ protected:
 	std::shared_ptr<StructuredBuffer> m_pIndexBuffer;
 	std::shared_ptr<StructuredBuffer> m_pVertexBuffer;
 
-	std::vector<std::shared_ptr<ColorBuffer>> m_renderTargets;
+	std::vector<RTVInfo> m_renderTargets;
 	std::shared_ptr<DepthBuffer> m_depthBuffer;
 
 	CD3DX12_VIEWPORT m_viewport;
