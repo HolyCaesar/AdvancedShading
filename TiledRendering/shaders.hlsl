@@ -52,6 +52,8 @@ StructuredBuffer<uint> g_lightIndex : register(t2);
 StructuredBuffer<Light> g_Lights : register(t3);
 SamplerState g_sampler : register(s0);
 
+
+
 //[earlydepthstencil]
 float4 PSMain(PSInput input) : SV_TARGET
 {

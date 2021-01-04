@@ -37,6 +37,23 @@ PSInput VSMain(VSInput input)
 StructuredBuffer<Light> g_Lights : register(t0);
 SamplerState g_sampler : register(s0);
 
+
+struct PSOut
+{
+	float4 res1 : SV_TARGET0;
+	float4 res2 : SV_TARGET1;
+};
+
+//PSOut PSMain(PSInput input)
+//{
+//	PSOut test;
+//
+//	test.res1 = float4(0.0f, 1.0f, 1.0f, 1.0f);
+//	test.res2 = float4(1.0f, 0.0f, 0.0f, 1.0f);
+//
+//	return test;
+//}
+
 float4 PSMain(PSInput input) : SV_TARGET
 {
 	float4 color = float4(0.0f, 0.0f, 0.0f, 1.0f);

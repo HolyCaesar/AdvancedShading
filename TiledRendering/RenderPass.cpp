@@ -238,6 +238,12 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 	// TODO: right now just use the back buffer of the swap chain
 	if (m_bEnableOwnRenderTarget)
 	{
+		// !!! Needs to setup depth stencil target before setting up render targets
+		// SetDepthStencilTarget use SetRenderTargets with no rtv binding
+		// If we used SetRenderTargets first, then no rtv can be bound to the pipline.
+		gfxContext.ClearDepth(*m_depthBuffer);
+		gfxContext.SetDepthStencilTarget(m_depthBuffer->GetDSV());
+
 		vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvs;
 		for (auto& rtv : m_renderTargets)
 			rtvs.push_back(rtv.m_pRTV->GetRTV());
@@ -245,9 +251,6 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 
 		for(auto& rtv : m_renderTargets)
 			gfxContext.ClearColor(*(rtv.m_pRTV));
-
-		gfxContext.ClearDepth(*m_depthBuffer);
-		gfxContext.SetDepthStencilTarget(m_depthBuffer->GetDSV());
 	}
 	else // otherwise just use the backbuffer
 	{

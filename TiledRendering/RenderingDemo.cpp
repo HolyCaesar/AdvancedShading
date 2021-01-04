@@ -321,6 +321,7 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	generalShadingPSO->SetSampleMask(UINT_MAX);
 	generalShadingPSO->SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	generalShadingPSO->SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	//generalShadingPSO->SetRenderTargetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_D32_FLOAT);
 	generalShadingPSO->Finalize();
 
 	// Add shaders to the renderpass.	(Although it is not nessary to store shaders because they will bind to PSO
