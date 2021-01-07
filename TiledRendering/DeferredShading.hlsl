@@ -7,6 +7,34 @@ cbuffer ConstBuffer : register(b0)
     matrix WorldViewProj;
 };
 
+cbuffer ScreenToViewParams : register(b1)
+{
+	matrix InverseProjection;
+	matrix ViewMatrix2;
+	uint2 ScreenDimensions;
+	uint2 Padding;
+}
+
+float4 ClipToView(float4 clip)
+{
+	float4 view = mul(InverseProjection, clip);
+	// Perspective projection
+	view = view / view.w;
+	return view;
+}
+
+float4 ScreenToView(float4 screenCoordinates)
+{
+	// Convert to normalized texture coordinates
+	float2 texCoord = screenCoordinates.xy / ScreenDimensions;
+	// Convert to clip space
+	// Reference:
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb205126(v=vs.85).aspx
+	float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2.0f - 1.0f, screenCoordinates.z, screenCoordinates.w);
+
+	return ClipToView(clip);
+}
+
 struct VSInput
 {
     float3 position : POSITION;
@@ -80,13 +108,63 @@ PSOutput PSGeometry(PSInput input)
 	return output;
 }
 
-Texture2D<float4> lightAccumulation : register(t1);
+Texture2D<float4> LightAccumulation : register(t1);
 Texture2D<float4> Diffuse : register(t2);
 Texture2D<float4> Specular : register(t3);
-Texture2D<float4> normalVS : register(t4);
+Texture2D<float4> NormalVS : register(t4);
+Texture2D<float>   Depth : register(t5);
 
 [earlydepthstencil]
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	return float4(0.0f, 1.0f, 0.0f, 1.0f);
+	float4 eyePos = float4(0, 0, 0, 1);
+
+	int2 texCoord = input.texCoord;
+	float depth = Depth.Load(int3(texCoord, 0));
+
+	float4 Pt = ScreenToView(float4(texCoord, depth, 1.0f));
+
+	float4 V = normalize(eyePos - Pt);
+
+	//float4 lightAcc = LightAccumulation.Load(int3(texCoord, 0));
+	float4 lightAcc = LightAccumulation.Load(int3(624, 380, 0));
+	float4 diffuse = Diffuse.Load(int3(texCoord, 0));
+	float4 specular = Specular.Load(int3(texCoord, 0));
+	float4 N = normalize(NormalVS.Load(int3(texCoord, 0)));
+
+	float specPower = exp2(specular.a * 10.5f);
+
+	return lightAcc;
+	return float4(1.0, 1.0, 0.0, 1.0);
+
+	// TODO: need a variable in constant buffer 
+	// showing the number of lights
+	LightingResult lit = (LightingResult)0;
+
+	for (int i = 0; i < 1; ++i)
+	{
+		Light light = g_Lights[i];
+
+		switch (light.Type)
+		{
+		case POINT_LIGHT:
+		{
+			lit = DoPointLight(light, V, Pt, N, ViewMatrix);
+			break;
+		}
+		case DIRECTIONAL_LIGHT:
+		{
+			lit = DoDirectionalLight(light, V, Pt, N);
+			break;
+		}
+		case SPOT_LIGHT:
+		{
+			lit = DoSpotLight(light, V, Pt, N);
+			break;
+		}
+		}
+	}
+	//return float4(0.0f, 1.0f, 0.0f, 1.0f);
+	return lightAcc;
+	return saturate(lightAcc + diffuse * lit.lightDiffuse + specular * lit.lightSpecular);
 }

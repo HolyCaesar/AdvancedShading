@@ -274,6 +274,7 @@ public:
 	{
 		m_depthBuffer = depthBuffer;
 	}
+	std::shared_ptr<DepthBuffer> GetDepthBuffer() { return m_depthBuffer; }
 
 	// TODO need to make m_depthBuffer a smart pointer
 

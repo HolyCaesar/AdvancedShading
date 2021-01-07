@@ -397,15 +397,17 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 
 	// Root signature for rendering phase
 	shared_ptr<DX12RootSignature> rs_render = make_shared<DX12RootSignature>();
-	numRootParameters = 6, numRootParamIdx = 0, numSampler = 1;
+	numRootParameters = 8, numRootParamIdx = 0, numSampler = 1;
 	rs_render->Reset(numRootParameters, numSampler);
 	rs_render->InitStaticSampler(0, non_static_sampler);
 	(*rs_render)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*rs_render)[numRootParamIdx++].InitAsConstantBuffer(1);
 	(*rs_render)[numRootParamIdx++].InitAsBufferSRV(0);
 	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_PIXEL); // LightAccumulation texture
 	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Diffuse texture
 	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 1, D3D12_SHADER_VISIBILITY_PIXEL); // Specular texture
 	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, D3D12_SHADER_VISIBILITY_PIXEL); // normal texture
+	(*rs_render)[numRootParamIdx++].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 1, D3D12_SHADER_VISIBILITY_PIXEL); // normal texture
 	wstring rsNameRendering(name.begin(), name.end());
 	rsNameRendering += L"RenderingPhase";
 	rs_render->Finalize(rsNameRendering.c_str(), rootSignatureFlags);
@@ -536,7 +538,13 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 
 	// Add Buffers
 	renderPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
-	renderPass->AddStructuredBufferSRV(1, L"LightBuffer", m_Lights);
+	renderPass->AddConstantBuffer(1, L"ScreenToViewConstBuffer", sizeof(m_screenToViewParamsData), &m_screenToViewParamsData);
+	renderPass->AddStructuredBufferSRV(2, L"LightBuffer", m_Lights);
+	renderPass->AddColorBufferSRV(3, L"LightAccumulationTex2D", lightAccumulationTex2D);
+	renderPass->AddColorBufferSRV(4, L"DiffuseTex2D", diffuseTex2D);
+	renderPass->AddColorBufferSRV(5, L"SpecularTex2D", specularTex2D);
+	renderPass->AddColorBufferSRV(6, L"NormalVSTex2D", normalVSTex2D);
+	renderPass->AddDepthBufferSRV(7, L"DepthMap", deferredPass->GetDepthBuffer());
 
 	// Use buack buffer of the swap chain
 	renderPass->SetEnableOwnRenderTarget(false);
@@ -939,6 +947,11 @@ void RenderingDemo::OnUpdate()
 	m_constantBufferData.worldMatrix = world;
 	m_constantBufferData.viewMatrix = view;
 	m_constantBufferData.worldViewProjMatrix = (world * view * proj);
+
+	m_screenToViewParamsData.InverseProjection = XMMatrixInverse(nullptr, proj);
+	m_screenToViewParamsData.ScreenDimensions = XMUINT2(m_width, m_height);
+	m_screenToViewParamsData.ViewMatrix = view;
+	m_screenToViewParamsData.Padding = XMUINT2(0, 0);
 
 	m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
 
