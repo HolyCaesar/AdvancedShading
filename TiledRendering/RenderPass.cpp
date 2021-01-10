@@ -298,7 +298,8 @@ void DX12ShadingPass::Render(GraphicsContext& gfxContext)
 	for (auto& sBuf : m_structuredBufferUAVMap.resPool) // structured UAV 
 		gfxContext.CopyBufferRegion(*sBuf.second, 0, sBuf.second->GetCounterBuffer(), 0, sizeof(UINT));
 
-	gfxContext.DrawIndexed(m_pVertexBuffer->GetElementCount(), 0, 0);
+	//gfxContext.DrawIndexed(m_pVertexBuffer->GetElementCount(), 0, 0);
+	gfxContext.DrawIndexed(m_pIndexBuffer->GetElementCount(), 0, 0);
 }
 
 void DX12ShadingPass::PostRender(GraphicsContext& gfxContext)

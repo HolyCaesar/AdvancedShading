@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "RenderingDemo.h"
 #include "RenderPass.h"
+#include "Geometry.h"
 
 default_random_engine defEngine(time(0));
 
@@ -415,7 +416,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 
 
 	// Shaders and pipline
-	ComPtr<ID3DBlob> vertexShader;
+	ComPtr<ID3DBlob> vertexShader, renderVertexShader;
 	ComPtr<ID3DBlob> deferredPixelShader;
 	ComPtr<ID3DBlob> renderPixelShader;
 
@@ -431,6 +432,8 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	ShaderMacros nullShaderMacros;
 	// Load vertex shader
 	vertexShader = DX12Aux::LoadShaderFromFile(ShaderType::VertexShader, "DeferredShading", "VSMain", L"DeferredShading.hlsl", nullShaderMacros, "vs_5_1");
+	// Load vertex shader for rendering
+	renderVertexShader = DX12Aux::LoadShaderFromFile(ShaderType::VertexShader, "DeferredShading", "VSMainRendering", L"DeferredShading.hlsl", nullShaderMacros, "vs_5_1");
 	// Load pixel shader for deferred phase
 	deferredPixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "DeferredShading", "PSGeometry", L"DeferredShading.hlsl", nullShaderMacros, "ps_5_1");
 	// Load pixel shader for rendering phase
@@ -465,7 +468,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	shared_ptr<GraphicsPSO> renderPhasePSO = make_shared<GraphicsPSO>();
 	renderPhasePSO->SetRootSignature(*rs_render);
 	renderPhasePSO->SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-	renderPhasePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(vertexShader.Get()));
+	renderPhasePSO->SetVertexShader(CD3DX12_SHADER_BYTECODE(renderVertexShader.Get()));
 	renderPhasePSO->SetPixelShader(CD3DX12_SHADER_BYTECODE(renderPixelShader.Get()));
 	renderPhasePSO->SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 	renderPhasePSO->SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
@@ -530,7 +533,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	shared_ptr<DX12ShadingPass> renderPass(new DX12ShadingPass(),
 		[](DX12ShadingPass* ptr) { ptr->Destroy(); });
 
-	renderPass->AddShader("DeferredRenderPass_VS", ShaderType::VertexShader, vertexShader);
+	renderPass->AddShader("DeferredRenderPass_VS", ShaderType::VertexShader, renderVertexShader);
 	renderPass->AddShader("DeferredRenderPass_PS", ShaderType::PixelShader, renderPixelShader);
 
 	renderPass->FinalizeRootSignature(rs_render);
@@ -552,8 +555,31 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	//deferredPass->AddRenderTarget(m_scene)
 	renderPass->SetDepthBuffer(L"DeferredRenderPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
-	renderPass->SetVertexBuffer(m_vertexBuffer);
-	renderPass->SetIndexBuffer(m_indexBuffer);
+	
+	Square bgSquare;
+	bgSquare.SetLength(2);
+	vector<Vertex> bgSquareVertices;
+	auto& bgVertices = bgSquare.GetVertices();
+	auto& bgIndices = bgSquare.GetIndices();
+	auto& bgTexCoords = bgSquare.GetTexCoords();
+	for (int i = 0; i < bgVertices.size(); i++)
+	{
+		Vertex v;
+		v.color = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		v.position = bgVertices[i];
+		v.uv = bgTexCoords[i];
+		bgSquareVertices.push_back(v);
+	}
+	shared_ptr<StructuredBuffer> bgVertexBuffer(new StructuredBuffer(),
+		[](StructuredBuffer* ptr) {ptr->Destroy(); });
+	bgVertexBuffer->Create(L"SquareBGVertices", bgSquareVertices.size(), sizeof(Vertex), bgSquareVertices.data());
+
+	shared_ptr<StructuredBuffer> bgIndicesBuffer(new StructuredBuffer(),
+		[](StructuredBuffer* ptr) {ptr->Destroy(); });
+	bgIndicesBuffer->Create(L"SquareBGIndices", bgIndices.size(), sizeof(UINT), bgIndices.data());
+
+	renderPass->SetVertexBuffer(bgVertexBuffer);
+	renderPass->SetIndexBuffer(bgIndicesBuffer);
 
 	renderPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
 
@@ -951,7 +977,9 @@ void RenderingDemo::OnUpdate()
 	m_screenToViewParamsData.InverseProjection = XMMatrixInverse(nullptr, proj);
 	m_screenToViewParamsData.ScreenDimensions = XMUINT2(m_width, m_height);
 	m_screenToViewParamsData.ViewMatrix = view;
-	m_screenToViewParamsData.Padding = XMUINT2(0, 0);
+	UINT lightCount = m_Lights->GetElementCount();
+	m_screenToViewParamsData.Padding = XMUINT2(lightCount, lightCount);
+	m_Lights->GetElementCount();
 
 	m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
 

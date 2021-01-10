@@ -12,7 +12,7 @@ cbuffer ScreenToViewParams : register(b1)
 	matrix InverseProjection;
 	matrix ViewMatrix2;
 	uint2 ScreenDimensions;
-	uint2 Padding;
+	uint2 LightCount;
 }
 
 float4 ClipToView(float4 clip)
@@ -62,6 +62,18 @@ PSInput VSMain(VSInput input)
     result.texCoord = input.texCoord;
 
     return result;
+}
+
+PSInput VSMainRendering(VSInput input)
+{
+	PSInput result;
+
+	result.position = float4(input.position, 1.0f);
+	result.positionVS = float4(input.position, 1.0f);
+	result.normalVS = float4(input.normal, 1.0f);
+	result.texCoord = input.texCoord;
+
+	return result;
 }
 
 struct PSOutput
@@ -119,29 +131,25 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
 	float4 eyePos = float4(0, 0, 0, 1);
 
-	int2 texCoord = input.texCoord;
+	int2 texCoord = input.texCoord * ScreenDimensions;
 	float depth = Depth.Load(int3(texCoord, 0));
 
 	float4 Pt = ScreenToView(float4(texCoord, depth, 1.0f));
 
 	float4 V = normalize(eyePos - Pt);
 
-	//float4 lightAcc = LightAccumulation.Load(int3(texCoord, 0));
-	float4 lightAcc = LightAccumulation.Load(int3(624, 380, 0));
+	float4 lightAcc = LightAccumulation.Load(int3(texCoord, 0));
 	float4 diffuse = Diffuse.Load(int3(texCoord, 0));
 	float4 specular = Specular.Load(int3(texCoord, 0));
 	float4 N = normalize(NormalVS.Load(int3(texCoord, 0)));
 
 	float specPower = exp2(specular.a * 10.5f);
 
-	return lightAcc;
-	return float4(1.0, 1.0, 0.0, 1.0);
-
 	// TODO: need a variable in constant buffer 
 	// showing the number of lights
 	LightingResult lit = (LightingResult)0;
 
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < LightCount.x; ++i)
 	{
 		Light light = g_Lights[i];
 
@@ -164,7 +172,8 @@ float4 PSMain(PSInput input) : SV_TARGET
 		}
 		}
 	}
-	//return float4(0.0f, 1.0f, 0.0f, 1.0f);
-	return lightAcc;
-	return saturate(lightAcc + diffuse * lit.lightDiffuse + specular * lit.lightSpecular);
+	//return saturate(lightAcc + diffuse * lit.lightDiffuse + specular * lit.lightSpecular);
+	//return saturate(lightAcc + lit.lightDiffuse + lit.lightSpecular);
+	//return saturate(lightAcc + lit.lightDiffuse);
+	return saturate(lit.lightDiffuse);
 }
