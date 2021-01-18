@@ -206,7 +206,8 @@ private:
 		XMUINT2 blockSize;        // threads in x and y dimension of a thread group
 		XMUINT2 padding3;
 	};
-	DispatchParams m_dispatchParamsData;
+	DispatchParams m_dispatchParamsDataFrustum;
+	DispatchParams m_dispatchParamsDataLightCulling;
 
 	__declspec(align(16)) struct ScreenToViewParams
 	{

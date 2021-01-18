@@ -470,19 +470,19 @@ void DX12ComputePass::PreCompute(GraphicsContext& gfxContext)
 
 	// Transist resource to the right state
 	for (auto& colorSRV : m_colorBufferSRVMap.resPool)
-		computeContext.TransitionResource(*(colorSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		computeContext.TransitionResource(*(colorSRV.second), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	for (auto& colorUAV : m_colorBufferUAVMap.resPool)
-		computeContext.TransitionResource(*(colorUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		computeContext.TransitionResource(*(colorUAV.second), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	for (auto& depthSRV : m_depthBufferSRVMap.resPool)
-		computeContext.TransitionResource(*(depthSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		computeContext.TransitionResource(*(depthSRV.second), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	for (auto& strutSRV : m_structuredBufferSRVMap.resPool)
-		computeContext.TransitionResource(*(strutSRV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		computeContext.TransitionResource(*(strutSRV.second), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	for (auto& strutUAV : m_structuredBufferUAVMap.resPool)
-		computeContext.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		computeContext.TransitionResource(*(strutUAV.second), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	computeContext.FlushResourceBarriers();
 }

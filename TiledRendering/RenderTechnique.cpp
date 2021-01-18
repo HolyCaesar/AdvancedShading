@@ -87,9 +87,18 @@ void TiledForwardRendering::Render(GraphicsContext& gfxContext)
 	for (auto& p : m_renderPassList)
 	{
 		auto pass = dynamic_pointer_cast<DX12ShadingPass>(p);
-		pass->PreRender(gfxContext);
-		pass->Render(gfxContext);
-		pass->PostRender(gfxContext);
+		if (pass)
+		{
+			pass->PreRender(gfxContext);
+			pass->Render(gfxContext);
+			pass->PostRender(gfxContext);
+		}
+		else
+		{
+			auto csPass = dynamic_pointer_cast<DX12ComputePass>(p);
+			csPass->PreCompute(gfxContext);
+			csPass->Compute(gfxContext);
+		}
 	}
 }
 
@@ -101,7 +110,8 @@ void TiledForwardRendering::Resize(uint64_t width, uint64_t height)
 	for (auto& rp : m_renderPassList)
 	{
 		auto dx12ShadingPass = dynamic_pointer_cast<DX12ShadingPass>(rp);
-		dx12ShadingPass->Resize(width, height);
+		if(dx12ShadingPass) 
+			dx12ShadingPass->Resize(width, height);
 	}
 }
 
