@@ -153,9 +153,9 @@ namespace IGuiCore
 		g_imGuiTexConverter->Convert(gfxContext);
 	}
 
-	void Terminate() 
-	{ 
-		g_appPtr = nullptr; 
+	void Terminate()
+	{
+		g_appPtr = nullptr;
 		delete g_imGuiTexConverter;
 	}
 
@@ -341,9 +341,14 @@ namespace IGuiCore
 		}
 
 		/**************************/
+		// Lighting Control 
+		/**************************/
+		ShowLightControlWidget();
+
+		/**************************/
 		// Tiled Forward rendering 
 		/**************************/
-		if (show_tiled_forward_rendering) ShowForwardPlusWidgets();
+		if (show_tiled_forward_rendering) ShowForwardTechWidget();
 
 
 		//// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
@@ -374,81 +379,65 @@ namespace IGuiCore
 		ImGui::End();
 
 
+
+
 		ShowCpuProfilerWindow();
 	}
 
 	//
 	// Customized Functions
 	//
-	void ShowForwardPlusWidgets()
+	void ShowLightControlWidget()
 	{
-		if (ImGui::CollapsingHeader("Tiled Forward Rendering"))
-		{
+		if (!ImGui::CollapsingHeader("Lighting Control"))
 			return;
-		}
 
-		if (ImGui::TreeNode("Grid Frustum Pass"))
+		ImGui::Separator();
+		static ImGuiSliderFlags flags = ImGuiSliderFlags_None;
+		static bool hasChange = false;
+		static int LightCnt = 1;
+		ImGui::Text("Light Number:");
+		//hasChange = ImGui::SliderInt("", &LightCnt, 1, 1000000) || hasChange; // LightCnt cannot be lower than 0
+		hasChange = ImGui::DragInt("Light Number", &LightCnt, 1, 1, 1000000, "%d", flags) || hasChange;
+
+
+		static float LowerLightSpawnPtec4a[4] = { -10.0f, -10.0f, -10.0f, 0.0f };
+		static float UpperLightSpawnPtec4a[4] = { 10.0f, 10.0f, 10.0f, 0.0f };
+		hasChange = ImGui::InputFloat3("Light Spawn Lower Point:", LowerLightSpawnPtec4a) || hasChange;
+		hasChange = ImGui::InputFloat3("Light Spawn Upper Point:", UpperLightSpawnPtec4a) || hasChange;
+
+		static float MinLightRange = LIGHT_RANGE_MIN;
+		static float MaxLightRange = LIGHT_RANGE_MAX;
+		hasChange = ImGui::InputFloat("Min Light Range", &MinLightRange, 0.1f, 10.0f, "%.3f", 0) || hasChange;
+		MinLightRange = min(max(LIGHT_RANGE_MIN, MinLightRange), MaxLightRange);
+		if (MaxLightRange < MinLightRange)
 		{
-			ImGui::Separator();
-			ImGui::Text("Resources Preview");
-			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
-			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
-			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
-				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
-				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
-				32);
-			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-			ImGuiIO& io = ImGui::GetIO();
-			//ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
-			ImGui::Image((ImTextureID)SceneDepthViewSRV.ptr, ImVec2(320, 240), uv_min, uv_max);
+			MaxLightRange = MinLightRange;
+		}
+		hasChange = ImGui::InputFloat("Max Light Range", &MaxLightRange, 0.1f, 10.0f, "%.3f") || hasChange;
+		MaxLightRange = max(min(LIGHT_RANGE_MAX, MaxLightRange), MinLightRange);
 
-			ImGui::Separator();
-			static bool hasChange = false;
-			static int LightCnt = 1;
-			ImGui::Text("Light Number:");
-			hasChange = ImGui::SliderInt("", &LightCnt, 1, 1000000) || hasChange; // LightCnt cannot be lower than 0
+		static float MinSpotLightAngle = LIGHT_SPOT_ANGLE_MIN;
+		static float MaxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX;
+		hasChange = ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 0.1f, 5.0f, "%.3f") || hasChange;
+		MinSpotLightAngle = min(max(LIGHT_SPOT_ANGLE_MIN, MinSpotLightAngle), MaxSpotLightAngle);
+		hasChange = ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 0.1f, 5.0f, "%.3f") || hasChange;
+		MaxSpotLightAngle = max(min(LIGHT_SPOT_ANGLE_MAX, MaxSpotLightAngle), MinSpotLightAngle);
 
-			static float LowerLightSpawnPtec4a[4] = { -10.0f, -10.0f, -10.0f, 0.0f };
-			static float UpperLightSpawnPtec4a[4] = { 10.0f, 10.0f, 10.0f, 0.0f };
-			hasChange = ImGui::InputFloat3("Light Spawn Lower Point:", LowerLightSpawnPtec4a) || hasChange;
-			hasChange = ImGui::InputFloat3("Light Spawn Upper Point:", UpperLightSpawnPtec4a) || hasChange;
+		int updatedLightsConfig = 0;
+		if (ImGui::Button("Update Lights"))
+			updatedLightsConfig += 1;
 
-			static float MinLightRange = LIGHT_RANGE_MIN;
-			static float MaxLightRange = LIGHT_RANGE_MAX;
-			hasChange = ImGui::InputFloat("Min Light Range", &MinLightRange, 0.1f, 10.0f, "%.3f", 0) || hasChange;
-			MinLightRange = min(max(LIGHT_RANGE_MIN, MinLightRange), MaxLightRange);
-			if (MaxLightRange < MinLightRange)
-			{
-				MaxLightRange = MinLightRange;
-			}
-			hasChange = ImGui::InputFloat("Max Light Range", &MaxLightRange, 0.1f, 10.0f, "%.3f") || hasChange;
-			MaxLightRange = max(min(LIGHT_RANGE_MAX, MaxLightRange), MinLightRange);
+		auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
+		if (hasChange and updatedLightsConfig)
+		{
+			// TODO update light forward rendering code
+			appPtr->GenerateLights((uint32_t)LightCnt,
+				XMFLOAT3(LowerLightSpawnPtec4a[0], LowerLightSpawnPtec4a[1], LowerLightSpawnPtec4a[2]),
+				XMFLOAT3(UpperLightSpawnPtec4a[0], UpperLightSpawnPtec4a[1], UpperLightSpawnPtec4a[2]),
+				MinLightRange, MaxLightRange, MinSpotLightAngle, MaxSpotLightAngle);
 
-			static float MinSpotLightAngle = LIGHT_SPOT_ANGLE_MIN;
-			static float MaxSpotLightAngle = LIGHT_SPOT_ANGLE_MAX;
-			hasChange = ImGui::InputFloat("Min Spot Light Angle", &MinSpotLightAngle, 0.1f, 5.0f, "%.3f") || hasChange;
-			MinSpotLightAngle = min(max(LIGHT_SPOT_ANGLE_MIN, MinSpotLightAngle), MaxSpotLightAngle);
-			hasChange = ImGui::InputFloat("Max Spot Light Angle", &MaxSpotLightAngle, 0.1f, 5.0f, "%.3f") || hasChange;
-			MaxSpotLightAngle = max(min(LIGHT_SPOT_ANGLE_MAX, MaxSpotLightAngle), MinSpotLightAngle);
-
-			int updatedLightsConfig = 0;
-			if (ImGui::Button("Update Lights"))
-				updatedLightsConfig += 1;
-
-			if (hasChange and updatedLightsConfig)
-			{
-				// TODO update light forward rendering code
-				appPtr->GenerateLights((uint32_t)LightCnt,
-					XMFLOAT3(LowerLightSpawnPtec4a[0], LowerLightSpawnPtec4a[1], LowerLightSpawnPtec4a[2]),
-					XMFLOAT3(UpperLightSpawnPtec4a[0], UpperLightSpawnPtec4a[1], UpperLightSpawnPtec4a[2]),
-					MinLightRange, MaxLightRange, MinSpotLightAngle, MaxSpotLightAngle);
-
-				hasChange = false;
-			}
-
-			ImGui::TreePop();
+			hasChange = false;
 		}
 	}
 
@@ -495,9 +484,9 @@ namespace IGuiCore
 		ImGui::Text("Current Memory Usage");
 		ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
 		progress = appPtr->m_cpuProfiler.m_memReader.GetCurTotalUsedPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB) /
-				   appPtr->m_cpuProfiler.m_memReader.GetTotalPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB);
+			appPtr->m_cpuProfiler.m_memReader.GetTotalPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB);
 
-		sprintf(buf, "%3.2f/%3.2f GB", 
+		sprintf(buf, "%3.2f/%3.2f GB",
 			appPtr->m_cpuProfiler.m_memReader.GetCurTotalUsedPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB),
 			appPtr->m_cpuProfiler.m_memReader.GetTotalPhysicalMemory(MEM_USAGE_UNIT::BYTES_TO_GB));
 
@@ -519,7 +508,7 @@ namespace IGuiCore
 		ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
 		static time_t gpuMemQuerytime = 0;
 		static float gpuMemUsagePercentage = 0;
-		if(time(nullptr) - gpuMemQuerytime > 5)
+		if (time(nullptr) - gpuMemQuerytime > 5)
 		{
 			// Reference: https://asawicki.info/news_1695_there_is_a_way_to_query_gpu_memory_usage_in_vulkan_-_use_dxgi.html
 			ComPtr<IDXGIFactory4> factory;
@@ -551,6 +540,36 @@ namespace IGuiCore
 
 		ImGui::End();
 	}
+
+	void ShowForwardTechWidget()
+	{
+		if (ImGui::CollapsingHeader("TiledForward Shading"))
+		{
+			return;
+		}
+
+		if (ImGui::TreeNode("Resources Preview"))
+		{
+			ImGui::Separator();
+			ImGui::Text("SceneDepthSRV");
+			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
+			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
+			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
+				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
+				32);
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImGuiIO& io = ImGui::GetIO();
+			//ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
+			ImGui::Image((ImTextureID)SceneDepthViewSRV.ptr, ImVec2(320, 240), uv_min, uv_max);
+
+			ImGui::TreePop();
+		}
+	}
+
+
 
 	//
 	// Helper Functions
@@ -732,7 +751,7 @@ void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 		m_viewport.TopLeftX = 0;
 		m_viewport.TopLeftY = 0;
 		m_viewport.Width = resDesc.Width;
-		m_viewport.Height= resDesc.Height;
+		m_viewport.Height = resDesc.Height;
 
 		m_scissorRect.left = 0;
 		m_scissorRect.top = 0;
@@ -746,7 +765,7 @@ void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 			32);
 		auto descriptorPtrColorBuffer = dynamic_cast<ColorBuffer*>(m_inputRes[resName]);
 		auto descriptorPtrDepthBuffer = dynamic_cast<DepthBuffer*>(m_inputRes[resName]);
-		if (descriptorPtrColorBuffer != nullptr) 
+		if (descriptorPtrColorBuffer != nullptr)
 			gfxContext.SetDynamicDescriptor(1, offset, descriptorPtrColorBuffer->GetSRV());
 		if (descriptorPtrDepthBuffer != nullptr)
 			gfxContext.SetDynamicDescriptor(1, offset, descriptorPtrDepthBuffer->GetDepthSRV());
@@ -915,7 +934,7 @@ HRESULT DX12TextureConverter::Finalize()
 			m_psoContainer[resName].Finalize();
 
 
-			vector<XMFLOAT3> vPoints = 
+			vector<XMFLOAT3> vPoints =
 			{
 				XMFLOAT3(-1.f, 1.0f, 0.0f),
 				XMFLOAT3(1.0f, 1.0f, 0.0f),

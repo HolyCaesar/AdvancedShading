@@ -168,6 +168,7 @@
     <ClCompile Include="Geometry.cpp" />
     <ClCompile Include="GpuProfiler.cpp" />
     <ClCompile Include="GUICore.cpp" />
+    <ClCompile Include="imgui_tables.cpp" />
     <ClCompile Include="LightCullingPass.cpp" />
     <ClCompile Include="GpuBuffer.cpp" />
     <ClCompile Include="GpuResource.cpp" />

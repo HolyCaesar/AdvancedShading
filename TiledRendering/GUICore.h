@@ -91,14 +91,19 @@ namespace IGuiCore
 	void RenderImGUI(GraphicsContext& gfxContext);
 	void Terminate();
 
-	void ShowMainMenuBar();
+	// Main GUI entry
 	void ShowMainGui();
 
 	// Customized Functions
-	void ShowForwardPlusWidgets();
+	void ShowLightControlWidget();
 	void ShowCpuProfilerWindow();
+
+	void ShowForwardTechWidget();
+	void ShowDeferredTechWidget();
+	void ShowGeneralTechWidget();
 
 	// Helper Functions
 	void ShowAboutWindow(bool* p_open);
 	void ShowMainMenuFile();
+	void ShowMainMenuBar();
 }
