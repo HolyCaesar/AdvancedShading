@@ -95,7 +95,8 @@ namespace IGuiCore
 	void ShowMainGui();
 
 	// Customized Functions
-	void ShowLightControlWidget();
+	void LightControlWidget();
+	void ShadingTechWidget();
 	void ShowCpuProfilerWindow();
 
 	void ShowForwardTechWidget();

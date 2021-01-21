@@ -297,58 +297,10 @@ namespace IGuiCore
 		/**************************/
 		// Functional options
 		/**************************/
-		static bool show_tiled_forward_rendering = false;
-		static bool show_normal_rendering = false;
-		static bool show_deferred_rendering_ = false;
-		if (ImGui::CollapsingHeader("Rendering Technique"))
-		{
-			static int rendering_technique = 0;
-			ImGui::RadioButton("General Rendering", &rendering_technique, 0); //ImGui::SameLine();
-			ImGui::RadioButton("Deferred Rendering", &rendering_technique, 1); //ImGui::SameLine();
-			ImGui::RadioButton("Tiled Forward Rendering", &rendering_technique, 2);
+		ShadingTechWidget();
 
-			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
-			switch (rendering_technique)
-			{
-			case 0:
-			{
-				// TODO
-				show_tiled_forward_rendering = false;
-				show_normal_rendering = true;
-				show_deferred_rendering_ = false;
-				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::GeneralRenderingOption;
-				break;
-			}
-			case 1:
-			{
-				// TODO
-				show_tiled_forward_rendering = false;
-				show_normal_rendering = false;
-				show_deferred_rendering_ = true;
-				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::DefferredRenderingOption;
-				break;
-			}
-			case 2:
-			{
-				// TODO: some intialization to the main program
-				show_tiled_forward_rendering = true;
-				show_normal_rendering = false;
-				show_deferred_rendering_ = false;
-				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::TiledForwardRenderingOption;
-				break;
-			}
-			}
-		}
+		LightControlWidget();
 
-		/**************************/
-		// Lighting Control 
-		/**************************/
-		ShowLightControlWidget();
-
-		/**************************/
-		// Tiled Forward rendering 
-		/**************************/
-		if (show_tiled_forward_rendering) ShowForwardTechWidget();
 
 
 		//// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
@@ -378,16 +330,13 @@ namespace IGuiCore
 		// End of ShowDemoWindow()
 		ImGui::End();
 
-
-
-
 		ShowCpuProfilerWindow();
 	}
 
 	//
 	// Customized Functions
 	//
-	void ShowLightControlWidget()
+	void LightControlWidget()
 	{
 		if (!ImGui::CollapsingHeader("Lighting Control"))
 			return;
@@ -438,6 +387,55 @@ namespace IGuiCore
 				MinLightRange, MaxLightRange, MinSpotLightAngle, MaxSpotLightAngle);
 
 			hasChange = false;
+		}
+	}
+
+	void ShadingTechWidget()
+	{
+		static bool show_tiled_forward_rendering = false;
+		static bool show_normal_rendering = false;
+		static bool show_deferred_rendering_ = false;
+		if (ImGui::CollapsingHeader("Rendering Technique"))
+		{
+			static int rendering_technique = 0;
+			ImGui::RadioButton("General Rendering", &rendering_technique, 0); //ImGui::SameLine();
+			ImGui::RadioButton("Deferred Rendering", &rendering_technique, 1); //ImGui::SameLine();
+			ImGui::RadioButton("Tiled Forward Rendering", &rendering_technique, 2);
+
+			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
+			switch (rendering_technique)
+			{
+			case 0:
+			{
+				// TODO
+				show_tiled_forward_rendering = false;
+				show_normal_rendering = true;
+				show_deferred_rendering_ = false;
+				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::GeneralRenderingOption;
+				break;
+			}
+			case 1:
+			{
+				// TODO
+				show_tiled_forward_rendering = false;
+				show_normal_rendering = false;
+				show_deferred_rendering_ = true;
+				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::DefferredRenderingOption;
+				break;
+			}
+			case 2:
+			{
+				// TODO: some intialization to the main program
+				show_tiled_forward_rendering = true;
+				show_normal_rendering = false;
+				show_deferred_rendering_ = false;
+				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::TiledForwardRenderingOption;
+				break;
+			}
+			}
+
+			if (show_tiled_forward_rendering) 
+				ShowForwardTechWidget();
 		}
 	}
 
@@ -543,11 +541,6 @@ namespace IGuiCore
 
 	void ShowForwardTechWidget()
 	{
-		if (ImGui::CollapsingHeader("TiledForward Shading"))
-		{
-			return;
-		}
-
 		if (ImGui::TreeNode("Resources Preview"))
 		{
 			ImGui::Separator();
@@ -568,8 +561,6 @@ namespace IGuiCore
 			ImGui::TreePop();
 		}
 	}
-
-
 
 	//
 	// Helper Functions
