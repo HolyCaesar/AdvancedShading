@@ -147,31 +147,16 @@ private:
 	shared_ptr<Model>   m_pModel;
 
 private:
-	// Pre-Depth pass resources
-	DepthBuffer					m_preDepthPass;
-	ColorBuffer					m_preDepthPassRTV;
-	DX12RootSignature		m_preDepthPassRootSignature;
-	GraphicsPSO				m_preDepthPassPSO;
-
 	// Light Culling Pass
 	vector<Light>       m_lightsList;
-	ForwardPlusLightCulling m_LightCullingPass;
 
-	// Compute Shader Demo
-	//SimpleComputeShader m_simpleCS;
 private:
 	void LoadPipeline();
 	void LoadAssets();
 	std::vector<UINT8> GenerateTextureData(); // For test purpose
 
-	void PreDepthPass(GraphicsContext& gfxContext);
-
 	// Update Lights Buffer
 	void UpdateLightsBuffer();
-
-	// TODO: a temporary function. Tiled forward rendering will be implemented
-	// using my new rendering technique and rendering pass function.
-	void TiledForwardRenderingTechnique(GraphicsContext& gfxContext);
 
 	//
 	// General Shading Technique resources

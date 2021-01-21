@@ -89,12 +89,6 @@ void RenderingDemo::LoadAssets()
 		m_sceneOpaqueRootSignature[e_LightIndexRootParameterSRV].InitAsBufferSRV(2);
 		m_sceneOpaqueRootSignature[e_LightBufferRootParameterSRV].InitAsBufferSRV(3);
 		m_sceneOpaqueRootSignature.Finalize(L"SceneRootSignature", rootSignatureFlags);
-
-		/*Root Signature for the depth pass*/
-		m_preDepthPassRootSignature.Reset(1, 0);
-		m_preDepthPassRootSignature[0].InitAsConstantBuffer(0);
-		//m_preDepthPassRootSignature[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, D3D12_SHADER_VISIBILITY_VERTEX);
-		m_preDepthPassRootSignature.Finalize(L"PreDepthPassRootSignature", rootSignatureFlags);
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -178,12 +172,6 @@ void RenderingDemo::LoadAssets()
 		m_scenePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		m_scenePSO.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
 		m_scenePSO.Finalize();
-
-		/*PSO for depth pass*/
-		m_preDepthPassPSO = m_scenePSO;
-		m_preDepthPassPSO.SetRootSignature(m_preDepthPassRootSignature);
-		m_preDepthPassPSO.SetPixelShader(CD3DX12_SHADER_BYTECODE(pixelShaderDepthPass.Get()));
-		m_preDepthPassPSO.Finalize();
 	}
 
 	// Create the vertex buffer.
@@ -211,30 +199,21 @@ void RenderingDemo::LoadAssets()
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
 	}
 
-	// Load pre-depth pass resources
-	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
-
-
-	m_LightCullingPass.SetTiledSize(16);
-	m_LightCullingPass.Init(
-		m_width,
-		m_height,
-		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
-
 	// Generate lights
 	m_Lights = make_shared<StructuredBuffer>();
 	GenerateLights(1);
-	//m_LightCullingPass.UpdateLightBuffer(m_lightsList);
-
-	// Gui Resource allocation
-	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
-	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 
 	// General Shading Technique
 	LoadGeneralShadingTech("GeneralShadingTechnique");
 	LoadDefferredShadingTech("DefferredShadingTechnique");
 	LoadTiledForwardShadingTech("TiledShadingTechnique");
+
+	// Gui Resource allocation
+	// Must invoked after LoadGeneralShadingTech, LoadDefferredShadingTech, and LoadTiledForwardShadingTech
+	// due to the function depandency
+	// TODO:
+	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, nullptr);
+	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
 
 void RenderingDemo::LoadGeneralShadingTech(string name)
@@ -335,9 +314,6 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 
 	// Add Buffers
 	generalPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
-	// TODO: their is dependency here, need to get light buffer out of light culling pass class.
-	auto pLightBuffer = m_LightCullingPass.GetLightBuffer();
-	//generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", pLightBuffer);
 	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", m_Lights);
 
 	// Use buack buffer of the swap chain
@@ -950,27 +926,14 @@ void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 		m_modelViewCamera.SetButtonMasks(MOUSE_LEFT_BUTTON, MOUSE_WHEEL, MOUSE_MIDDLE_BUTTON);
 	}
 
-	// Load pre-depth pass resources
-	m_preDepthPassRTV.Destroy();
-	m_preDepthPassRTV.Create(L"PreDepthPassRTV", m_width, m_height, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-
-	m_preDepthPass.Destroy();
-	m_preDepthPass.Create(L"PreSceneDepthPass", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
-
-	m_LightCullingPass.ResizeBuffers();
-	m_LightCullingPass.SetTiledSize(16);
-	m_LightCullingPass.Init(
-		m_width,
-		m_height,
-		XMMatrixInverse(nullptr, m_modelViewCamera.GetProjMatrix()));
-
 	m_generalRenderingTech.Resize(width, height);
 	m_deferredRenderingTech.Resize(width, height);
 	m_tiledForwardRenderingTech.Resize(width, height);
 
 	// Gui Resource allocation
+	// TODO:
 	IGuiCore::g_imGuiTexConverter->CleanUp();
-	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, &m_preDepthPass);
+	IGuiCore::g_imGuiTexConverter->AddInputRes("SceneDepthView", m_width, m_height, sizeof(float), DXGI_FORMAT_D32_FLOAT, nullptr);
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
 
@@ -1033,13 +996,13 @@ void RenderingDemo::OnUpdate()
 	m_screenToViewParamsData.Padding = XMUINT2(lightCount, lightCount);
 	m_Lights->GetElementCount();
 
-	m_LightCullingPass.UpdateConstantBuffer(m_modelViewCamera.GetViewMatrix());
-
 	m_generalRenderingTech.UpdatePerFrameContBuffer(
 		0,
 		m_constantBufferData.worldMatrix,
 		m_constantBufferData.viewMatrix,
 		m_constantBufferData.worldViewProjMatrix);
+
+	// TODO add contBuffer update for other two techniques
 }
 
 // Render the scene.
@@ -1116,43 +1079,6 @@ void RenderingDemo::OnRender()
 	IGraphics::g_GraphicsCore->Present();
 }
 
-void RenderingDemo::TiledForwardRenderingTechnique(GraphicsContext& gfxContext)
-{
-	m_gpuProfiler.Start("MainPassGpu", gfxContext);
-
-	UINT backBufferIndex = IGraphics::g_GraphicsCore->g_CurrentBuffer;
-	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
-	{
-		IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex].GetRTV()
-	};
-	gfxContext.TransitionResource(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
-	gfxContext.TransitionResource(m_sceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-
-	gfxContext.ClearDepth(m_sceneDepthBuffer);
-	gfxContext.SetDepthStencilTarget(m_sceneDepthBuffer.GetDSV());
-	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_sceneDepthBuffer.GetDSV());
-	gfxContext.ClearColor(IGraphics::g_GraphicsCore->g_DisplayPlane[backBufferIndex]);
-
-	gfxContext.SetRootSignature(m_sceneOpaqueRootSignature);
-	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
-	gfxContext.SetVertexBuffer(0, m_vertexBuffer->VertexBufferView());
-	gfxContext.SetPipelineState(m_scenePSO);
-
-	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
-	gfxContext.SetDynamicDescriptor(e_ModelTexRootParameterSRV, 0, m_modelTexture.GetSRV());
-	gfxContext.SetDynamicDescriptor(e_LightGridRootParameterSRV, 0, m_LightCullingPass.GetOpaqueLightGrid().GetSRV());
-	gfxContext.SetBufferSRV(e_LightIndexRootParameterSRV, m_LightCullingPass.GetOpaqueLightIndex());
-	gfxContext.SetBufferSRV(e_LightBufferRootParameterSRV, *m_LightCullingPass.GetLightBuffer());
-
-
-	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
-
-	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
-
-	m_gpuProfiler.Stop("MainPassGpu", gfxContext);
-}
-
 void RenderingDemo::OnDestroy()
 {
 	ImGui_ImplDX12_Shutdown();
@@ -1160,7 +1086,6 @@ void RenderingDemo::OnDestroy()
 	ImGui::DestroyContext();
 
 	m_lightsList.clear();
-	m_LightCullingPass.Destroy();
 	m_pModel.reset();
 
 	m_sceneDepthBuffer.Destroy();
@@ -1168,41 +1093,9 @@ void RenderingDemo::OnDestroy()
 	m_indexBuffer->Destroy();
 	m_modelTexture.Destroy();
 
-	m_preDepthPass.Destroy();
-	m_preDepthPassRTV.Destroy();
-
 	m_generalRenderingTech.Destroy();
 	m_deferredRenderingTech.Destroy();
 	m_tiledForwardRenderingTech.Destroy();
-}
-
-void RenderingDemo::PreDepthPass(GraphicsContext& gfxContext)
-{
-	gfxContext.SetRootSignature(m_preDepthPassRootSignature);
-	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	gfxContext.SetIndexBuffer(m_indexBuffer->IndexBufferView());
-	gfxContext.SetVertexBuffer(0, m_vertexBuffer->VertexBufferView());
-
-	gfxContext.SetDynamicConstantBufferView(e_rootParameterCB, sizeof(m_constantBufferData), &m_constantBufferData);
-
-	gfxContext.TransitionResource(m_preDepthPassRTV, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	gfxContext.TransitionResource(m_preDepthPass, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE RTVs[] =
-	{
-		m_preDepthPassRTV.GetRTV()
-	};
-	gfxContext.SetPipelineState(m_preDepthPassPSO);
-	gfxContext.ClearDepth(m_preDepthPass);
-	gfxContext.SetDepthStencilTarget(m_preDepthPass.GetDSV());
-	gfxContext.SetRenderTargets(_countof(RTVs), RTVs, m_preDepthPass.GetDSV());
-	gfxContext.ClearColor(m_preDepthPassRTV);
-
-	gfxContext.SetViewportAndScissor(m_viewport, m_scissorRect);
-
-	gfxContext.DrawIndexed(m_pModel->m_vecIndexData.size(), 0, 0);
-
-	gfxContext.TransitionResource(m_preDepthPass, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, true);
 }
 
 // Lights generation
@@ -1301,6 +1194,4 @@ void RenderingDemo::UpdateLightsBuffer()
 	IGraphics::g_GraphicsCore->g_CommandManager->IdleGPU();
 	m_Lights->Destroy();
 	m_Lights->Create(L"LightLists", m_lightsList.size(), sizeof(Light), m_lightsList.data());
-
-	m_LightCullingPass.UpdateLightBuffer(m_Lights);
 }
