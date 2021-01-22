@@ -550,11 +550,14 @@ namespace IGuiCore
 			ImGui::Separator();
 			ImGui::Text("SceneDepthSRV");
 			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
-			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+			g_imGuiTexConverter->DisabledAllRes();
+			DX12Resource* depthSRV = g_imGuiTexConverter->GetOutputResSRV("SceneDepthViewTiledForward");
+			depthSRV->bEnable = true;
+
 			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
-				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
+				depthSRV->uSrvDescriptorOffset,
 				32);
 			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
 			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
@@ -573,11 +576,14 @@ namespace IGuiCore
 			ImGui::Separator();
 			ImGui::Text("SceneDepthSRV");
 			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
-			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+			g_imGuiTexConverter->DisabledAllRes();
+			DX12Resource* depthSRV = g_imGuiTexConverter->GetOutputResSRV("SceneDepthViewDeferred");
+			depthSRV->bEnable = true;
+
 			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
-				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
+				depthSRV->uSrvDescriptorOffset,
 				32);
 			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
 			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
@@ -596,11 +602,14 @@ namespace IGuiCore
 			ImGui::Separator();
 			ImGui::Text("SceneDepthSRV");
 			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
-			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
 			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+			g_imGuiTexConverter->DisabledAllRes();
+			DX12Resource* depthSRV = g_imGuiTexConverter->GetOutputResSRV("SceneDepthViewGeneral");
+			depthSRV->bEnable = true;
+
 			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
 				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
-				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
+				depthSRV->uSrvDescriptorOffset,
 				32);
 			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
 			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
@@ -788,6 +797,12 @@ void DX12TextureConverter::Resize(uint32_t width, uint32_t height)
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
 
+void DX12TextureConverter::DisabledAllRes()
+{
+	for (auto& outRes : m_outputRes)
+		outRes.second.bEnable = false;
+}
+
 void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 {
 	gfxContext.SetRootSignature(m_sceneRootSignature);
@@ -893,7 +908,8 @@ HRESULT DX12TextureConverter::Finalize()
 		non_static_sampler.MinLOD = 0.0f;
 		non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
-		m_sceneRootSignature.Reset(m_inputRes.size() + 1, 1);
+		//m_sceneRootSignature.Reset(m_inputRes.size() + 1, 1);
+		m_sceneRootSignature.Reset(2, 1);
 		m_sceneRootSignature.InitStaticSampler(0, non_static_sampler);
 		m_sceneRootSignature[0].InitAsConstantBuffer(0);
 		m_sceneRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, m_inputRes.size());

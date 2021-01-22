@@ -33,6 +33,8 @@ public:
 
 	void Resize(uint32_t width, uint32_t height);
 
+	void DisabledAllRes();
+
 	HRESULT Finalize();
 
 	DX12Resource* GetOutputResSRV(string name)

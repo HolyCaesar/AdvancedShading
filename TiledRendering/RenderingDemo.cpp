@@ -212,11 +212,23 @@ void RenderingDemo::LoadAssets()
 	// Must invoked after LoadGeneralShadingTech, LoadDefferredShadingTech, and LoadTiledForwardShadingTech
 	// due to the function depandency
 	IGuiCore::g_imGuiTexConverter->AddInputRes(
-		"SceneDepthView", 
+		"SceneDepthViewGeneral", 
 		m_width, m_height, 
 		DXGI_FORMAT_D32_FLOAT, 
 		dynamic_pointer_cast<DX12ShadingPass>(m_generalRenderingTech.GetPass(0))->GetDepthBuffer().get(),
 		true);
+	IGuiCore::g_imGuiTexConverter->AddInputRes(
+		"SceneDepthViewDeferred", 
+		m_width, m_height, 
+		DXGI_FORMAT_D32_FLOAT, 
+		dynamic_pointer_cast<DX12ShadingPass>(m_deferredRenderingTech.GetPass(0))->GetDepthBuffer().get(),
+		false);
+	IGuiCore::g_imGuiTexConverter->AddInputRes(
+		"SceneDepthViewTiledForward", 
+		m_width, m_height, 
+		DXGI_FORMAT_D32_FLOAT, 
+		dynamic_pointer_cast<DX12ShadingPass>(m_tiledForwardRenderingTech.GetPass(0))->GetDepthBuffer().get(),
+		false);
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
 
@@ -764,6 +776,8 @@ void RenderingDemo::LoadTiledForwardShadingTech(string name)
 	sceneDepthPass->SetVertexBuffer(m_vertexBuffer);
 	sceneDepthPass->SetIndexBuffer(m_indexBuffer);
 	sceneDepthPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
+
+	sceneDepthPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
 
 	sceneDepthPass->AddGpuProfiler(&m_gpuProfiler);
 	sceneDepthPass->SetGPUQueryStatus(true);
