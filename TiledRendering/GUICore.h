@@ -27,8 +27,10 @@ public:
 	void Convert(GraphicsContext& gfxContext);
 
 	void AddInputRes(
-		string name, uint32_t width, uint32_t height, uint32_t elementSize,
+		string name, uint32_t width, uint32_t height, 
 		DXGI_FORMAT format, GpuResource* input);
+
+	void Resize(uint32_t width, uint32_t height);
 
 	HRESULT Finalize();
 
@@ -74,7 +76,7 @@ private:
 private:
 	void CreateTex2DResources(
 		string name, uint32_t width, uint32_t height,
-		uint32_t elementSize, DXGI_FORMAT format, DX12Resource* pResource);
+		DXGI_FORMAT format, DX12Resource* pResource);
 };
 
 namespace IGuiCore

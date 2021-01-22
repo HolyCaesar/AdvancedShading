@@ -215,7 +215,7 @@ void RenderingDemo::LoadAssets()
 	IGuiCore::g_imGuiTexConverter->AddInputRes(
 		"SceneDepthView", 
 		m_width, m_height, 
-		sizeof(float), DXGI_FORMAT_D32_FLOAT, 
+		DXGI_FORMAT_D32_FLOAT, 
 		dynamic_pointer_cast<DX12ShadingPass>(m_generalRenderingTech.GetPass(0))->GetDepthBuffer().get());
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
@@ -935,14 +935,15 @@ void RenderingDemo::OnResize(uint64_t width, uint64_t height)
 	m_tiledForwardRenderingTech.Resize(width, height);
 
 	// Gui Resource allocation
-	// TODO:
-	IGuiCore::g_imGuiTexConverter->CleanUp();
-	IGuiCore::g_imGuiTexConverter->AddInputRes(
-		"SceneDepthView", 
-		m_width, m_height, 
-		sizeof(float), DXGI_FORMAT_D32_FLOAT, 
-		dynamic_pointer_cast<DX12ShadingPass>(m_generalRenderingTech.GetPass(0))->GetDepthBuffer().get()); 
-	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
+	//IGuiCore::g_imGuiTexConverter->CleanUp();
+	//IGuiCore::g_imGuiTexConverter->AddInputRes(
+	//	"SceneDepthView", 
+	//	m_width, m_height, 
+	//	DXGI_FORMAT_D32_FLOAT, 
+	//	dynamic_pointer_cast<DX12ShadingPass>(m_generalRenderingTech.GetPass(0))->GetDepthBuffer().get()); 
+	//ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
+
+	IGuiCore::g_imGuiTexConverter->Resize(width, height);
 }
 
 

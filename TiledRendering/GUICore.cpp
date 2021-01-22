@@ -758,6 +758,33 @@ void DX12TextureConverter::CleanUp()
 	IGuiCore::g_heapPtr = 1;
 }
 
+void DX12TextureConverter::Resize(uint32_t width, uint32_t height)
+{
+	vector<DXGI_FORMAT> outResFormats;
+	// Remove old resources
+	for (auto& o : m_outputRes)
+	{
+		outResFormats.push_back(o.second.mFormat);
+		o.second.pResource->Release();
+	}
+	m_outputRes.clear();
+
+	m_rtvHeapPtr = 0;
+	IGuiCore::g_heapPtr = 1;
+
+	int outResFormatsIdx(0);
+	for (auto& i : m_inputRes)
+	{
+		string inputResName = i.first;
+		AddInputRes(
+			inputResName, width, height,
+			outResFormats[outResFormatsIdx],
+			i.second);
+		++outResFormatsIdx;
+	}
+	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
+}
+
 void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 {
 	gfxContext.SetRootSignature(m_sceneRootSignature);
@@ -822,7 +849,7 @@ void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 }
 
 void DX12TextureConverter::AddInputRes(
-	string name, uint32_t width, uint32_t height, uint32_t elementSize,
+	string name, uint32_t width, uint32_t height, 
 	DXGI_FORMAT format, GpuResource* input)
 {
 	m_inputRes[name] = input;
@@ -830,7 +857,7 @@ void DX12TextureConverter::AddInputRes(
 	m_outputRes[name].mFormat = format;
 
 	// The texture for ImGUI is always set to R32G32B32A32 format for easier visualization
-	CreateTex2DResources(name, width, height, elementSize, DXGI_FORMAT_R32G32B32A32_FLOAT, &m_outputRes[name]);
+	CreateTex2DResources(name, width, height, DXGI_FORMAT_R32G32B32A32_FLOAT, &m_outputRes[name]);
 }
 
 HRESULT DX12TextureConverter::Finalize()
@@ -991,7 +1018,7 @@ HRESULT DX12TextureConverter::Finalize()
 // Private Functions
 void DX12TextureConverter::CreateTex2DResources(
 	string name, uint32_t width, uint32_t height,
-	uint32_t elementSize, DXGI_FORMAT format, DX12Resource* pResource)
+	DXGI_FORMAT format, DX12Resource* pResource)
 {
 	D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 	CD3DX12_HEAP_PROPERTIES HeapProps(D3D12_HEAP_TYPE_DEFAULT);
