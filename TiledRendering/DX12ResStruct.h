@@ -12,7 +12,8 @@ struct DX12Resource
         uRtvDescriptorOffset(-1),
         pResource(nullptr),
         mUsageState(D3D12_RESOURCE_STATE_COMMON),
-        mFormat(DXGI_FORMAT_UNKNOWN)
+        mFormat(DXGI_FORMAT_UNKNOWN),
+        bEnable(false)
     {
     }
 
@@ -24,5 +25,6 @@ struct DX12Resource
     UINT uRtvDescriptorOffset;
     D3D12_RESOURCE_STATES mUsageState;
     DXGI_FORMAT mFormat;
+    bool bEnable;
 };
 

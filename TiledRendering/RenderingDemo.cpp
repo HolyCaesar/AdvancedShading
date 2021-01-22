@@ -211,12 +211,12 @@ void RenderingDemo::LoadAssets()
 	// Gui Resource allocation
 	// Must invoked after LoadGeneralShadingTech, LoadDefferredShadingTech, and LoadTiledForwardShadingTech
 	// due to the function depandency
-	// TODO:
 	IGuiCore::g_imGuiTexConverter->AddInputRes(
 		"SceneDepthView", 
 		m_width, m_height, 
 		DXGI_FORMAT_D32_FLOAT, 
-		dynamic_pointer_cast<DX12ShadingPass>(m_generalRenderingTech.GetPass(0))->GetDepthBuffer().get());
+		dynamic_pointer_cast<DX12ShadingPass>(m_generalRenderingTech.GetPass(0))->GetDepthBuffer().get(),
+		true);
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
 

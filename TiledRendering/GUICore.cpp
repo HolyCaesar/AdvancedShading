@@ -761,10 +761,12 @@ void DX12TextureConverter::CleanUp()
 void DX12TextureConverter::Resize(uint32_t width, uint32_t height)
 {
 	vector<DXGI_FORMAT> outResFormats;
+	vector<bool> outResEnables;
 	// Remove old resources
 	for (auto& o : m_outputRes)
 	{
 		outResFormats.push_back(o.second.mFormat);
+		outResEnables.push_back(o.second.bEnable);
 		o.second.pResource->Release();
 	}
 	m_outputRes.clear();
@@ -772,15 +774,16 @@ void DX12TextureConverter::Resize(uint32_t width, uint32_t height)
 	m_rtvHeapPtr = 0;
 	IGuiCore::g_heapPtr = 1;
 
-	int outResFormatsIdx(0);
+	int outResIdx(0);
 	for (auto& i : m_inputRes)
 	{
 		string inputResName = i.first;
+		// TODO need to add enable/disable when create the output resource
 		AddInputRes(
 			inputResName, width, height,
-			outResFormats[outResFormatsIdx],
-			i.second);
-		++outResFormatsIdx;
+			outResFormats[outResIdx],
+			i.second, outResEnables[outResIdx]);
+		++outResIdx;
 	}
 	ThrowIfFailed(IGuiCore::g_imGuiTexConverter->Finalize());
 }
@@ -798,6 +801,7 @@ void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 	int offset(0);
 	for (auto& outRes : m_outputRes)
 	{
+		if (!outRes.second.bEnable) continue;
 		string resName = outRes.first;
 		gfxContext.TransitionResource(outRes.second, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 
@@ -850,11 +854,13 @@ void DX12TextureConverter::Convert(GraphicsContext& gfxContext)
 
 void DX12TextureConverter::AddInputRes(
 	string name, uint32_t width, uint32_t height, 
-	DXGI_FORMAT format, GpuResource* input)
+	DXGI_FORMAT format, GpuResource* input,
+	bool enable)
 {
 	m_inputRes[name] = input;
 	//m_outputRes[name] = new DX12Resource>();
 	m_outputRes[name].mFormat = format;
+	m_outputRes[name].bEnable = enable;
 
 	// The texture for ImGUI is always set to R32G32B32A32 format for easier visualization
 	CreateTex2DResources(name, width, height, DXGI_FORMAT_R32G32B32A32_FLOAT, &m_outputRes[name]);
