@@ -394,7 +394,7 @@ namespace IGuiCore
 	{
 		static bool show_tiled_forward_rendering = false;
 		static bool show_normal_rendering = false;
-		static bool show_deferred_rendering_ = false;
+		static bool show_deferred_rendering = false;
 		if (ImGui::CollapsingHeader("Rendering Technique"))
 		{
 			static int rendering_technique = 0;
@@ -410,7 +410,7 @@ namespace IGuiCore
 				// TODO
 				show_tiled_forward_rendering = false;
 				show_normal_rendering = true;
-				show_deferred_rendering_ = false;
+				show_deferred_rendering = false;
 				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::GeneralRenderingOption;
 				break;
 			}
@@ -419,7 +419,7 @@ namespace IGuiCore
 				// TODO
 				show_tiled_forward_rendering = false;
 				show_normal_rendering = false;
-				show_deferred_rendering_ = true;
+				show_deferred_rendering = true;
 				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::DefferredRenderingOption;
 				break;
 			}
@@ -428,7 +428,7 @@ namespace IGuiCore
 				// TODO: some intialization to the main program
 				show_tiled_forward_rendering = true;
 				show_normal_rendering = false;
-				show_deferred_rendering_ = false;
+				show_deferred_rendering = false;
 				appPtr->m_renderingOption = RenderingDemo::RenderTechniqueOption::TiledForwardRenderingOption;
 				break;
 			}
@@ -436,6 +436,10 @@ namespace IGuiCore
 
 			if (show_tiled_forward_rendering) 
 				ShowForwardTechWidget();
+			if (show_deferred_rendering)
+				ShowDeferredTechWidget();
+			if (show_normal_rendering)
+				ShowGeneralTechWidget();
 		}
 	}
 
@@ -540,6 +544,52 @@ namespace IGuiCore
 	}
 
 	void ShowForwardTechWidget()
+	{
+		if (ImGui::TreeNode("Resources Preview"))
+		{
+			ImGui::Separator();
+			ImGui::Text("SceneDepthSRV");
+			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
+			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
+			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
+				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
+				32);
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImGuiIO& io = ImGui::GetIO();
+			//ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
+			ImGui::Image((ImTextureID)SceneDepthViewSRV.ptr, ImVec2(320, 240), uv_min, uv_max);
+
+			ImGui::TreePop();
+		}
+	}
+
+	void ShowDeferredTechWidget()
+	{
+		if (ImGui::TreeNode("Resources Preview"))
+		{
+			ImGui::Separator();
+			ImGui::Text("SceneDepthSRV");
+			auto appPtr = reinterpret_cast<RenderingDemo*>(g_appPtr);
+			//auto appPtr = dynamic_pointer_cast<TiledRendering>(g_appPtr);
+			// Checkout the tutorial https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+			CD3DX12_GPU_DESCRIPTOR_HANDLE SceneDepthViewSRV(
+				imGuiHeap->GetGPUDescriptorHandleForHeapStart(),
+				g_imGuiTexConverter->GetOutputResSRV("SceneDepthView")->uSrvDescriptorOffset,
+				32);
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImGuiIO& io = ImGui::GetIO();
+			//ImGui::Image((ImTextureID)io.Fonts->TexID, ImVec2(512, 128), uv_min, uv_max);
+			ImGui::Image((ImTextureID)SceneDepthViewSRV.ptr, ImVec2(320, 240), uv_min, uv_max);
+
+			ImGui::TreePop();
+		}
+	}
+
+	void ShowGeneralTechWidget()
 	{
 		if (ImGui::TreeNode("Resources Preview"))
 		{
