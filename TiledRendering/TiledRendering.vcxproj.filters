@@ -383,4 +383,7 @@
     </None>
     <None Include="ClassDiagram.cd" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODOLIST.txt" />
+  </ItemGroup>
 </Project>

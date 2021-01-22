@@ -1,0 +1,3 @@
+1. DX12Resources should not have that bEnable member variables, 
+this variable should be control by DX12TextureConverter.
+
