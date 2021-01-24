@@ -135,13 +135,19 @@ private:
 		//XMFLOAT4 offset;
 	};
 
+	__declspec(align(16)) struct CbufferLight
+	{
+		uint32_t lightNum;
+		uint32_t paddings[3];
+	};
+
 	// App resources.
 	shared_ptr<StructuredBuffer>    m_vertexBuffer;
 	shared_ptr<StructuredBuffer>    m_indexBuffer;
 	ColorBuffer				m_modelTexture;
 
 	CBuffer						m_constantBufferData;
-	UINT8* m_pCbvDataBegin;
+	CbufferLight				m_lightConstantBuffer;
 
 	// Model
 	shared_ptr<Model>   m_pModel;

@@ -15,7 +15,6 @@ void RenderingDemo::WinMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 RenderingDemo::RenderingDemo(UINT width, UINT height, std::wstring name) :
 	Win32FrameWork(width, height, name),
-	m_pCbvDataBegin(nullptr),
 	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 	m_constantBufferData{}
@@ -119,7 +118,7 @@ void RenderingDemo::LoadAssets()
 		errorMessages.Reset();
 		errorMessages = nullptr;
 
-		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMainGeneral", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
+		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -266,10 +265,11 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	non_static_sampler.MinLOD = 0.0f;
 	non_static_sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
-	UINT numRootParameters(2), numRootParamIdx(0), numSampler(1);
+	UINT numRootParameters(3), numRootParamIdx(0), numSampler(1);
 	generalShadingRS->Reset(numRootParameters, numSampler);
 	generalShadingRS->InitStaticSampler(0, non_static_sampler);
 	(*generalShadingRS)[numRootParamIdx++].InitAsConstantBuffer(0);
+	(*generalShadingRS)[numRootParamIdx++].InitAsConstantBuffer(1);
 	(*generalShadingRS)[numRootParamIdx++].InitAsBufferSRV(0);
 	wstring rsName(name.begin(), name.end());
 	generalShadingRS->Finalize(rsName.c_str(), rootSignatureFlags);
@@ -329,8 +329,9 @@ void RenderingDemo::LoadGeneralShadingTech(string name)
 	generalPass->FinalizePSO(generalShadingPSO);
 
 	// Add Buffers
-	generalPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
-	generalPass->AddStructuredBufferSRV(1, L"GeneralLightBuffer", m_Lights);
+	generalPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(CBuffer), &m_constantBufferData);
+	generalPass->AddConstantBuffer(1, L"LightParamConstBuffer", sizeof(CbufferLight), &m_lightConstantBuffer);
+	generalPass->AddStructuredBufferSRV(2, L"GeneralLightBuffer", m_Lights);
 
 	// Use buack buffer of the swap chain
 	generalPass->SetEnableOwnRenderTarget(false);
@@ -510,7 +511,7 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	deferredPass->AddRenderTarget(normalVSTex2D, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	deferredPass->SetDepthBuffer(L"DeferredPhaseLightDepBuf", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 
-	deferredPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
+	deferredPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(CBuffer), &m_constantBufferData);
 
 	deferredPass->SetVertexBuffer(m_vertexBuffer);
 	deferredPass->SetIndexBuffer(m_indexBuffer);
@@ -533,8 +534,8 @@ void RenderingDemo::LoadDefferredShadingTech(string name)
 	renderPass->FinalizePSO(renderPhasePSO);
 
 	// Add Buffers
-	renderPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
-	renderPass->AddConstantBuffer(1, L"ScreenToViewConstBuffer", sizeof(m_screenToViewParamsData), &m_screenToViewParamsData);
+	renderPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(CBuffer), &m_constantBufferData);
+	renderPass->AddConstantBuffer(1, L"ScreenToViewConstBuffer", sizeof(ScreenToViewParams), &m_screenToViewParamsData);
 	renderPass->AddStructuredBufferSRV(2, L"LightBuffer", m_Lights);
 	renderPass->AddColorBufferSRV(3, L"LightAccumulationTex2D", lightAccumulationTex2D);
 	renderPass->AddColorBufferSRV(4, L"DiffuseTex2D", diffuseTex2D);
@@ -777,7 +778,7 @@ void RenderingDemo::LoadTiledForwardShadingTech(string name)
 	sceneDepthPass->SetIndexBuffer(m_indexBuffer);
 	sceneDepthPass->SetViewPortAndScissorRect(m_viewport, m_scissorRect);
 
-	sceneDepthPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(m_constantBufferData), &m_constantBufferData);
+	sceneDepthPass->AddConstantBuffer(0, L"GeneralConstBuffer", sizeof(CBuffer), &m_constantBufferData);
 
 	sceneDepthPass->AddGpuProfiler(&m_gpuProfiler);
 	sceneDepthPass->SetGPUQueryStatus(true);
@@ -1018,6 +1019,11 @@ void RenderingDemo::OnUpdate()
 	UINT lightCount = m_Lights->GetElementCount();
 	m_screenToViewParamsData.Padding = XMUINT2(lightCount, lightCount);
 	m_Lights->GetElementCount();
+
+	m_lightConstantBuffer.lightNum = lightCount;
+	m_lightConstantBuffer.paddings[0] = 0;
+	m_lightConstantBuffer.paddings[1] = 0;
+	m_lightConstantBuffer.paddings[2] = 0;
 
 	m_generalRenderingTech.UpdatePerFrameContBuffer(
 		0,

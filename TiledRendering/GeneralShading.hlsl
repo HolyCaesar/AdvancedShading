@@ -7,6 +7,12 @@ cbuffer ConstBuffer : register(b0)
 	matrix WorldViewProj;
 };
 
+cbuffer LightConstBuffer : register(b1)
+{
+	uint LightNum;
+	uint3 Padding;
+}
+
 struct VSInput
 {
 	float3 position : POSITION;
@@ -63,7 +69,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
 	LightingResult lit = (LightingResult)0;
 
-	for (uint i = 0; i < 1; ++i)
+	for (uint i = 0; i < LightNum; ++i)
 	{
 		Light light = g_Lights[i];
 

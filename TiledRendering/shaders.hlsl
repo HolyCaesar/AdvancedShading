@@ -14,6 +14,12 @@ cbuffer ConstBuffer : register(b0)
     matrix WorldViewProj;
 };
 
+cbuffer LightConstBuffer : register(b1)
+{
+    uint LightNum;
+    uint3 Padding;
+}
+
 struct VSInput
 {
     float3 position : POSITION;
@@ -30,14 +36,10 @@ struct PSInput
 };
 
 
-//PSInput VSMain(float3 position : POSITION, float3 normal : NORMAL, float2 tex : TEXCOORD)
 PSInput VSMain(VSInput input)
 {
     PSInput result;
 
-    //result.position = mul(World, float4(input.position, 1.0f));
-    //result.position = mul(World, float4(input.position, 1.0f));
-    //result.position = mul(WorldViewProj, result.position);
     result.position = mul(WorldViewProj, float4(input.position, 1.0f));
     result.positionVS = mul(ViewMatrix, float4(input.position, 1.0f));
     result.normal = mul(World, float4(input.normal, 1.0f)).xyz;
@@ -61,18 +63,11 @@ float4 PSMainGeneral(PSInput input) : SV_TARGET
     float4 posVS = float4(input.positionVS, 1.0f);
     float4 viewVS = normalize(eyePos - posVS);
 
-    uint2 tileIndex = uint2(floor(input.position.xy / BLOCK_SIZE));
-    uint startOffset = g_lightGrid[tileIndex].x;
-    uint lightCount = g_lightGrid[tileIndex].y;
-
-    //return float4(lightCount, lightCount, 0.2f, 1);
-
     LightingResult lit = (LightingResult)0;
 
-    for (uint i = 0; i < lightCount; ++i)
+    for (uint i = 0; i < LightNum; ++i)
     {
-        uint lightIndex = g_lightIndex[startOffset + i];
-        Light light = g_Lights[lightIndex];
+        Light light = g_Lights[i];
 
         LightingResult res = (LightingResult)0;
 
@@ -162,6 +157,11 @@ float4 PSMainTiledForward(PSInput input) : SV_TARGET
 
     return color;
     //return g_texture.Sample(g_sampler, input.tex);
+}
+
+float4 PSMain(PSInput input) : SV_TARGET
+{
+    return float4(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 //[earlydepthstencil]
