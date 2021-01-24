@@ -152,25 +152,28 @@ float4 PSMain(PSInput input) : SV_TARGET
 	for (int i = 0; i < LightCount.x; ++i)
 	{
 		Light light = g_Lights[i];
+		LightingResult res = (LightingResult)0;
 
 		switch (light.Type)
 		{
 		case POINT_LIGHT:
 		{
-			lit = DoPointLight(light, V, Pt, N, ViewMatrix);
+			res = DoPointLight(light, V, Pt, N, ViewMatrix);
 			break;
 		}
 		case DIRECTIONAL_LIGHT:
 		{
-			lit = DoDirectionalLight(light, V, Pt, N);
+			res = DoDirectionalLight(light, V, Pt, N);
 			break;
 		}
 		case SPOT_LIGHT:
 		{
-			lit = DoSpotLight(light, V, Pt, N);
+			res = DoSpotLight(light, V, Pt, N);
 			break;
 		}
 		}
+		lit.lightDiffuse += res.lightDiffuse;
+		lit.lightSpecular += res.lightSpecular;
 	}
 	//return saturate(lightAcc + diffuse * lit.lightDiffuse + specular * lit.lightSpecular);
 	//return saturate(lightAcc + lit.lightDiffuse + lit.lightSpecular);

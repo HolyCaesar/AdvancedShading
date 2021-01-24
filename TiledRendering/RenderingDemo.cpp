@@ -1018,7 +1018,6 @@ void RenderingDemo::OnUpdate()
 	m_screenToViewParamsData.ViewMatrix = view;
 	UINT lightCount = m_Lights->GetElementCount();
 	m_screenToViewParamsData.Padding = XMUINT2(lightCount, lightCount);
-	m_Lights->GetElementCount();
 
 	m_lightConstantBuffer.lightNum = lightCount;
 	m_lightConstantBuffer.paddings[0] = 0;
