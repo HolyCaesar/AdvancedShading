@@ -119,7 +119,7 @@ void RenderingDemo::LoadAssets()
 		errorMessages.Reset();
 		errorMessages = nullptr;
 
-		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
+		hr = D3DCompileFromFile(L"shaders.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMainGeneral", "ps_5_1", compileFlags, 0, &pixelShader, &errorMessages);
 		if (FAILED(hr) && errorMessages)
 		{
 			const char* errorMsg = (const char*)errorMessages->GetBufferPointer();
@@ -730,7 +730,7 @@ void RenderingDemo::LoadTiledForwardShadingTech(string name)
 	// Load pixel shader for scene depth
 	pixelShaderDepth = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "TiledForwardRendering", "PS_SceneDepth", L"shaders.hlsl", nullShaderMacros, "ps_5_1");
 	// Load pixel shader for deferred phase
-	pixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "TiledForwardRendering", "PSMain", L"shaders.hlsl", nullShaderMacros, "ps_5_1");
+	pixelShader = DX12Aux::LoadShaderFromFile(ShaderType::PixelShader, "TiledForwardRendering", "PSMainTiledForward", L"shaders.hlsl", nullShaderMacros, "ps_5_1");
 	// Load frustum compute shader for frustum calculation
 	frustumComputeShader = DX12Aux::LoadShaderFromFile(ShaderType::ComputeShader, "TiledForwardRendering", "CS_GridFrustumPass", L"GridFrustumPass.hlsl", nullShaderMacros, "cs_5_1");
 	// Load light culling compute shader for frustum calculation
